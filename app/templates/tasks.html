@@ -1,0 +1,390 @@
+{% extends "base.html" %}
+{% block title %}Your Tasks — Personal planner{% endblock %}
+
+{% block content %}
+
+<div class="task-box">
+
+    <!--  HEADER  -->
+    <div class="task-header">
+        <h2>Your Tasks- Plan your day</h2>
+
+        {# Google Calendar connection status #}
+        {% if current_user.google_access_token %}
+        <div class="google-status-wrapper" id="google-status-wrapper">
+            <button type="button" class="badge badge-done google-status-btn" onclick="toggleGoogleMenu()"
+                id="google-status-btn">
+                <span class="google-dot"></span> Google Connected ▾
+            </button>
+            <div class="google-dropdown" id="google-dropdown">
+                <form action="{{ url_for('google.disconnect_google') }}" method="POST">
+                    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}"/>
+                    <button type="submit" class="google-disconnect-btn">
+                        <i data-lucide="unplug"
+                            style="width:14px;height:14px;vertical-align:middle;margin-right:4px;"></i>
+                        Disconnect Google
+                    </button>
+                </form>
+            </div>
+        </div>
+        {% else %}
+        <a href="{{ url_for('google.connect_google') }}" class="btn-google-connect">
+            <span class="google-icon">G</span> Connect Google
+        </a>
+        {% endif %}
+    </div>
+
+    <!--  ADD TASK  -->
+    <form action="{{ url_for('tasks.add_task') }}" method="POST" class="task-form">
+        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}"/>
+        <input type="text" name="title" placeholder="✦  What needs to be done?" required>
+
+        <select name="priority">
+            <option value="Low">Low</option>
+            <option value="Medium" selected>Medium</option>
+            <option value="High">High</option>
+        </select>
+
+        <input type="date" name="deadline">
+        <input type="time" name="time_slot">
+
+        <button type="submit" class="btn">
+            <i data-lucide="plus" style="width:16px;height:16px;"></i>
+            Add Task
+        </button>
+    </form>
+
+    <div class="divider"></div>
+
+    <!--  FILTERS  -->
+    <form method="GET" action="{{ url_for('tasks.view_tasks') }}" class="filter-form">
+        <input type="text" name="q" placeholder="🔍  Search tasks..." value="{{ search or '' }}">
+
+        <select name="status">
+            <option value="all">All Status</option>
+            <option value="Pending" {% if status_filter=='Pending' %}selected{% endif %}>Pending</option>
+            <option value="Working" {% if status_filter=='Working' %}selected{% endif %}>Working</option>
+            <option value="Completed" {% if status_filter=='Completed' %}selected{% endif %}>Completed</option>
+        </select>
+
+        <select name="priority">
+            <option value="all">All Priority</option>
+            <option value="Low" {% if priority_filter=='Low' %}selected{% endif %}>Low</option>
+            <option value="Medium" {% if priority_filter=='Medium' %}selected{% endif %}>Medium</option>
+            <option value="High" {% if priority_filter=='High' %}selected{% endif %}>High</option>
+        </select>
+
+        <button type="submit" class="btn-small">
+            <i data-lucide="filter" style="width:14px;height:14px;vertical-align:middle;margin-right:4px;"></i>Apply
+        </button>
+    </form>
+
+    <!--  ACTION BAR  -->
+    {% if tasks %}
+    <div class="action-bar">
+        <div>
+            <span class="task-count">
+                <span class="count-num">{{ tasks|length }}</span> tasks found
+            </span>
+
+            <form method="POST" action="{{ url_for('tasks.clear_tasks') }}" style="display:inline;">
+                <input type="hidden" name="csrf_token" value="{{ csrf_token() }}"/>
+                <button type="submit" class="btn-clear">
+                    <i data-lucide="trash-2" style="width:14px;height:14px;vertical-align:middle;margin-right:4px;"></i>
+                    Clear All
+                </button>
+            </form>
+        </div>
+
+        <div>
+            <button type="button" class="btn-small btn-export" onclick="toggleExportPanel()">
+                <i data-lucide="download" style="width:14px;height:14px;vertical-align:middle;margin-right:4px;"></i>
+                Export CSV
+            </button>
+        </div>
+    </div>
+
+    <!--  EXPORT CSV PANEL  -->
+    <div class="export-section" id="export-section" style="display:none;">
+        <div class="export-panel" id="export-panel">
+            <p class="export-label">Select date range</p>
+            <div class="export-options">
+                <a href="{{ url_for('tasks.export_csv', range='7') }}" class="export-chip">Last 7 Days</a>
+                <a href="{{ url_for('tasks.export_csv', range='15') }}" class="export-chip">Last 15 Days</a>
+                <a href="{{ url_for('tasks.export_csv', range='30') }}" class="export-chip">1 Month</a>
+                <a href="{{ url_for('tasks.export_csv', range='all') }}" class="export-chip">All Tasks</a>
+                <button type="button" class="export-chip export-chip-custom" onclick="toggleCustomRange()">Custom
+                    Range</button>
+            </div>
+            <div class="custom-range" id="custom-range" style="display:none;">
+                <input type="date" id="export-start">
+                <span style="color:var(--text-muted);font-size:13px;">to</span>
+                <input type="date" id="export-end">
+                <button type="button" class="btn-small btn-export" onclick="exportCustomCSV()">
+                    <i data-lucide="download"
+                        style="width:14px;height:14px;vertical-align:middle;margin-right:4px;"></i>Download
+                </button>
+            </div>
+        </div>
+    </div>
+    {% endif %}
+
+    <!--  TASK LIST  -->
+    {% if tasks %}
+    <div class="table-responsive">
+    <table class="task-table">
+        <thead>
+            <tr>
+                <th>Task</th>
+                <th>Status</th>
+                <th>Priority</th>
+                <th>Date</th>
+                <th>Time</th>
+                <th>Change</th>
+                <th>Edit</th>
+                <th>Delete</th>
+            </tr>
+        </thead>
+
+        <tbody>
+            {% for task in tasks %}
+            <tr>
+                <td style="font-weight:500;">{{ task.title }}</td>
+
+                <td>
+                    {% if task.status == 'Pending' %}
+                    <span class="badge badge-pending">● Pending</span>
+                    {% elif task.status == 'Working' %}
+                    <span class="badge badge-working">◉ Working</span>
+                    {% else %}
+                    <span class="badge badge-done">✓ Completed</span>
+                    {% endif %}
+                </td>
+
+                <td>
+                    {% if task.priority == 'Low' %}
+                    <span class="badge badge-low">↓ Low</span>
+                    {% elif task.priority == 'Medium' %}
+                    <span class="badge badge-medium">→ Medium</span>
+                    {% else %}
+                    <span class="badge badge-high">↑ High</span>
+                    {% endif %}
+                </td>
+
+                <td>{{ task.deadline.strftime('%d %b %Y') if task.deadline else '—' }}</td>
+                <td>{{ task.time_slot.strftime('%I:%M %p') if task.time_slot else '—' }}</td>
+
+                <td>
+                    <form action="{{ url_for('tasks.toggle_status', task_id=task.id) }}" method="POST"
+                        style="display:inline;">
+                        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}"/>
+                        <button class="btn-small" type="submit">
+                            <i data-lucide="arrow-right" style="width:14px;height:14px;vertical-align:middle;"></i>
+                        </button>
+                    </form>
+                </td>
+
+                <td>
+                    <button class="btn-small btn-edit edit-task-btn" data-id="{{ task.id }}"
+                        data-title="{{ task.title }}" data-priority="{{ task.priority }}"
+                        data-deadline="{{ task.deadline or '' }}" data-time="{{ task.time_slot or '' }}">
+                        <i data-lucide="pencil" style="width:14px;height:14px;vertical-align:middle;"></i>
+                    </button>
+                </td>
+
+                <td>
+                    <form action="{{ url_for('tasks.delete_task', task_id=task.id) }}" method="POST">
+                        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}"/>
+                        <button class="btn-small btn-delete">
+                            <i data-lucide="trash-2" style="width:14px;height:14px;vertical-align:middle;"></i>
+                        </button>
+                    </form>
+                </td>
+            </tr>
+            {% endfor %}
+        </tbody>
+
+    </table>
+    </div>
+
+    {% else %}
+    <!--  EMPTY STATE  -->
+    <div class="empty-state">
+        <span class="empty-icon">📋</span>
+        <h3>No tasks yet</h3>
+        <p>Add your first task above and start organizing your day.</p>
+    </div>
+    {% endif %}
+
+</div>
+
+
+<!-- ========================================================
+     EDIT TASK MODAL
+     ======================================================== -->
+<div class="modal-overlay" id="edit-modal-overlay" onclick="closeEditModal(event)">
+    <div class="modal" onclick="event.stopPropagation()">
+
+        <!-- Modal header -->
+        <div class="modal-header">
+            <h3>
+                <i data-lucide="pencil-line" style="width:20px;height:20px;vertical-align:middle;margin-right:8px;"></i>
+                Edit Task
+            </h3>
+            <button type="button" class="modal-close" onclick="closeEditModal()">
+                <i data-lucide="x" style="width:20px;height:20px;"></i>
+            </button>
+        </div>
+
+        <!-- Modal body -->
+        <form id="edit-modal-form" method="POST" action="">
+            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}"/>
+            <div class="modal-body">
+
+                <div class="form-group">
+                    <label for="edit-title">Task Title</label>
+                    <input type="text" id="edit-title" name="title" required placeholder="What needs to be done?">
+                </div>
+
+                <div class="modal-row">
+                    <div class="form-group">
+                        <label for="edit-priority">Priority</label>
+                        <select id="edit-priority" name="priority">
+                            <option value="Low">Low</option>
+                            <option value="Medium">Medium</option>
+                            <option value="High">High</option>
+                        </select>
+                    </div>
+
+                    <div class="form-group">
+                        <label for="edit-deadline">Deadline</label>
+                        <input type="date" id="edit-deadline" name="deadline">
+                    </div>
+
+                    <div class="form-group">
+                        <label for="edit-time">Time</label>
+                        <input type="time" id="edit-time" name="time_slot">
+                    </div>
+                </div>
+
+            </div>
+
+            <!-- Modal footer -->
+            <div class="modal-footer">
+                <button type="button" class="btn-small" onclick="closeEditModal()">
+                    Cancel
+                </button>
+                <button type="submit" class="btn modal-save-btn">
+                    <i data-lucide="check" style="width:16px;height:16px;"></i>
+                    Save Changes
+                </button>
+            </div>
+        </form>
+
+    </div>
+</div>
+
+
+<script>
+    /* ---- Edit Modal (data-attribute driven) ---- */
+    document.addEventListener('click', function (e) {
+        const btn = e.target.closest('.edit-task-btn');
+        if (!btn) return;
+
+        const overlay = document.getElementById('edit-modal-overlay');
+        const form = document.getElementById('edit-modal-form');
+
+        // Read from data-attributes (safe from quote/escaping issues)
+        const taskId = btn.dataset.id;
+        const title = btn.dataset.title;
+        const priority = btn.dataset.priority;
+        const deadline = btn.dataset.deadline;
+        const timeSlot = btn.dataset.time;
+
+        // Set form action
+        form.action = `/edit/${taskId}`;
+
+        // Populate fields
+        document.getElementById('edit-title').value = title;
+        document.getElementById('edit-priority').value = priority;
+        document.getElementById('edit-deadline').value = deadline;
+        document.getElementById('edit-time').value = timeSlot;
+
+        // Show modal
+        overlay.classList.add('open');
+        document.body.style.overflow = 'hidden';
+
+        // Focus title after animation
+        setTimeout(() => {
+            document.getElementById('edit-title').focus();
+            document.getElementById('edit-title').select();
+        }, 200);
+
+        // Re-render Lucide icons inside modal
+        if (typeof lucide !== 'undefined') lucide.createIcons();
+    });
+
+    function closeEditModal(event) {
+        // If called from overlay click, only close if clicking the overlay itself
+        if (event && event.target !== event.currentTarget) return;
+
+        const overlay = document.getElementById('edit-modal-overlay');
+        overlay.classList.remove('open');
+        document.body.style.overflow = '';
+    }
+
+    // Close on Escape key
+    document.addEventListener('keydown', function (e) {
+        if (e.key === 'Escape') closeEditModal();
+    });
+
+
+    /* ---- Google status dropdown ---- */
+    function toggleGoogleMenu() {
+        const dd = document.getElementById('google-dropdown');
+        if (dd) dd.classList.toggle('open');
+    }
+
+    // Close dropdown when clicking outside
+    document.addEventListener('click', function (e) {
+        const wrapper = document.getElementById('google-status-wrapper');
+        const dd = document.getElementById('google-dropdown');
+        if (wrapper && dd && !wrapper.contains(e.target)) {
+            dd.classList.remove('open');
+        }
+    });
+
+    /* ---- Export CSV panel ---- */
+    function toggleExportPanel() {
+        const section = document.getElementById('export-section');
+        if (section) {
+            const isHidden = section.style.display === 'none';
+            section.style.display = isHidden ? 'block' : 'none';
+        }
+    }
+
+    function toggleCustomRange() {
+        const cr = document.getElementById('custom-range');
+        if (cr) {
+            cr.style.display = cr.style.display === 'none' ? 'flex' : 'none';
+        }
+    }
+
+    function exportCustomCSV() {
+        const start = document.getElementById('export-start').value;
+        const end = document.getElementById('export-end').value;
+
+        if (!start && !end) {
+            alert("Please select at least a start or end date.");
+            return;
+        }
+
+        let url = "{{ url_for('tasks.export_csv') }}?range=custom";
+        if (start) url += `&start=${start}`;
+        if (end) url += `&end=${end}`;
+
+        window.location.href = url;
+    }
+</script>
+
+{% endblock %}
