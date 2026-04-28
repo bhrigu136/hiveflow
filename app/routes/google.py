@@ -102,7 +102,7 @@ def disconnect_google():
 
     # Clear google_event_id from user's tasks (they won't sync anymore)
     Task.query.filter_by(user_id=current_user.id).update(
-        {Task.google_event_id: None}
+        {'google_event_id': None}
     )
 
     db.session.commit()
