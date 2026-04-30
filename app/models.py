@@ -1,7 +1,7 @@
 from app.extensions import db, login_manager
 from flask_login import UserMixin
 from werkzeug.security import generate_password_hash, check_password_hash
-from datetime import datetime
+from datetime import datetime, timezone
 
 @login_manager.user_loader
 def load_user(user_id):
@@ -37,18 +37,18 @@ class User(UserMixin, db.Model):
 class Task(db.Model):
     id = db.Column(db.Integer, primary_key=True)
     title = db.Column(db.String(100), nullable=False)
-    status = db.Column(db.String(20), default="Pending")
+    status = db.Column(db.String(20), default="Pending", index=True)
 
-    priority = db.Column(db.String(20), default="Medium")
+    priority = db.Column(db.String(20), default="Medium", index=True)
     deadline = db.Column(db.Date, nullable=True)
     time_slot = db.Column(db.Time, nullable=True)
 
-    created_at = db.Column(db.DateTime, default=datetime.utcnow)
+    created_at = db.Column(db.DateTime, default=lambda: datetime.now(timezone.utc))
 
     # Google Calendar event tracking
     google_event_id = db.Column(db.String(255), nullable=True)
 
-    user_id = db.Column(db.Integer, db.ForeignKey('user.id'), nullable=False)
+    user_id = db.Column(db.Integer, db.ForeignKey('user.id'), nullable=False, index=True)
 
     def __repr__(self):
         return f"<Task {self.title} ({self.status})>"

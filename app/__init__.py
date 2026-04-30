@@ -5,7 +5,7 @@ import os
 from flask import Flask
 from datetime import datetime
 
-from app.extensions import db, login_manager, csrf
+from app.extensions import db, login_manager, csrf, migrate, limiter
 
 
 
@@ -44,9 +44,11 @@ def create_app():
 
     # Initialize extensions
     db.init_app(app)
+    migrate.init_app(app, db)
     login_manager.init_app(app)
     login_manager.login_view = 'auth.login'
     csrf.init_app(app)
+    limiter.init_app(app)
 
     # Jinja global
     app.jinja_env.globals['current_year'] = datetime.now().year
@@ -60,8 +62,10 @@ def create_app():
     app.register_blueprint(tasks_bp)
     app.register_blueprint(google_bp)
 
-    # Create tables
+    # Create tables on first run (migrations handle everything after that)
     with app.app_context():
-        db.create_all()
+        migrations_dir = os.path.join(app.root_path, '..', 'migrations')
+        if not os.path.exists(migrations_dir):
+            db.create_all()  # First-time bootstrap only
 
     return app

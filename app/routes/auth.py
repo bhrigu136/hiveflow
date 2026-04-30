@@ -8,7 +8,7 @@ from datetime import datetime, timedelta
 from flask import Blueprint, render_template, request, redirect, url_for, flash
 from flask_login import login_user, logout_user, login_required, current_user
 from app.models import User
-from app.extensions import db
+from app.extensions import db, limiter
 
 auth_bp = Blueprint('auth', __name__, url_prefix='/auth')
 
@@ -71,6 +71,7 @@ def send_reset_email(to_email, code, username):
 # ─── Register ────────────────────────────────────────────
 
 @auth_bp.route('/register', methods=['GET', 'POST'])
+@limiter.limit("5 per minute")
 def register():
     if current_user.is_authenticated:
         return redirect(url_for('tasks.view_tasks'))
@@ -120,6 +121,7 @@ def register():
 # ─── Login ───────────────────────────────────────────────
 
 @auth_bp.route('/login', methods=['GET', 'POST'])
+@limiter.limit("10 per minute")
 def login():
     if current_user.is_authenticated:
         return redirect(url_for('tasks.view_tasks'))
@@ -157,6 +159,7 @@ def logout():
 # ─── Forgot Password ────────────────────────────────────
 
 @auth_bp.route('/forgot-password', methods=['GET', 'POST'])
+@limiter.limit("3 per minute")
 def forgot_password():
     if current_user.is_authenticated:
         return redirect(url_for('tasks.view_tasks'))
@@ -197,6 +200,7 @@ def forgot_password():
 # ─── Reset Password ─────────────────────────────────────
 
 @auth_bp.route('/reset-password', methods=['GET', 'POST'])
+@limiter.limit("5 per minute")
 def reset_password():
     if current_user.is_authenticated:
         return redirect(url_for('tasks.view_tasks'))
