@@ -1,0 +1,78 @@
+{% extends "base.html" %}
+{% block title %}{{ org.name }} — HiveFlow{% endblock %}
+
+{% block content %}
+<div class="org-header" style="background: var(--glass-bg); border: 1px solid var(--glass-border); border-radius: 12px; padding: 30px; margin-bottom: 30px; display: flex; justify-content: space-between; align-items: flex-start;">
+    <div>
+        <h2 style="margin-top: 0; display: flex; align-items: center; gap: 10px;">
+            <div style="width: 40px; height: 40px; border-radius: 8px; background: linear-gradient(135deg, var(--primary-color), var(--secondary-color)); display: flex; align-items: center; justify-content: center; color: white;">
+                {{ org.name[0].upper() }}
+            </div>
+            {{ org.name }}
+            {% if membership.role == 'Admin' %}
+            <span style="font-size: 12px; background: rgba(67, 97, 238, 0.2); color: #4361ee; padding: 2px 8px; border-radius: 12px; border: 1px solid rgba(67, 97, 238, 0.3); font-weight: 500;">Admin</span>
+            {% endif %}
+        </h2>
+        <p style="color: var(--text-muted); margin-bottom: 0;">{{ org.description if org.description else "No description provided." }}</p>
+    </div>
+    
+    <div style="text-align: right;">
+        <div style="font-size: 12px; color: var(--text-muted); margin-bottom: 5px; text-transform: uppercase; letter-spacing: 0.5px;">Invite Code</div>
+        <div style="background: rgba(0,0,0,0.2); border: 1px solid var(--glass-border); padding: 8px 16px; border-radius: 8px; font-family: monospace; font-size: 18px; letter-spacing: 2px; color: var(--primary-color); cursor: pointer;" title="Click to copy" onclick="navigator.clipboard.writeText('{{ org.invite_code }}'); alert('Invite code copied to clipboard!');">
+            {{ org.invite_code }}
+            <i data-lucide="copy" style="width: 14px; height: 14px; margin-left: 5px; vertical-align: baseline; opacity: 0.7;"></i>
+        </div>
+    </div>
+</div>
+
+<div class="org-content" style="display: grid; grid-template-columns: 2fr 1fr; gap: 30px;">
+    
+    <!-- Left Column: Tasks/Projects (Phase 2 Placeholder) -->
+    <div class="projects-section">
+        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px;">
+            <h3 style="margin: 0;"><i data-lucide="layout" style="vertical-align: middle; margin-right: 8px;"></i>Projects</h3>
+            <button class="btn" style="padding: 6px 12px; font-size: 14px; opacity: 0.5; cursor: not-allowed;" title="Coming in Phase 2">
+                <i data-lucide="plus" style="width: 14px; height: 14px;"></i> New Project
+            </button>
+        </div>
+        
+        <div style="background: var(--glass-bg); border: 1px dashed var(--glass-border); border-radius: 12px; padding: 40px; text-align: center;">
+            <div style="width: 48px; height: 48px; border-radius: 50%; background: var(--glass-border); display: flex; align-items: center; justify-content: center; margin: 0 auto 15px;">
+                <i data-lucide="hammer" style="color: var(--text-muted);"></i>
+            </div>
+            <h4 style="margin-top: 0;">Projects coming soon</h4>
+            <p style="color: var(--text-muted); font-size: 14px;">In the next phase, you'll be able to create shared projects and assign tasks to team members.</p>
+        </div>
+    </div>
+    
+    <!-- Right Column: Members -->
+    <div class="members-section">
+        <h3 style="margin-top: 0; margin-bottom: 20px;"><i data-lucide="users" style="vertical-align: middle; margin-right: 8px;"></i>Members ({{ members|length }})</h3>
+        
+        <div style="background: var(--glass-bg); border: 1px solid var(--glass-border); border-radius: 12px; overflow: hidden;">
+            {% for member in members %}
+            <div style="padding: 15px; border-bottom: 1px solid var(--glass-border); display: flex; justify-content: space-between; align-items: center;">
+                <div style="display: flex; align-items: center; gap: 10px;">
+                    <div style="width: 32px; height: 32px; border-radius: 50%; background: var(--bg-color); display: flex; align-items: center; justify-content: center; font-weight: bold; color: var(--text-muted); border: 1px solid var(--glass-border);">
+                        {{ member.user.name[0].upper() if member.user.name else member.user.username[0].upper() }}
+                    </div>
+                    <div>
+                        <div style="font-weight: 500; font-size: 14px;">
+                            {{ member.user.name if member.user.name else member.user.username }}
+                            {% if member.user.id == current_user.id %}
+                            <span style="font-size: 11px; color: var(--text-muted); margin-left: 5px;">(You)</span>
+                            {% endif %}
+                        </div>
+                        <div style="font-size: 12px; color: var(--text-muted);">@{{ member.user.username }}</div>
+                    </div>
+                </div>
+                <div style="font-size: 12px; background: var(--bg-color); padding: 2px 8px; border-radius: 4px; color: var(--text-muted);">
+                    {{ member.role }}
+                </div>
+            </div>
+            {% endfor %}
+        </div>
+    </div>
+    
+</div>
+{% endblock %}

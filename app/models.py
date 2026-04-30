@@ -52,3 +52,36 @@ class Task(db.Model):
 
     def __repr__(self):
         return f"<Task {self.title} ({self.status})>"
+
+class Organization(db.Model):
+    id = db.Column(db.Integer, primary_key=True)
+    name = db.Column(db.String(100), nullable=False, unique=True)
+    slug = db.Column(db.String(100), nullable=False, unique=True)
+    description = db.Column(db.Text, nullable=True)
+    invite_code = db.Column(db.String(20), nullable=False, unique=True, index=True)
+    created_at = db.Column(db.DateTime, default=lambda: datetime.now(timezone.utc))
+    created_by = db.Column(db.Integer, db.ForeignKey('user.id'), nullable=False)
+
+    # Relationships
+    creator = db.relationship('User', backref='created_orgs', foreign_keys=[created_by])
+    members = db.relationship('OrgMember', backref='organization', lazy='dynamic', cascade='all, delete-orphan')
+
+    def __repr__(self):
+        return f"<Organization {self.name}>"
+
+class OrgMember(db.Model):
+    id = db.Column(db.Integer, primary_key=True)
+    org_id = db.Column(db.Integer, db.ForeignKey('organization.id'), nullable=False, index=True)
+    user_id = db.Column(db.Integer, db.ForeignKey('user.id'), nullable=False, index=True)
+    role = db.Column(db.String(20), default="Member") # Admin or Member
+    joined_at = db.Column(db.DateTime, default=lambda: datetime.now(timezone.utc))
+
+    # Relationships
+    user = db.relationship('User', backref='org_memberships', foreign_keys=[user_id])
+
+    __table_args__ = (
+        db.UniqueConstraint('org_id', 'user_id', name='uq_org_member'),
+    )
+
+    def __repr__(self):
+        return f"<OrgMember {self.user.username} in Org {self.org_id}>"

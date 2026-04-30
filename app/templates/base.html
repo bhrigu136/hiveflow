@@ -34,6 +34,11 @@
                 </a>
 
                 {% if current_user.is_authenticated %}
+                <a href="{{ url_for('orgs.list_orgs') }}">
+                    <i data-lucide="users"
+                        style="width:16px;height:16px;vertical-align:middle;margin-right:4px;"></i>Teams
+                </a>
+
                 <a href="#" onclick="toggleProfileSidebar(event);" class="nav-username" style="cursor: pointer; text-decoration: none;">
                     <i data-lucide="user" style="width:14px;height:14px;vertical-align:middle;margin-right:4px;"></i>
                     Profile
