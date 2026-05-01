@@ -2,7 +2,12 @@
 {% block title %}Create Project — HiveFlow{% endblock %}
 
 {% block content %}
-<div class="auth-container" style="max-width: 500px; margin: 40px auto;">
+<div style="max-width: 500px; margin: 40px auto 0; padding: 0 0 0 4px;">
+    <a href="{{ url_for('orgs.dashboard', slug=org.slug) }}" style="color: var(--text-muted); text-decoration: none; display: inline-flex; align-items: center; font-size: 14px;">
+        <i data-lucide="arrow-left" style="width: 14px; height: 14px; margin-right: 4px;"></i> Back to {{ org.name }}
+    </a>
+</div>
+<div class="auth-container" style="max-width: 500px; margin: 15px auto 40px;">
     <div class="auth-card" style="background: var(--glass-bg); border: 1px solid var(--glass-border); border-radius: 16px; padding: 40px;">
         <div class="auth-header" style="text-align: center; margin-bottom: 30px;">
             <div style="width: 56px; height: 56px; border-radius: 50%; background: linear-gradient(135deg, var(--primary-color), var(--secondary-color)); display: flex; align-items: center; justify-content: center; margin: 0 auto 20px;">
