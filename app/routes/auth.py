@@ -21,13 +21,19 @@ def generate_otp():
 
 
 def send_reset_email(to_email, code, username):
-    """Send password reset code via SMTP (Gmail)."""
+    """Send password reset code via SMTP (Gmail).
+
+    Returns 'sent' on success, 'unconfigured' if no SMTP creds, 'failed' on error.
+    """
     smtp_email = os.environ.get('MAIL_USERNAME')
     smtp_password = os.environ.get('MAIL_PASSWORD')
 
     if not smtp_email or not smtp_password:
-        # If SMTP is not configured, show code in flash (dev mode)
-        return False
+        return 'unconfigured'
+
+    # Gmail App Passwords are shown with spaces ("abcd efgh ijkl mnop") —
+    # strip them so a copy-pasted value still works.
+    smtp_password = smtp_password.replace(' ', '')
 
     msg = MIMEMultipart('alternative')
     msg['Subject'] = 'Personal planner — Password Reset Code'
@@ -62,10 +68,12 @@ def send_reset_email(to_email, code, username):
         with smtplib.SMTP_SSL('smtp.gmail.com', 465, context=ctx, timeout=15) as server:
             server.login(smtp_email, smtp_password)
             server.sendmail(smtp_email, to_email, msg.as_string())
-        return True
+        return 'sent'
     except Exception as e:
-        print(f"[MAIL ERROR] {e}")
-        return False
+        import traceback
+        print(f"[MAIL ERROR] {type(e).__name__}: {e}")
+        traceback.print_exc()
+        return 'failed'
 
 
 # ─── Register ────────────────────────────────────────────
@@ -184,12 +192,16 @@ def forgot_password():
         db.session.commit()
 
         # Try to send email
-        email_sent = send_reset_email(email, code, user.name or user.username)
+        email_status = send_reset_email(email, code, user.name or user.username)
 
-        if email_sent:
+        if email_status == 'sent':
             flash('A reset code has been sent to your email.', 'success')
+        elif email_status == 'failed':
+            # SMTP is configured but sending raised — show on screen so the
+            # user isn't blocked, but make it obvious something went wrong.
+            flash(f'Email failed to send (check server logs). Reset code: {code}', 'warning')
         else:
-            # Dev mode — show code in flash for testing
+            # No SMTP configured — pure dev mode
             flash(f'Reset code (dev mode): {code}', 'info')
 
         return redirect(url_for('auth.reset_password', email=email))
