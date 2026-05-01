@@ -56,6 +56,34 @@ document.addEventListener('DOMContentLoaded', () => {
     document.querySelectorAll('.task-box, .auth-box').forEach(el => {
         observer.observe(el);
     });
+
+    // Convert UTC <time data-fmt> elements to the viewer's local timezone.
+    // Server emits ...Z ISO strings; we reformat in the user's locale.
+    document.querySelectorAll('time[data-fmt]').forEach(el => {
+        const iso = el.getAttribute('datetime');
+        if (!iso) return;
+        const d = new Date(iso);
+        if (isNaN(d.getTime())) return;
+        const fmt = el.getAttribute('data-fmt');
+        let opts;
+        if (fmt === 'long') {
+            opts = { month: 'short', day: '2-digit', year: 'numeric', hour: 'numeric', minute: '2-digit', hour12: true };
+            const parts = new Intl.DateTimeFormat(undefined, opts).formatToParts(d);
+            const get = t => (parts.find(p => p.type === t) || {}).value || '';
+            el.textContent = `${get('month')} ${get('day')}, ${get('year')} at ${get('hour')}:${get('minute')} ${get('dayPeriod')}`;
+        } else if (fmt === 'short') {
+            opts = { month: 'short', day: '2-digit', hour: 'numeric', minute: '2-digit', hour12: true };
+            const parts = new Intl.DateTimeFormat(undefined, opts).formatToParts(d);
+            const get = t => (parts.find(p => p.type === t) || {}).value || '';
+            el.textContent = `${get('month')} ${get('day')}, ${get('hour')}:${get('minute')} ${get('dayPeriod')}`;
+        } else if (fmt === 'compact') {
+            opts = { month: 'short', day: '2-digit', hour: '2-digit', minute: '2-digit', hour12: false };
+            const parts = new Intl.DateTimeFormat(undefined, opts).formatToParts(d);
+            const get = t => (parts.find(p => p.type === t) || {}).value || '';
+            el.textContent = `${get('month')} ${get('day')}, ${get('hour')}:${get('minute')}`;
+        }
+        el.setAttribute('title', d.toLocaleString());
+    });
 });
 
 // Ripple animation keyframe (injected once)

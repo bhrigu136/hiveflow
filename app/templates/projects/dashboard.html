@@ -17,9 +17,14 @@
             <p style="color: var(--text-muted); margin-top: 8px; margin-bottom: 0;">{{ project.description if project.description else "No description provided." }}</p>
         </div>
         
-        <button onclick="document.getElementById('newTaskModal').style.display='flex'" class="btn primary" style="width: auto; flex: 0 0 auto; padding: 10px 18px; font-size: 14px; white-space: nowrap;">
-            <i data-lucide="plus" style="width: 16px; height: 16px;"></i> Add Task
-        </button>
+        <div style="display: flex; gap: 10px;">
+            <a href="{{ url_for('discussions.list_discussions', project_id=project.id) }}" class="btn" style="background: transparent; border: 1px solid var(--glass-border); text-decoration: none; display: inline-flex; align-items: center; gap: 6px;">
+                <i data-lucide="message-square" style="width: 16px; height: 16px;"></i> Discussions
+            </a>
+            <button onclick="document.getElementById('newTaskModal').style.display='flex'" class="btn primary" style="width: auto; flex: 0 0 auto; padding: 10px 18px; font-size: 14px; white-space: nowrap;">
+                <i data-lucide="plus" style="width: 16px; height: 16px;"></i> Add Task
+            </button>
+        </div>
     </div>
 </div>
 

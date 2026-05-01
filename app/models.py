@@ -110,3 +110,39 @@ class OrgMember(db.Model):
 
     def __repr__(self):
         return f"<OrgMember {self.user.username} in Org {self.org_id}>"
+
+# ── Phase 3: Collaboration ──────────────────────────────────────────────────
+
+class Discussion(db.Model):
+    id = db.Column(db.Integer, primary_key=True)
+    title = db.Column(db.String(200), nullable=False)
+    content = db.Column(db.Text, nullable=False)
+    project_id = db.Column(db.Integer, db.ForeignKey('project.id'), nullable=False, index=True)
+    created_by = db.Column(db.Integer, db.ForeignKey('user.id'), nullable=False)
+    created_at = db.Column(db.DateTime, default=lambda: datetime.now(timezone.utc))
+
+    creator = db.relationship('User', foreign_keys=[created_by])
+    project = db.relationship('Project', backref=db.backref('discussions', lazy='dynamic', cascade='all, delete-orphan'))
+
+    def __repr__(self):
+        return f"<Discussion {self.title}>"
+
+class DiscussionComment(db.Model):
+    id = db.Column(db.Integer, primary_key=True)
+    content = db.Column(db.Text, nullable=False)
+    discussion_id = db.Column(db.Integer, db.ForeignKey('discussion.id'), nullable=False, index=True)
+    created_by = db.Column(db.Integer, db.ForeignKey('user.id'), nullable=False)
+    created_at = db.Column(db.DateTime, default=lambda: datetime.now(timezone.utc))
+
+    creator = db.relationship('User', foreign_keys=[created_by])
+    discussion = db.relationship('Discussion', backref=db.backref('comments', lazy='dynamic', cascade='all, delete-orphan'))
+
+class TaskComment(db.Model):
+    id = db.Column(db.Integer, primary_key=True)
+    content = db.Column(db.Text, nullable=False)
+    task_id = db.Column(db.Integer, db.ForeignKey('task.id'), nullable=False, index=True)
+    created_by = db.Column(db.Integer, db.ForeignKey('user.id'), nullable=False)
+    created_at = db.Column(db.DateTime, default=lambda: datetime.now(timezone.utc))
+
+    creator = db.relationship('User', foreign_keys=[created_by])
+    task = db.relationship('Task', backref=db.backref('comments', lazy='dynamic', cascade='all, delete-orphan'))

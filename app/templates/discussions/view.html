@@ -1,0 +1,63 @@
+{% extends "base.html" %}
+{% block title %}{{ discussion.title }} — Discussions{% endblock %}
+
+{% block content %}
+<div class="discussion-header" style="margin-bottom: 30px;">
+    <div style="display: flex; align-items: center; gap: 10px; margin-bottom: 15px;">
+        <a href="{{ url_for('discussions.list_discussions', project_id=discussion.project_id) }}" style="color: var(--text-muted); text-decoration: none; display: flex; align-items: center; font-size: 14px;">
+            <i data-lucide="arrow-left" style="width: 14px; height: 14px; margin-right: 4px;"></i> Back to Discussions
+        </a>
+    </div>
+</div>
+
+<div style="background: var(--glass-bg); border: 1px solid var(--glass-border); border-radius: 12px; padding: 30px; margin-bottom: 30px;">
+    <h2 style="margin-top: 0; margin-bottom: 15px; font-size: 24px; color: var(--text-color);">{{ discussion.title }}</h2>
+    
+    <div style="display: flex; align-items: center; gap: 10px; margin-bottom: 20px; padding-bottom: 20px; border-bottom: 1px solid var(--glass-border);">
+        <div style="width: 32px; height: 32px; border-radius: 50%; background: var(--primary-color); display: flex; align-items: center; justify-content: center; font-weight: bold; color: white;">
+            {{ discussion.creator.name[0].upper() if discussion.creator.name else discussion.creator.username[0].upper() }}
+        </div>
+        <div>
+            <div style="font-weight: 500; font-size: 14px;">{{ discussion.creator.name if discussion.creator.name else discussion.creator.username }}</div>
+            <div style="font-size: 12px; color: var(--text-muted);"><time datetime="{{ discussion.created_at.strftime('%Y-%m-%dT%H:%M:%SZ') }}" data-fmt="long">{{ discussion.created_at.strftime('%b %d, %Y at %I:%M %p') }}</time></div>
+        </div>
+    </div>
+    
+    <div style="line-height: 1.6; color: var(--text-color); font-size: 15px; white-space: pre-wrap;">{{ discussion.content }}</div>
+</div>
+
+<div class="comments-section">
+    <h3 style="margin-bottom: 20px; font-size: 18px; display: flex; align-items: center; gap: 8px;">
+        <i data-lucide="message-circle" style="color: var(--text-muted);"></i> Comments ({{ comments|length }})
+    </h3>
+    
+    <div style="display: flex; flex-direction: column; gap: 15px; margin-bottom: 30px;">
+        {% for comment in comments %}
+        <div style="background: rgba(255,255,255,0.02); border: 1px solid var(--glass-border); border-radius: 12px; padding: 20px;">
+            <div style="display: flex; align-items: center; gap: 10px; margin-bottom: 15px;">
+                <div style="width: 28px; height: 28px; border-radius: 50%; background: var(--bg-color); display: flex; align-items: center; justify-content: center; font-weight: bold; color: var(--text-muted); border: 1px solid var(--glass-border);">
+                    {{ comment.creator.name[0].upper() if comment.creator.name else comment.creator.username[0].upper() }}
+                </div>
+                <div>
+                    <div style="font-weight: 500; font-size: 13px;">{{ comment.creator.name if comment.creator.name else comment.creator.username }}</div>
+                    <div style="font-size: 11px; color: var(--text-muted);"><time datetime="{{ comment.created_at.strftime('%Y-%m-%dT%H:%M:%SZ') }}" data-fmt="short">{{ comment.created_at.strftime('%b %d, %I:%M %p') }}</time></div>
+                </div>
+            </div>
+            <div style="line-height: 1.5; color: var(--text-color); font-size: 14px; white-space: pre-wrap;">{{ comment.content }}</div>
+        </div>
+        {% endfor %}
+    </div>
+    
+    <div style="background: var(--glass-bg); border: 1px solid var(--glass-border); border-radius: 12px; padding: 20px;">
+        <form method="POST" action="{{ url_for('discussions.add_discussion_comment', discussion_id=discussion.id) }}">
+            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+            <div style="margin-bottom: 15px;">
+                <textarea name="content" required rows="3" placeholder="Add a comment..." style="width: 100%; padding: 12px; border-radius: 8px; border: 1px solid var(--glass-border); background: rgba(0,0,0,0.2); color: white; box-sizing: border-box; resize: vertical; font-family: inherit;"></textarea>
+            </div>
+            <div style="text-align: right;">
+                <button type="submit" class="btn primary">Post Comment</button>
+            </div>
+        </form>
+    </div>
+</div>
+{% endblock %}

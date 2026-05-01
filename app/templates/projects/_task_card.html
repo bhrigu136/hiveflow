@@ -72,4 +72,28 @@
             {% endif %}
         </div>
     </div>
+    
+    <!-- Task Comments -->
+    <details style="margin-top: 15px; font-size: 13px; color: var(--text-muted);">
+        <summary style="cursor: pointer; user-select: none; padding: 4px 0; border-top: 1px solid var(--glass-border); margin-top: 10px; display: flex; align-items: center; gap: 4px;">
+            <i data-lucide="message-circle" style="width: 14px; height: 14px;"></i> Comments ({{ task.comments.count() }})
+        </summary>
+        <div style="padding-top: 10px; padding-bottom: 10px; display: flex; flex-direction: column; gap: 10px;">
+            {% for comment in task.comments %}
+            <div style="background: rgba(255,255,255,0.05); padding: 8px; border-radius: 6px;">
+                <div style="display: flex; justify-content: space-between; margin-bottom: 4px;">
+                    <span style="font-weight: 500; color: var(--text-color);">{{ comment.creator.name if comment.creator.name else comment.creator.username }}</span>
+                    <span style="font-size: 10px;"><time datetime="{{ comment.created_at.strftime('%Y-%m-%dT%H:%M:%SZ') }}" data-fmt="compact">{{ comment.created_at.strftime('%b %d, %H:%M') }}</time></span>
+                </div>
+                <div style="color: var(--text-color);">{{ comment.content }}</div>
+            </div>
+            {% endfor %}
+            <form action="{{ url_for('discussions.add_task_comment', task_id=task.id) }}" method="POST" style="margin-top: 5px; display: flex; gap: 6px;">
+                <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                <input type="hidden" name="next" value="{{ request.url }}">
+                <input type="text" name="content" required placeholder="Add a comment..." style="flex: 1; padding: 6px 10px; border-radius: 4px; border: 1px solid var(--glass-border); background: var(--bg-color); color: var(--text-color); font-size: 12px;">
+                <button type="submit" class="btn primary" style="padding: 4px 10px; font-size: 12px;">Post</button>
+            </form>
+        </div>
+    </details>
 </div>

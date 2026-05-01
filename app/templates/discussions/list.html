@@ -1,0 +1,85 @@
+{% extends "base.html" %}
+{% block title %}Discussions — {{ project.name }}{% endblock %}
+
+{% block content %}
+<div class="project-header" style="margin-bottom: 30px;">
+    <div style="display: flex; align-items: center; gap: 10px; margin-bottom: 15px;">
+        <a href="{{ url_for('projects.dashboard', project_id=project.id) }}" style="color: var(--text-muted); text-decoration: none; display: flex; align-items: center; font-size: 14px;">
+            <i data-lucide="arrow-left" style="width: 14px; height: 14px; margin-right: 4px;"></i> Back to {{ project.name }}
+        </a>
+    </div>
+    
+    <div style="background: var(--glass-bg); border: 1px solid var(--glass-border); border-radius: 12px; padding: 25px; display: flex; justify-content: space-between; align-items: center;">
+        <div>
+            <h2 style="margin: 0; display: flex; align-items: center; gap: 10px;">
+                <i data-lucide="message-square" style="color: var(--primary-color);"></i> Project Discussions
+            </h2>
+            <p style="color: var(--text-muted); margin-top: 8px; margin-bottom: 0;">Talk about {{ project.name }} with your team.</p>
+        </div>
+        
+        <button onclick="document.getElementById('newDiscussionModal').style.display='flex'" class="btn primary">
+            <i data-lucide="plus"></i> New Discussion
+        </button>
+    </div>
+</div>
+
+<div class="discussions-list" style="display: flex; flex-direction: column; gap: 15px;">
+    {% for discussion in discussions %}
+    <a href="{{ url_for('discussions.view_discussion', discussion_id=discussion.id) }}" style="display: block; text-decoration: none; background: var(--glass-bg); border: 1px solid var(--glass-border); border-radius: 12px; padding: 20px; transition: transform 0.2s, box-shadow 0.2s;" class="project-card">
+        <div style="display: flex; justify-content: space-between; align-items: flex-start;">
+            <div>
+                <h4 style="margin: 0 0 8px 0; color: var(--text-color); font-size: 16px;">{{ discussion.title }}</h4>
+                <p style="color: var(--text-muted); font-size: 13px; margin: 0; overflow: hidden; text-overflow: ellipsis; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical;">
+                    {{ discussion.content }}
+                </p>
+            </div>
+            <div style="text-align: right; min-width: 120px;">
+                <div style="font-size: 12px; color: var(--text-muted); margin-bottom: 5px;">
+                    By {{ discussion.creator.name if discussion.creator.name else discussion.creator.username }}
+                </div>
+                <div style="font-size: 12px; display: inline-flex; align-items: center; gap: 4px; background: rgba(255,255,255,0.05); padding: 2px 8px; border-radius: 10px; border: 1px solid var(--glass-border); color: var(--text-muted);">
+                    <i data-lucide="message-circle" style="width: 12px; height: 12px;"></i> {{ discussion.comments.count() }}
+                </div>
+            </div>
+        </div>
+    </a>
+    {% else %}
+    <div style="background: var(--glass-bg); border: 1px dashed var(--glass-border); border-radius: 12px; padding: 40px; text-align: center;">
+        <div style="width: 48px; height: 48px; border-radius: 50%; background: var(--glass-border); display: flex; align-items: center; justify-content: center; margin: 0 auto 15px;">
+            <i data-lucide="message-square" style="color: var(--text-muted);"></i>
+        </div>
+        <h4 style="margin-top: 0;">No discussions yet</h4>
+        <p style="color: var(--text-muted); font-size: 14px;">Start a conversation with your team.</p>
+    </div>
+    {% endfor %}
+</div>
+
+<!-- New Discussion Modal -->
+<div id="newDiscussionModal" style="display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.5); z-index: 1000; align-items: center; justify-content: center; backdrop-filter: blur(4px);">
+    <div style="background: var(--bg-color); border: 1px solid var(--glass-border); border-radius: 16px; padding: 30px; width: 100%; max-width: 600px; box-shadow: 0 10px 30px rgba(0,0,0,0.3);">
+        <h3 style="margin-top: 0; margin-bottom: 20px; display: flex; justify-content: space-between; align-items: center;">
+            Start a Discussion
+            <button onclick="document.getElementById('newDiscussionModal').style.display='none'" style="background: none; border: none; color: var(--text-muted); cursor: pointer;"><i data-lucide="x"></i></button>
+        </h3>
+        
+        <form method="POST" action="{{ url_for('discussions.create_discussion', project_id=project.id) }}">
+            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+            
+            <div style="margin-bottom: 15px;">
+                <label style="display: block; margin-bottom: 5px; font-size: 14px;">Title</label>
+                <input type="text" name="title" required placeholder="What's on your mind?" style="width: 100%; padding: 10px; border-radius: 8px; border: 1px solid var(--glass-border); background: rgba(0,0,0,0.2); color: white; box-sizing: border-box;">
+            </div>
+            
+            <div style="margin-bottom: 20px;">
+                <label style="display: block; margin-bottom: 5px; font-size: 14px;">Content</label>
+                <textarea name="content" required rows="5" placeholder="Share your thoughts..." style="width: 100%; padding: 10px; border-radius: 8px; border: 1px solid var(--glass-border); background: rgba(0,0,0,0.2); color: white; box-sizing: border-box; resize: vertical; font-family: inherit;"></textarea>
+            </div>
+            
+            <div style="display: flex; justify-content: flex-end; gap: 10px;">
+                <button type="button" onclick="document.getElementById('newDiscussionModal').style.display='none'" class="btn" style="background: transparent; border: 1px solid var(--glass-border);">Cancel</button>
+                <button type="submit" class="btn primary">Post Discussion</button>
+            </div>
+        </form>
+    </div>
+</div>
+{% endblock %}
