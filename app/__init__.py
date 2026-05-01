@@ -58,11 +58,13 @@ def create_app():
     from app.routes.tasks import tasks_bp
     from app.routes.google import google_bp
     from app.routes.orgs import orgs_bp
+    from app.routes.projects import projects_bp
 
     app.register_blueprint(auth_bp)
     app.register_blueprint(tasks_bp)
     app.register_blueprint(google_bp)
     app.register_blueprint(orgs_bp)
+    app.register_blueprint(projects_bp)
 
     # Create tables on first run (migrations handle everything after that)
     with app.app_context():

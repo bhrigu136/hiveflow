@@ -1,4 +1,5 @@
 import os
+import traceback
 from flask import Blueprint, redirect, url_for, session, request, flash
 from flask_login import login_required, current_user
 from google_auth_oauthlib.flow import Flow
@@ -15,6 +16,14 @@ CLIENT_ID = os.environ.get("GOOGLE_CLIENT_ID")
 CLIENT_SECRET = os.environ.get("GOOGLE_CLIENT_SECRET")
 
 SCOPES = ["https://www.googleapis.com/auth/calendar"]
+
+# Local dev runs on http://127.0.0.1, not https. oauthlib refuses to exchange
+# tokens over plain HTTP by default — allow it when not in production.
+# Also, Google often returns extra scopes (e.g. openid) that don't exactly match
+# the ones requested, which oauthlib treats as an error unless this is set.
+if os.environ.get('FLASK_ENV') != 'production':
+    os.environ.setdefault('OAUTHLIB_INSECURE_TRANSPORT', '1')
+    os.environ.setdefault('OAUTHLIB_RELAX_TOKEN_SCOPE', '1')
 
 # -------------------------------------------------
 # CONNECT GOOGLE CALENDAR
@@ -61,32 +70,38 @@ def google_callback():
         flash("OAuth session expired. Try again.", "danger")
         return redirect(url_for('tasks.view_tasks'))
 
-    flow = Flow.from_client_config(
-        {
-            "web": {
-                "client_id": CLIENT_ID,
-                "client_secret": CLIENT_SECRET,
-                "auth_uri": "https://accounts.google.com/o/oauth2/auth",
-                "token_uri": "https://oauth2.googleapis.com/token",
-            }
-        },
-        scopes=SCOPES,
-        state=state,
-        redirect_uri=url_for('google.google_callback', _external=True)
-    )
+    try:
+        flow = Flow.from_client_config(
+            {
+                "web": {
+                    "client_id": CLIENT_ID,
+                    "client_secret": CLIENT_SECRET,
+                    "auth_uri": "https://accounts.google.com/o/oauth2/auth",
+                    "token_uri": "https://oauth2.googleapis.com/token",
+                }
+            },
+            scopes=SCOPES,
+            state=state,
+            redirect_uri=url_for('google.google_callback', _external=True)
+        )
 
-    flow.fetch_token(authorization_response=request.url)
-    credentials = flow.credentials
+        flow.fetch_token(authorization_response=request.url)
+        credentials = flow.credentials
 
-    # Store tokens in DB (CRITICAL)
-    current_user.google_access_token = credentials.token
-    current_user.google_refresh_token = credentials.refresh_token
-    current_user.google_token_expiry = credentials.expiry
+        # Store tokens in DB (CRITICAL)
+        current_user.google_access_token = credentials.token
+        current_user.google_refresh_token = credentials.refresh_token
+        current_user.google_token_expiry = credentials.expiry
 
-    db.session.commit()
+        db.session.commit()
 
-    flash("Google Calendar connected successfully!", "success")
-    return redirect(url_for('tasks.view_tasks'))
+        flash("Google Calendar connected successfully!", "success")
+        return redirect(url_for('tasks.view_tasks'))
+    except Exception as e:
+        print(f"[GOOGLE OAUTH ERROR] {type(e).__name__}: {e}")
+        traceback.print_exc()
+        flash(f"Google connection failed: {type(e).__name__}. Check server logs for details.", "danger")
+        return redirect(url_for('tasks.view_tasks'))
 
 
 # -------------------------------------------------

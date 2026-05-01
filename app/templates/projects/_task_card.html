@@ -1,0 +1,75 @@
+<div class="task-card" style="background: rgba(0,0,0,0.2); border: 1px solid var(--glass-border); border-radius: 8px; padding: 15px; margin-bottom: 12px; position: relative;">
+    <div style="display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 10px;">
+        <h4 style="margin: 0; font-size: 14px; font-weight: 500; padding-right: 20px;">{{ task.title }}</h4>
+        
+        <!-- Priority badge -->
+        <span style="font-size: 10px; text-transform: uppercase; padding: 2px 6px; border-radius: 4px; border: 1px solid currentColor;
+            {% if task.priority == 'High' %}color: #ff5252;
+            {% elif task.priority == 'Medium' %}color: #ffeb3b;
+            {% else %}color: #4caf50;{% endif %}
+        ">
+            {{ task.priority }}
+        </span>
+    </div>
+    
+    <div style="display: flex; justify-content: space-between; align-items: center; margin-top: 15px;">
+        <!-- Assignee -->
+        <div style="display: flex; align-items: center; gap: 6px; font-size: 12px; color: var(--text-muted);">
+            {% if task.assignee %}
+            <div style="width: 20px; height: 20px; border-radius: 50%; background: var(--primary-color); color: white; display: flex; align-items: center; justify-content: center; font-size: 10px;" title="{{ task.assignee.name if task.assignee.name else task.assignee.username }}">
+                {{ task.assignee.name[0].upper() if task.assignee.name else task.assignee.username[0].upper() }}
+            </div>
+            <span style="max-width: 80px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;">{{ task.assignee.name if task.assignee.name else task.assignee.username }}</span>
+            {% else %}
+            <div style="width: 20px; height: 20px; border-radius: 50%; border: 1px dashed var(--glass-border); display: flex; align-items: center; justify-content: center;">
+                <i data-lucide="user" style="width: 10px; height: 10px;"></i>
+            </div>
+            <span>Unassigned</span>
+            {% endif %}
+        </div>
+        
+        <!-- Actions: status toggle for admin or assignee; delete for admin only -->
+        {% set can_toggle = is_admin or (task.assigned_to and task.assigned_to == current_user.id) %}
+        <div style="display: flex; gap: 4px; align-items: center;">
+            {% if can_toggle %}
+            <form action="{{ url_for('tasks.toggle_status', task_id=task.id) }}" method="POST" style="margin: 0;">
+                <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                <input type="hidden" name="next" value="{{ request.url }}">
+                {% if task.status == 'Pending' %}
+                <button type="submit" style="background: none; border: none; color: var(--primary-color); cursor: pointer; padding: 4px;" title="Start working">
+                    <i data-lucide="play-circle" style="width: 16px; height: 16px;"></i>
+                </button>
+                {% elif task.status == 'Working' %}
+                <button type="submit" style="background: none; border: none; color: #4caf50; cursor: pointer; padding: 4px;" title="Mark completed">
+                    <i data-lucide="check-circle" style="width: 16px; height: 16px;"></i>
+                </button>
+                {% else %}
+                <button type="submit" style="background: none; border: none; color: var(--text-muted); cursor: pointer; padding: 4px;" title="Reopen task">
+                    <i data-lucide="rotate-ccw" style="width: 16px; height: 16px;"></i>
+                </button>
+                {% endif %}
+            </form>
+            {% endif %}
+            {% if is_admin %}
+            <button type="button"
+                    class="task-edit-btn"
+                    data-task-id="{{ task.id }}"
+                    data-task-title="{{ task.title }}"
+                    data-task-priority="{{ task.priority }}"
+                    data-task-status="{{ task.status }}"
+                    data-task-assigned="{{ task.assigned_to or '' }}"
+                    style="background: none; border: none; color: var(--text-muted); cursor: pointer; padding: 4px;"
+                    title="Edit task">
+                <i data-lucide="edit-3" style="width: 16px; height: 16px;"></i>
+            </button>
+            <form action="{{ url_for('tasks.delete_task', task_id=task.id) }}" method="POST" style="margin: 0;" onsubmit="return confirm('Delete this task?');">
+                <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                <input type="hidden" name="next" value="{{ request.url }}">
+                <button type="submit" style="background: none; border: none; color: #ff5252; cursor: pointer; padding: 4px;" title="Delete task">
+                    <i data-lucide="trash-2" style="width: 16px; height: 16px;"></i>
+                </button>
+            </form>
+            {% endif %}
+        </div>
+    </div>
+</div>

@@ -1,5 +1,5 @@
 {% extends "base.html" %}
-{% block title %}Your Tasks — Personal planner{% endblock %}
+{% block title %}Your Tasks — HiveFlow{% endblock %}
 
 {% block content %}
 
@@ -74,9 +74,17 @@
             <option value="High" {% if priority_filter=='High' %}selected{% endif %}>High</option>
         </select>
 
+        <input type="date" name="date" value="{{ date_filter or '' }}" title="Show tasks for a specific day" style="width: 170px; flex: 0 0 auto;">
+
         <button type="submit" class="btn-small">
             <i data-lucide="filter" style="width:14px;height:14px;vertical-align:middle;margin-right:4px;"></i>Apply
         </button>
+
+        {% if date_filter or search or status_filter != 'all' or priority_filter != 'all' %}
+        <a href="{{ url_for('tasks.view_tasks') }}" class="btn-small" style="text-decoration:none;">
+            <i data-lucide="x" style="width:14px;height:14px;vertical-align:middle;margin-right:4px;"></i>Reset
+        </a>
+        {% endif %}
     </form>
 
     <!--  ACTION BAR  -->
@@ -129,6 +137,13 @@
     </div>
     {% endif %}
 
+    {% if date_filter %}
+    <div style="display:flex;align-items:center;gap:8px;padding:10px 14px;margin:10px 0;background:rgba(124,77,255,0.12);border:1px solid rgba(124,77,255,0.3);border-radius:8px;color:var(--text-color);font-size:14px;">
+        <i data-lucide="calendar" style="width:16px;height:16px;vertical-align:middle;"></i>
+        Showing tasks for <strong>{{ date_filter }}</strong>
+    </div>
+    {% endif %}
+
     <!--  TASK LIST  -->
     {% if tasks %}
     <div class="table-responsive">
@@ -138,7 +153,6 @@
                 <th>Task</th>
                 <th>Status</th>
                 <th>Priority</th>
-                <th>Date</th>
                 <th>Time</th>
                 <th>Change</th>
                 <th>Edit</th>
@@ -171,7 +185,6 @@
                     {% endif %}
                 </td>
 
-                <td>{{ task.deadline.strftime('%d %b %Y') if task.deadline else '—' }}</td>
                 <td>{{ task.time_slot.strftime('%I:%M %p') if task.time_slot else '—' }}</td>
 
                 <td>

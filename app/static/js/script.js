@@ -1,5 +1,5 @@
 // ===================================================
-// Personal planner — UI Interactions
+// HiveFlow — UI Interactions
 // ===================================================
 
 document.addEventListener('DOMContentLoaded', () => {

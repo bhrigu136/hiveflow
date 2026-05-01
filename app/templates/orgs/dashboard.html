@@ -31,17 +31,29 @@
     <div class="projects-section">
         <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px;">
             <h3 style="margin: 0;"><i data-lucide="layout" style="vertical-align: middle; margin-right: 8px;"></i>Projects</h3>
-            <button class="btn" style="padding: 6px 12px; font-size: 14px; opacity: 0.5; cursor: not-allowed;" title="Coming in Phase 2">
-                <i data-lucide="plus" style="width: 14px; height: 14px;"></i> New Project
-            </button>
+            <a href="{{ url_for('projects.create_project', org_slug=org.slug) }}" class="btn primary" style="width: auto; flex: 0 0 auto; padding: 10px 18px; font-size: 14px; white-space: nowrap; display: inline-flex; align-items: center; gap: 6px; text-decoration: none;">
+                <i data-lucide="plus" style="width: 16px; height: 16px;"></i> New Project
+            </a>
         </div>
         
-        <div style="background: var(--glass-bg); border: 1px dashed var(--glass-border); border-radius: 12px; padding: 40px; text-align: center;">
-            <div style="width: 48px; height: 48px; border-radius: 50%; background: var(--glass-border); display: flex; align-items: center; justify-content: center; margin: 0 auto 15px;">
-                <i data-lucide="hammer" style="color: var(--text-muted);"></i>
+        <div style="display: grid; gap: 15px;">
+            {% for project in org.projects %}
+            <a href="{{ url_for('projects.dashboard', project_id=project.id) }}" style="display: block; text-decoration: none; background: var(--glass-bg); border: 1px solid var(--glass-border); border-radius: 12px; padding: 20px; transition: transform 0.2s, box-shadow 0.2s;" class="project-card">
+                <h4 style="margin: 0 0 5px 0; color: var(--text-color); display: flex; justify-content: space-between;">
+                    {{ project.name }}
+                    <span style="font-size: 12px; color: var(--text-muted); font-weight: normal;">{{ project.tasks.count() }} tasks</span>
+                </h4>
+                <p style="color: var(--text-muted); font-size: 13px; margin: 0;">{{ project.description if project.description else "No description" }}</p>
+            </a>
+            {% else %}
+            <div style="background: var(--glass-bg); border: 1px dashed var(--glass-border); border-radius: 12px; padding: 40px; text-align: center;">
+                <div style="width: 48px; height: 48px; border-radius: 50%; background: var(--glass-border); display: flex; align-items: center; justify-content: center; margin: 0 auto 15px;">
+                    <i data-lucide="layout" style="color: var(--text-muted);"></i>
+                </div>
+                <h4 style="margin-top: 0;">No projects yet</h4>
+                <p style="color: var(--text-muted); font-size: 14px;">Create your first project to start organizing team tasks.</p>
             </div>
-            <h4 style="margin-top: 0;">Projects coming soon</h4>
-            <p style="color: var(--text-muted); font-size: 14px;">In the next phase, you'll be able to create shared projects and assign tasks to team members.</p>
+            {% endfor %}
         </div>
     </div>
     

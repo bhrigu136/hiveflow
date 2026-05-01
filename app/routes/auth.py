@@ -36,14 +36,14 @@ def send_reset_email(to_email, code, username):
     smtp_password = smtp_password.replace(' ', '')
 
     msg = MIMEMultipart('alternative')
-    msg['Subject'] = 'Personal planner — Password Reset Code'
+    msg['Subject'] = 'HiveFlow — Password Reset Code'
     msg['From'] = smtp_email
     msg['To'] = to_email
 
     html = f"""
     <div style="font-family: 'Segoe UI', Arial, sans-serif; max-width: 480px; margin: 0 auto; padding: 32px;">
         <div style="text-align: center; margin-bottom: 24px;">
-            <h2 style="color: #1a1a2e; margin: 0;">Personal planner</h2>
+            <h2 style="color: #1a1a2e; margin: 0;">HiveFlow</h2>
             <p style="color: #666; font-size: 14px;">Password Reset Request</p>
         </div>
         <div style="background: #f8f9fa; border-radius: 12px; padding: 24px; text-align: center;">

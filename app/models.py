@@ -23,7 +23,7 @@ class User(UserMixin, db.Model):
     google_refresh_token = db.Column(db.Text, nullable=True)
     google_token_expiry = db.Column(db.DateTime, nullable=True)
 
-    tasks = db.relationship('Task', backref='user', lazy=True)
+    tasks = db.relationship('Task', backref='user', lazy=True, foreign_keys='Task.user_id')
 
     def set_password(self, password: str):
         self.password_hash = generate_password_hash(password)
@@ -50,8 +50,33 @@ class Task(db.Model):
 
     user_id = db.Column(db.Integer, db.ForeignKey('user.id'), nullable=False, index=True)
 
+    # Phase 2 Additions
+    project_id = db.Column(db.Integer, db.ForeignKey('project.id'), nullable=True, index=True)
+    assigned_to = db.Column(db.Integer, db.ForeignKey('user.id'), nullable=True, index=True)
+    created_by = db.Column(db.Integer, db.ForeignKey('user.id'), nullable=True)
+
+    # Explicit relationships to fix AmbiguousForeignKeysError
+    assignee = db.relationship('User', foreign_keys=[assigned_to], backref='assigned_tasks')
+    creator = db.relationship('User', foreign_keys=[created_by], backref='created_tasks_group')
+
     def __repr__(self):
         return f"<Task {self.title} ({self.status})>"
+
+class Project(db.Model):
+    id = db.Column(db.Integer, primary_key=True)
+    name = db.Column(db.String(100), nullable=False)
+    description = db.Column(db.Text, nullable=True)
+    org_id = db.Column(db.Integer, db.ForeignKey('organization.id'), nullable=False, index=True)
+    created_by = db.Column(db.Integer, db.ForeignKey('user.id'), nullable=False)
+    created_at = db.Column(db.DateTime, default=lambda: datetime.now(timezone.utc))
+
+    # Relationships
+    organization = db.relationship('Organization', backref=db.backref('projects', lazy='dynamic', cascade='all, delete-orphan'))
+    creator_user = db.relationship('User', foreign_keys=[created_by])
+    tasks = db.relationship('Task', backref='project', lazy='dynamic', cascade='all, delete-orphan')
+
+    def __repr__(self):
+        return f"<Project {self.name} in Org {self.org_id}>"
 
 class Organization(db.Model):
     id = db.Column(db.Integer, primary_key=True)

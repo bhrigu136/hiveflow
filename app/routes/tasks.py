@@ -1,10 +1,10 @@
 # Flask-ToDo_App\app\routes\tasks.py
 
-from flask import Blueprint, render_template, request, redirect, url_for, flash, Response
+from flask import Blueprint, render_template, request, redirect, url_for, flash, Response, abort
 from flask_login import login_required, current_user
 from datetime import datetime, time, timedelta, date
 from app.extensions import db
-from app.models import Task
+from app.models import Task, Project, OrgMember
 
 from google.oauth2.credentials import Credentials
 from googleapiclient.discovery import build
@@ -26,8 +26,17 @@ def view_tasks():
     status_filter = request.args.get('status', 'all')
     priority_filter = request.args.get('priority', 'all')
     search = request.args.get('q', '').strip()
+    date_filter_raw = request.args.get('date', '').strip()
 
-    query = Task.query.filter_by(user_id=current_user.id)
+    date_filter = None
+    if date_filter_raw:
+        try:
+            date_filter = datetime.strptime(date_filter_raw, "%Y-%m-%d").date()
+        except ValueError:
+            date_filter = None
+
+    # Personal view: only personal tasks. Project tasks live on their project board.
+    query = Task.query.filter_by(user_id=current_user.id).filter(Task.project_id.is_(None))
 
     if status_filter != 'all':
         query = query.filter_by(status=status_filter)
@@ -37,6 +46,9 @@ def view_tasks():
 
     if search:
         query = query.filter(Task.title.ilike(f'%{search}%'))
+
+    if date_filter:
+        query = query.filter(Task.deadline == date_filter)
 
     tasks = query.order_by(
         Task.deadline.desc(),
@@ -49,7 +61,8 @@ def view_tasks():
         tasks=tasks,
         status_filter=status_filter,
         priority_filter=priority_filter,
-        search=search
+        search=search,
+        date_filter=date_filter_raw if date_filter else ''
     )
 
 
@@ -171,25 +184,77 @@ def add_task():
     return redirect(url_for('tasks.view_tasks'))
 
 
+# Authorization helper for tasks that may belong to a project (org-scoped).
+# action: 'status' (toggle), 'edit', or 'delete'.
+def _authorize_task(task_id, action):
+    task = Task.query.get_or_404(task_id)
+
+    def _deny(reason, status=403):
+        print(
+            f"[TASK AUTH DENY] action={action} task_id={task_id} "
+            f"user_id={current_user.id} task.user_id={task.user_id} "
+            f"task.project_id={task.project_id} task.assigned_to={task.assigned_to} "
+            f"reason={reason} -> {status}"
+        )
+        abort(status)
+
+    # Personal task (not part of a project) — owner only, same as before.
+    if not task.project_id:
+        if task.user_id != current_user.id:
+            _deny("personal task not owned by user", 404)
+        return task
+
+    # Project task — check org membership and role.
+    project = Project.query.get(task.project_id)
+    if not project:
+        _deny("project missing", 404)
+
+    membership = OrgMember.query.filter_by(
+        org_id=project.org_id, user_id=current_user.id
+    ).first()
+    if not membership:
+        _deny(f"user not a member of org {project.org_id}")
+
+    is_admin = membership.role == 'Admin'
+    print(
+        f"[TASK AUTH] action={action} task_id={task_id} user_id={current_user.id} "
+        f"org_id={project.org_id} role={membership.role!r} is_admin={is_admin} "
+        f"assigned_to={task.assigned_to}"
+    )
+
+    if action == 'status':
+        # Admin can toggle anything; a regular member can toggle only tasks assigned to them.
+        if is_admin or task.assigned_to == current_user.id:
+            return task
+        _deny("not admin and not assignee")
+
+    # 'edit' and 'delete' — admin only.
+    if is_admin:
+        return task
+    _deny("not admin")
+
+
 # EDIT TASK
 @tasks_bp.route('/edit/<int:task_id>', methods=['POST'])
 @login_required
 def edit_task(task_id):
-    task = Task.query.filter_by(
-        id=task_id,
-        user_id=current_user.id
-    ).first_or_404()
+    task = _authorize_task(task_id, 'edit')
 
     title = request.form.get('title', '').strip()
     priority = request.form.get('priority', 'Medium')
     deadline_str = request.form.get('deadline', '').strip()
     time_str = request.form.get('time_slot', '').strip()
+    status = request.form.get('status', '').strip()
+    assigned_to_raw = request.form.get('assigned_to', None)
+    next_url = request.form.get('next')
+
+    fallback_redirect = next_url or url_for('tasks.view_tasks')
 
     if not title:
         flash("Task title cannot be empty.", "danger")
-        return redirect(url_for('tasks.view_tasks'))
+        return redirect(fallback_redirect)
 
-    
+
     # PARSE DATE
     deadline = None
     if deadline_str:
@@ -197,24 +262,38 @@ def edit_task(task_id):
             deadline = datetime.strptime(deadline_str, "%Y-%m-%d").date()
         except ValueError:
             flash("Invalid date format.", "danger")
-            return redirect(url_for('tasks.view_tasks'))
+            return redirect(fallback_redirect)
 
-    # PARSE TIME    
+    # PARSE TIME
     time_slot = None
     if time_str:
         try:
             time_slot = datetime.strptime(time_str, "%H:%M").time()
         except ValueError:
             flash("Invalid time format.", "danger")
-            return redirect(url_for('tasks.view_tasks'))
+            return redirect(fallback_redirect)
 
-  
+
     # UPDATE TASK
-    
+
     task.title = title
     task.priority = priority
     task.deadline = deadline
     task.time_slot = time_slot
+
+    # Project-task fields — only meaningful when this is a project task
+    if task.project_id:
+        if status in ('Pending', 'Working', 'Completed'):
+            task.status = status
+        if assigned_to_raw is not None:
+            assigned_to_raw = assigned_to_raw.strip()
+            if assigned_to_raw == '':
+                task.assigned_to = None
+            else:
+                try:
+                    task.assigned_to = int(assigned_to_raw)
+                except ValueError:
+                    pass
 
     db.session.commit()
 
@@ -268,7 +347,7 @@ def edit_task(task_id):
             print("Google Calendar update failed:", e)
 
     flash("Task updated successfully.", "success")
-    return redirect(url_for('tasks.view_tasks'))
+    return redirect(fallback_redirect)
 
 
 
@@ -276,10 +355,7 @@ def edit_task(task_id):
 @tasks_bp.route('/toggle/<int:task_id>', methods=['POST'])
 @login_required
 def toggle_status(task_id):
-    task = Task.query.filter_by(
-        id=task_id,
-        user_id=current_user.id
-    ).first_or_404()
+    task = _authorize_task(task_id, 'status')
 
     if task.status == 'Pending':
         task.status = 'Working'
@@ -289,7 +365,8 @@ def toggle_status(task_id):
         task.status = 'Pending'
 
     db.session.commit()
-    return redirect(url_for('tasks.view_tasks'))
+    next_url = request.form.get('next')
+    return redirect(next_url or url_for('tasks.view_tasks'))
 
 
 # DELETE TASK
@@ -297,10 +374,7 @@ def toggle_status(task_id):
 @tasks_bp.route('/delete/<int:task_id>', methods=['POST'])
 @login_required
 def delete_task(task_id):
-    task = Task.query.filter_by(
-        id=task_id,
-        user_id=current_user.id
-    ).first_or_404()
+    task = _authorize_task(task_id, 'delete')
 
     
     # DELETE GOOGLE CALENDAR EVENT (IF EXISTS)
@@ -337,7 +411,8 @@ def delete_task(task_id):
     db.session.commit()
 
     flash('Task deleted.', 'info')
-    return redirect(url_for('tasks.view_tasks'))
+    next_url = request.form.get('next')
+    return redirect(next_url or url_for('tasks.view_tasks'))
 
 
 
@@ -346,7 +421,8 @@ def delete_task(task_id):
 @tasks_bp.route('/clear', methods=['POST'])
 @login_required
 def clear_tasks():
-    Task.query.filter_by(user_id=current_user.id).delete()
+    # Only clear personal tasks; never wipe project tasks the user is involved in.
+    Task.query.filter_by(user_id=current_user.id).filter(Task.project_id.is_(None)).delete(synchronize_session=False)
     db.session.commit()
     flash('All your tasks have been cleared.', 'info')
     return redirect(url_for('tasks.view_tasks'))
@@ -362,7 +438,7 @@ def export_csv():
     start_str = request.args.get('start', '').strip()
     end_str = request.args.get('end', '').strip()
 
-    query = Task.query.filter_by(user_id=current_user.id)
+    query = Task.query.filter_by(user_id=current_user.id).filter(Task.project_id.is_(None))
 
     today = date.today()
 

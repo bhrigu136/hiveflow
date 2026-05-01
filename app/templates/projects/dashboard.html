@@ -1,0 +1,190 @@
+{% extends "base.html" %}
+{% block title %}{{ project.name }} — HiveFlow{% endblock %}
+
+{% block content %}
+<div class="project-header" style="margin-bottom: 30px;">
+    <div style="display: flex; align-items: center; gap: 10px; margin-bottom: 15px;">
+        <a href="{{ url_for('orgs.dashboard', slug=org.slug) }}" style="color: var(--text-muted); text-decoration: none; display: flex; align-items: center; font-size: 14px;">
+            <i data-lucide="arrow-left" style="width: 14px; height: 14px; margin-right: 4px;"></i> Back to {{ org.name }}
+        </a>
+    </div>
+    
+    <div style="background: var(--glass-bg); border: 1px solid var(--glass-border); border-radius: 12px; padding: 25px; display: flex; justify-content: space-between; align-items: center;">
+        <div>
+            <h2 style="margin: 0; display: flex; align-items: center; gap: 10px;">
+                <i data-lucide="layout" style="color: var(--primary-color);"></i> {{ project.name }}
+            </h2>
+            <p style="color: var(--text-muted); margin-top: 8px; margin-bottom: 0;">{{ project.description if project.description else "No description provided." }}</p>
+        </div>
+        
+        <button onclick="document.getElementById('newTaskModal').style.display='flex'" class="btn primary" style="width: auto; flex: 0 0 auto; padding: 10px 18px; font-size: 14px; white-space: nowrap;">
+            <i data-lucide="plus" style="width: 16px; height: 16px;"></i> Add Task
+        </button>
+    </div>
+</div>
+
+<!-- Kanban Board -->
+<div class="kanban-board" style="display: grid; grid-template-columns: repeat(3, 1fr); gap: 20px; align-items: flex-start;">
+    
+    <!-- Pending Column -->
+    <div class="kanban-column" style="background: rgba(255, 255, 255, 0.02); border: 1px solid var(--glass-border); border-radius: 12px; padding: 15px; min-height: 400px;">
+        <h3 style="margin-top: 0; margin-bottom: 15px; font-size: 16px; display: flex; align-items: center; justify-content: space-between;">
+            <span><i data-lucide="circle" style="width: 14px; height: 14px; color: #ff9800; vertical-align: middle; margin-right: 6px;"></i> Pending</span>
+            <span style="background: var(--glass-bg); padding: 2px 8px; border-radius: 10px; font-size: 12px;">{{ pending_tasks|length }}</span>
+        </h3>
+        
+        <div class="task-list">
+            {% for task in pending_tasks %}
+            {% include 'projects/_task_card.html' %}
+            {% endfor %}
+        </div>
+    </div>
+    
+    <!-- Working Column -->
+    <div class="kanban-column" style="background: rgba(255, 255, 255, 0.02); border: 1px solid var(--glass-border); border-radius: 12px; padding: 15px; min-height: 400px;">
+        <h3 style="margin-top: 0; margin-bottom: 15px; font-size: 16px; display: flex; align-items: center; justify-content: space-between;">
+            <span><i data-lucide="clock" style="width: 14px; height: 14px; color: #2196f3; vertical-align: middle; margin-right: 6px;"></i> In Progress</span>
+            <span style="background: var(--glass-bg); padding: 2px 8px; border-radius: 10px; font-size: 12px;">{{ working_tasks|length }}</span>
+        </h3>
+        
+        <div class="task-list">
+            {% for task in working_tasks %}
+            {% include 'projects/_task_card.html' %}
+            {% endfor %}
+        </div>
+    </div>
+    
+    <!-- Completed Column -->
+    <div class="kanban-column" style="background: rgba(255, 255, 255, 0.02); border: 1px solid var(--glass-border); border-radius: 12px; padding: 15px; min-height: 400px;">
+        <h3 style="margin-top: 0; margin-bottom: 15px; font-size: 16px; display: flex; align-items: center; justify-content: space-between;">
+            <span><i data-lucide="check-circle" style="width: 14px; height: 14px; color: #4caf50; vertical-align: middle; margin-right: 6px;"></i> Completed</span>
+            <span style="background: var(--glass-bg); padding: 2px 8px; border-radius: 10px; font-size: 12px;">{{ completed_tasks|length }}</span>
+        </h3>
+        
+        <div class="task-list">
+            {% for task in completed_tasks %}
+            {% include 'projects/_task_card.html' %}
+            {% endfor %}
+        </div>
+    </div>
+</div>
+
+<!-- New Task Modal -->
+<div id="newTaskModal" style="display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.5); z-index: 1000; align-items: center; justify-content: center; backdrop-filter: blur(4px);">
+    <div style="background: var(--bg-color); border: 1px solid var(--glass-border); border-radius: 16px; padding: 30px; width: 100%; max-width: 500px; box-shadow: 0 10px 30px rgba(0,0,0,0.3);">
+        <h3 style="margin-top: 0; margin-bottom: 20px; display: flex; justify-content: space-between; align-items: center;">
+            Add New Task
+            <button onclick="document.getElementById('newTaskModal').style.display='none'" style="background: none; border: none; color: var(--text-muted); cursor: pointer;"><i data-lucide="x"></i></button>
+        </h3>
+        
+        <form method="POST" action="{{ url_for('projects.add_task', project_id=project.id) }}">
+            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+            
+            <div style="margin-bottom: 15px;">
+                <label style="display: block; margin-bottom: 5px; font-size: 14px;">Task Title</label>
+                <input type="text" name="title" required placeholder="What needs to be done?" style="width: 100%; padding: 10px; border-radius: 8px; border: 1px solid var(--glass-border); background: rgba(0,0,0,0.2); color: white; box-sizing: border-box;">
+            </div>
+            
+            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 15px; margin-bottom: 20px;">
+                <div>
+                    <label style="display: block; margin-bottom: 5px; font-size: 14px;">Priority</label>
+                    <select name="priority" style="width: 100%; padding: 10px; border-radius: 8px; border: 1px solid var(--glass-border); background: rgba(0,0,0,0.2); color: white; box-sizing: border-box; appearance: none;">
+                        <option value="Low" style="color: black;">Low</option>
+                        <option value="Medium" selected style="color: black;">Medium</option>
+                        <option value="High" style="color: black;">High</option>
+                    </select>
+                </div>
+                
+                <div>
+                    <label style="display: block; margin-bottom: 5px; font-size: 14px;">Assign To</label>
+                    <select name="assigned_to" style="width: 100%; padding: 10px; border-radius: 8px; border: 1px solid var(--glass-border); background: rgba(0,0,0,0.2); color: white; box-sizing: border-box; appearance: none;">
+                        <option value="" style="color: black;">Unassigned</option>
+                        {% for member in org_members %}
+                        <option value="{{ member.user.id }}" style="color: black;">{{ member.user.name if member.user.name else member.user.username }}</option>
+                        {% endfor %}
+                    </select>
+                </div>
+            </div>
+            
+            <div style="display: flex; justify-content: flex-end; gap: 10px;">
+                <button type="button" onclick="document.getElementById('newTaskModal').style.display='none'" class="btn" style="background: transparent; border: 1px solid var(--glass-border);">Cancel</button>
+                <button type="submit" class="btn primary">Create Task</button>
+            </div>
+        </form>
+    </div>
+</div>
+
+{% if is_admin %}
+<!-- Edit Task Modal (admin only) -->
+<div id="editTaskModal" style="display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.5); z-index: 1000; align-items: center; justify-content: center; backdrop-filter: blur(4px);">
+    <div style="background: var(--bg-color); border: 1px solid var(--glass-border); border-radius: 16px; padding: 30px; width: 100%; max-width: 500px; box-shadow: 0 10px 30px rgba(0,0,0,0.3);">
+        <h3 style="margin-top: 0; margin-bottom: 20px; display: flex; justify-content: space-between; align-items: center;">
+            Edit Task
+            <button type="button" onclick="document.getElementById('editTaskModal').style.display='none'" style="background: none; border: none; color: var(--text-muted); cursor: pointer;"><i data-lucide="x"></i></button>
+        </h3>
+
+        <form id="editTaskForm" method="POST">
+            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+            <input type="hidden" name="next" value="{{ request.url }}">
+
+            <div style="margin-bottom: 15px;">
+                <label style="display: block; margin-bottom: 5px; font-size: 14px;">Task Title</label>
+                <input type="text" name="title" id="editTaskTitle" required style="width: 100%; padding: 10px; border-radius: 8px; border: 1px solid var(--glass-border); background: rgba(0,0,0,0.2); color: white; box-sizing: border-box;">
+            </div>
+
+            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 15px; margin-bottom: 15px;">
+                <div>
+                    <label style="display: block; margin-bottom: 5px; font-size: 14px;">Priority</label>
+                    <select name="priority" id="editTaskPriority" style="width: 100%; padding: 10px; border-radius: 8px; border: 1px solid var(--glass-border); background: rgba(0,0,0,0.2); color: white; box-sizing: border-box; appearance: none;">
+                        <option value="Low" style="color: black;">Low</option>
+                        <option value="Medium" style="color: black;">Medium</option>
+                        <option value="High" style="color: black;">High</option>
+                    </select>
+                </div>
+
+                <div>
+                    <label style="display: block; margin-bottom: 5px; font-size: 14px;">Status</label>
+                    <select name="status" id="editTaskStatus" style="width: 100%; padding: 10px; border-radius: 8px; border: 1px solid var(--glass-border); background: rgba(0,0,0,0.2); color: white; box-sizing: border-box; appearance: none;">
+                        <option value="Pending" style="color: black;">Pending</option>
+                        <option value="Working" style="color: black;">In Progress</option>
+                        <option value="Completed" style="color: black;">Completed</option>
+                    </select>
+                </div>
+            </div>
+
+            <div style="margin-bottom: 20px;">
+                <label style="display: block; margin-bottom: 5px; font-size: 14px;">Assign To</label>
+                <select name="assigned_to" id="editTaskAssigned" style="width: 100%; padding: 10px; border-radius: 8px; border: 1px solid var(--glass-border); background: rgba(0,0,0,0.2); color: white; box-sizing: border-box; appearance: none;">
+                    <option value="" style="color: black;">Unassigned</option>
+                    {% for member in org_members %}
+                    <option value="{{ member.user.id }}" style="color: black;">{{ member.user.name if member.user.name else member.user.username }}</option>
+                    {% endfor %}
+                </select>
+            </div>
+
+            <div style="display: flex; justify-content: flex-end; gap: 10px;">
+                <button type="button" onclick="document.getElementById('editTaskModal').style.display='none'" class="btn" style="background: transparent; border: 1px solid var(--glass-border);">Cancel</button>
+                <button type="submit" class="btn primary">Save Changes</button>
+            </div>
+        </form>
+    </div>
+</div>
+
+<script>
+(function() {
+    document.addEventListener('click', function(e) {
+        var btn = e.target.closest('.task-edit-btn');
+        if (!btn) return;
+        var taskId = btn.dataset.taskId;
+        var form = document.getElementById('editTaskForm');
+        form.action = '/edit/' + taskId;
+        document.getElementById('editTaskTitle').value = btn.dataset.taskTitle || '';
+        document.getElementById('editTaskPriority').value = btn.dataset.taskPriority || 'Medium';
+        document.getElementById('editTaskStatus').value = btn.dataset.taskStatus || 'Pending';
+        document.getElementById('editTaskAssigned').value = btn.dataset.taskAssigned || '';
+        document.getElementById('editTaskModal').style.display = 'flex';
+    });
+})();
+</script>
+{% endif %}
+{% endblock %}
