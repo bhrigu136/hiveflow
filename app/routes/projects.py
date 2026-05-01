@@ -2,7 +2,7 @@ from flask import Blueprint, render_template, request, redirect, url_for, flash
 from flask_login import login_required, current_user
 from app.models import Organization, OrgMember, Project, Task, User, ActivityLog
 from app.extensions import db
-from app.utils import log_activity
+from app.utils import log_activity, create_notification
 
 projects_bp = Blueprint('projects', __name__, url_prefix='/projects')
 
@@ -114,6 +114,13 @@ def add_task(project_id):
     db.session.add(new_task)
     
     log_activity(org.id, current_user.id, f"added task '{title}'", project.id)
+    
+    if new_task.assigned_to and new_task.assigned_to != current_user.id:
+        create_notification(
+            new_task.assigned_to,
+            f"{current_user.name or current_user.username} assigned you a task: {title}",
+            url_for('projects.dashboard', project_id=project.id)
+        )
     
     db.session.commit()
     

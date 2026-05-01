@@ -28,6 +28,10 @@ class User(UserMixin, db.Model):
     def set_password(self, password: str):
         self.password_hash = generate_password_hash(password)
 
+    def get_recent_notifications(self, limit=10):
+        from app.models import Notification
+        return self.notifications.order_by(Notification.created_at.desc()).limit(limit).all()
+
     def check_password(self, password: str) -> bool:
         return check_password_hash(self.password_hash, password)
 
@@ -163,3 +167,13 @@ class ActivityLog(db.Model):
     user = db.relationship('User', foreign_keys=[user_id])
     organization = db.relationship('Organization', backref=db.backref('activities', lazy='dynamic', cascade='all, delete-orphan'))
     project = db.relationship('Project', backref=db.backref('activities', lazy='dynamic', cascade='all, delete-orphan'))
+
+class Notification(db.Model):
+    id = db.Column(db.Integer, primary_key=True)
+    user_id = db.Column(db.Integer, db.ForeignKey('user.id'), nullable=False, index=True)
+    message = db.Column(db.String(255), nullable=False)
+    link = db.Column(db.String(255), nullable=True)
+    is_read = db.Column(db.Boolean, default=False, index=True)
+    created_at = db.Column(db.DateTime, default=lambda: datetime.now(timezone.utc), index=True)
+
+    user_rel = db.relationship('User', backref=db.backref('notifications', lazy='dynamic', cascade='all, delete-orphan'))

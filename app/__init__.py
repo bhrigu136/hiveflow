@@ -60,6 +60,7 @@ def create_app():
     from app.routes.orgs import orgs_bp
     from app.routes.projects import projects_bp
     from app.routes.discussions import discussions_bp
+    from app.routes.notifications import notifications_bp
 
     app.register_blueprint(auth_bp)
     app.register_blueprint(tasks_bp)
@@ -67,6 +68,7 @@ def create_app():
     app.register_blueprint(orgs_bp)
     app.register_blueprint(projects_bp)
     app.register_blueprint(discussions_bp)
+    app.register_blueprint(notifications_bp)
 
     # Create tables on first run (migrations handle everything after that)
     with app.app_context():

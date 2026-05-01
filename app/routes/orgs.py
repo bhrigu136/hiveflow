@@ -4,7 +4,7 @@ from flask import Blueprint, render_template, request, redirect, url_for, flash
 from flask_login import login_required, current_user
 from app.models import Organization, OrgMember, User, ActivityLog
 from app.extensions import db
-from app.utils import log_activity
+from app.utils import log_activity, create_notification
 
 orgs_bp = Blueprint('orgs', __name__, url_prefix='/orgs')
 
@@ -96,6 +96,9 @@ def join_org():
     
     log_activity(org.id, current_user.id, "joined the organization")
     
+    if org.created_by != current_user.id:
+        create_notification(org.created_by, f"{current_user.name or current_user.username} joined your organization '{org.name}'", url_for('orgs.dashboard', slug=org.slug))
+        
     db.session.commit()
     
     flash(f'Successfully joined {org.name}!', 'success')

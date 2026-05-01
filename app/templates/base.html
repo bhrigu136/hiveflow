@@ -39,6 +39,46 @@
                         style="width:16px;height:16px;vertical-align:middle;margin-right:4px;"></i>Teams
                 </a>
 
+                <!-- Notification Bell -->
+                {% set unread_count = current_user.notifications.filter_by(is_read=False).count() %}
+                <div style="position: relative; display: inline-block;">
+                    <a href="#" onclick="toggleNotifications(event);" style="text-decoration: none; position: relative;">
+                        <i data-lucide="bell" style="width:16px;height:16px;vertical-align:middle;"></i>
+                        {% if unread_count > 0 %}
+                        <span style="position: absolute; top: -5px; right: -8px; background: #ff5252; color: white; border-radius: 50%; padding: 2px 5px; font-size: 10px; font-weight: bold; line-height: 1;">
+                            {{ unread_count if unread_count < 10 else '9+' }}
+                        </span>
+                        {% endif %}
+                    </a>
+                    
+                    <!-- Notification Dropdown -->
+                    <div id="notificationsDropdown" style="display: none; position: absolute; top: 100%; right: -50px; width: 300px; background: var(--glass-bg); border: 1px solid var(--glass-border); border-radius: 12px; margin-top: 15px; box-shadow: 0 10px 30px rgba(0,0,0,0.3); z-index: 1000; overflow: hidden; backdrop-filter: blur(10px);">
+                        <div style="padding: 15px; border-bottom: 1px solid rgba(255,255,255,0.05); display: flex; justify-content: space-between; align-items: center;">
+                            <h4 style="margin: 0; font-size: 14px; color: var(--text-color);">Notifications</h4>
+                            {% if unread_count > 0 %}
+                            <form action="{{ url_for('notifications.mark_all_read') }}" method="POST" style="margin: 0;">
+                                <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                                <button type="submit" style="background: none; border: none; color: var(--primary-color); font-size: 12px; cursor: pointer; padding: 0;">Mark all read</button>
+                            </form>
+                            {% endif %}
+                        </div>
+                        
+                        <div style="max-height: 300px; overflow-y: auto;">
+                            {% set recent_notifs = current_user.get_recent_notifications(10) %}
+                            {% for notif in recent_notifs %}
+                            <a href="{{ url_for('notifications.mark_read', notification_id=notif.id) }}" style="display: block; padding: 12px 15px; border-bottom: 1px solid rgba(255,255,255,0.05); text-decoration: none; background: {{ 'rgba(67, 97, 238, 0.1)' if not notif.is_read else 'transparent' }}; transition: background 0.2s;">
+                                <div style="font-size: 13px; color: var(--text-color); margin-bottom: 4px; font-weight: {{ '600' if not notif.is_read else '400' }}; line-height: 1.4;">{{ notif.message }}</div>
+                                <div style="font-size: 11px; color: var(--text-muted);">{{ notif.created_at.strftime('%b %d, %I:%M %p') }}</div>
+                            </a>
+                            {% else %}
+                            <div style="padding: 20px; text-align: center; color: var(--text-muted); font-size: 13px;">
+                                No notifications yet.
+                            </div>
+                            {% endfor %}
+                        </div>
+                    </div>
+                </div>
+
                 <a href="#" onclick="toggleProfileSidebar(event);" class="nav-username" style="cursor: pointer; text-decoration: none;">
                     <i data-lucide="user" style="width:14px;height:14px;vertical-align:middle;margin-right:4px;"></i>
                     Profile
@@ -182,8 +222,16 @@
     <script>
     function toggleProfileSidebar(e) {
         if(e) e.preventDefault();
-        document.getElementById('profileSidebar').classList.toggle('open');
-        document.getElementById('profileSidebarOverlay').classList.toggle('open');
+        const sidebar = document.getElementById('profileSidebar');
+        const overlay = document.getElementById('profileSidebarOverlay');
+        const notifDropdown = document.getElementById('notificationsDropdown');
+        
+        sidebar.classList.toggle('open');
+        overlay.classList.toggle('open');
+        
+        if (sidebar.classList.contains('open') && notifDropdown) {
+            notifDropdown.style.display = 'none';
+        }
     }
 
     function toggleSidebarPassword(fieldId, btn) {
@@ -200,6 +248,32 @@
             lucide.createIcons();
         }
     }
+    
+    function toggleNotifications(e) {
+        if(e) e.preventDefault();
+        const dropdown = document.getElementById('notificationsDropdown');
+        const sidebar = document.getElementById('profileSidebar');
+        const overlay = document.getElementById('profileSidebarOverlay');
+        
+        if (dropdown.style.display === 'none' || dropdown.style.display === '') {
+            dropdown.style.display = 'block';
+            if (sidebar.classList.contains('open')) {
+                sidebar.classList.remove('open');
+                overlay.classList.remove('open');
+            }
+        } else {
+            dropdown.style.display = 'none';
+        }
+    }
+    
+    document.addEventListener('click', function(e) {
+        const notifDropdown = document.getElementById('notificationsDropdown');
+        const notifIcon = e.target.closest('a[onclick*="toggleNotifications"]');
+        
+        if (notifDropdown && notifDropdown.style.display === 'block' && !notifDropdown.contains(e.target) && !notifIcon) {
+            notifDropdown.style.display = 'none';
+        }
+    });
     </script>
     {% endif %}
 </body>

@@ -13,3 +13,13 @@ def log_activity(org_id, user_id, action, project_id=None):
     )
     db.session.add(log)
     # The caller is responsible for calling db.session.commit()
+
+def create_notification(user_id, message, link=None):
+    from app.models import Notification
+    notification = Notification(
+        user_id=user_id,
+        message=message,
+        link=link
+    )
+    db.session.add(notification)
+    # Caller is responsible for db.session.commit()
