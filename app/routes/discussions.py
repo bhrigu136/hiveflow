@@ -2,6 +2,7 @@ from flask import Blueprint, render_template, request, redirect, url_for, flash
 from flask_login import login_required, current_user
 from app.models import Project, Discussion, DiscussionComment, Task, TaskComment, OrgMember
 from app.extensions import db
+from app.utils import log_activity
 
 discussions_bp = Blueprint('discussions', __name__)
 
@@ -45,6 +46,9 @@ def create_discussion(project_id):
         created_by=current_user.id
     )
     db.session.add(new_discussion)
+    
+    log_activity(project.org_id, current_user.id, f"started a discussion '{title}'", project.id)
+    
     db.session.commit()
     
     flash("Discussion created successfully.", 'success')
@@ -80,6 +84,9 @@ def add_discussion_comment(discussion_id):
         created_by=current_user.id
     )
     db.session.add(comment)
+    
+    log_activity(discussion.project.org_id, current_user.id, f"commented on discussion '{discussion.title}'", discussion.project_id)
+    
     db.session.commit()
     
     return redirect(url_for('discussions.view_discussion', discussion_id=discussion.id))
@@ -111,6 +118,10 @@ def add_task_comment(task_id):
             created_by=current_user.id
         )
         db.session.add(comment)
+        
+        if task.project_id:
+            log_activity(task.project.org_id, current_user.id, f"commented on task '{task.title}'", task.project_id)
+            
         db.session.commit()
         
     # Redirect back to wherever we came from

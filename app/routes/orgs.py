@@ -2,8 +2,9 @@ import re
 import secrets
 from flask import Blueprint, render_template, request, redirect, url_for, flash
 from flask_login import login_required, current_user
-from app.models import Organization, OrgMember, User
+from app.models import Organization, OrgMember, User, ActivityLog
 from app.extensions import db
+from app.utils import log_activity
 
 orgs_bp = Blueprint('orgs', __name__, url_prefix='/orgs')
 
@@ -60,6 +61,8 @@ def create_org():
         member = OrgMember(org_id=new_org.id, user_id=current_user.id, role="Admin")
         db.session.add(member)
         
+        log_activity(new_org.id, current_user.id, "created the organization")
+        
         db.session.commit()
         flash(f'Organization "{name}" created successfully!', 'success')
         return redirect(url_for('orgs.dashboard', slug=new_org.slug))
@@ -90,6 +93,9 @@ def join_org():
     # Join org
     member = OrgMember(org_id=org.id, user_id=current_user.id, role="Member")
     db.session.add(member)
+    
+    log_activity(org.id, current_user.id, "joined the organization")
+    
     db.session.commit()
     
     flash(f'Successfully joined {org.name}!', 'success')
@@ -108,4 +114,6 @@ def dashboard(slug):
         
     members = OrgMember.query.filter_by(org_id=org.id).all()
     
-    return render_template('orgs/dashboard.html', org=org, membership=membership, members=members)
+    activities = ActivityLog.query.filter_by(org_id=org.id).order_by(ActivityLog.created_at.desc()).limit(15).all()
+    
+    return render_template('orgs/dashboard.html', org=org, membership=membership, members=members, activities=activities)
