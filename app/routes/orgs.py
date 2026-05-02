@@ -3,7 +3,7 @@ import secrets
 from flask import Blueprint, render_template, request, redirect, url_for, flash
 from flask_login import login_required, current_user
 from app.models import Organization, OrgMember, User, ActivityLog
-from app.extensions import db
+from app.extensions import db, limiter
 from app.utils import log_activity, create_notification
 
 orgs_bp = Blueprint('orgs', __name__, url_prefix='/orgs')
@@ -71,6 +71,7 @@ def create_org():
 
 @orgs_bp.route('/join', methods=['POST'])
 @login_required
+@limiter.limit("5 per minute", error_message="Too many join attempts. Please wait.")
 def join_org():
     invite_code = request.form.get('invite_code', '').strip()
     

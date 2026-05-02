@@ -68,3 +68,5 @@ htmlcov/
 # == Deployment artifacts ========
 *.pyc
 *.pyo
+
+.md

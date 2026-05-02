@@ -3,6 +3,7 @@
 from flask import Blueprint, render_template, request, redirect, url_for, flash, Response, abort
 from flask_login import login_required, current_user
 from datetime import datetime, time, timedelta, date
+from sqlalchemy import or_
 from app.extensions import db
 from app.models import Task, Project, OrgMember
 from app.utils import log_activity
@@ -29,12 +30,19 @@ def view_tasks():
     search = request.args.get('q', '').strip()
     date_filter_raw = request.args.get('date', '').strip()
 
-    date_filter = None
-    if date_filter_raw:
-        try:
-            date_filter = datetime.strptime(date_filter_raw, "%Y-%m-%d").date()
-        except ValueError:
-            date_filter = None
+    today = date.today()
+    show_all = date_filter_raw == 'all'
+    selected_date = None
+
+    if not show_all:
+        if date_filter_raw:
+            try:
+                selected_date = datetime.strptime(date_filter_raw, "%Y-%m-%d").date()
+            except ValueError:
+                selected_date = today
+        else:
+            # Default view = today only
+            selected_date = today
 
     # Personal view: only personal tasks. Project tasks live on their project board.
     query = Task.query.filter_by(user_id=current_user.id).filter(Task.project_id.is_(None))
@@ -48,8 +56,12 @@ def view_tasks():
     if search:
         query = query.filter(Task.title.ilike(f'%{search}%'))
 
-    if date_filter:
-        query = query.filter(Task.deadline == date_filter)
+    if selected_date is not None:
+        if selected_date == today:
+            # Today's view also surfaces undated tasks so they don't get lost
+            query = query.filter(or_(Task.deadline == selected_date, Task.deadline.is_(None)))
+        else:
+            query = query.filter(Task.deadline == selected_date)
 
     tasks = query.order_by(
         Task.deadline.desc(),
@@ -57,13 +69,44 @@ def view_tasks():
         Task.created_at.desc()
     ).all()
 
+    # Build prev/next dates and a friendly label for the day-navigation bar
+    prev_date = (selected_date - timedelta(days=1)).isoformat() if selected_date else None
+    next_date = (selected_date + timedelta(days=1)).isoformat() if selected_date else None
+
+    if show_all:
+        day_label = "All Tasks"
+    elif selected_date == today:
+        day_label = "Today"
+    elif selected_date == today - timedelta(days=1):
+        day_label = "Yesterday"
+    elif selected_date == today + timedelta(days=1):
+        day_label = "Tomorrow"
+    else:
+        day_label = selected_date.strftime('%A, %b %d, %Y')
+
+    # Persist active filters on the day-nav links
+    nav_args = {}
+    if status_filter != 'all':
+        nav_args['status'] = status_filter
+    if priority_filter != 'all':
+        nav_args['priority'] = priority_filter
+    if search:
+        nav_args['q'] = search
+
     return render_template(
         'tasks.html',
         tasks=tasks,
         status_filter=status_filter,
         priority_filter=priority_filter,
         search=search,
-        date_filter=date_filter_raw if date_filter else ''
+        date_filter=selected_date.isoformat() if selected_date else '',
+        selected_date=selected_date,
+        show_all=show_all,
+        is_today=(selected_date == today),
+        prev_date=prev_date,
+        next_date=next_date,
+        day_label=day_label,
+        nav_args=nav_args,
     )
 
 
