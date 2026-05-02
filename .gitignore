@@ -67,6 +67,6 @@ htmlcov/
 
 # == Deployment artifacts ========
 *.pyc
-*.pyo
-
-.md
+# == Uploads ======
+app/static/uploads/profiles/*
+!app/static/uploads/profiles/.gitkeep

@@ -79,8 +79,12 @@
                     </div>
                 </div>
 
-                <a href="#" onclick="toggleProfileSidebar(event);" class="nav-username" style="cursor: pointer; text-decoration: none;">
-                    <i data-lucide="user" style="width:14px;height:14px;vertical-align:middle;margin-right:4px;"></i>
+                <a href="#" onclick="toggleProfileSidebar(event);" class="nav-username" style="cursor: pointer; text-decoration: none; display: inline-flex; align-items: center;">
+                    {% if current_user.profile_picture and current_user.profile_picture != 'default.png' %}
+                        <img src="{{ url_for('static', filename='uploads/profiles/' + current_user.profile_picture) }}" alt="Profile" style="width: 24px; height: 24px; border-radius: 50%; margin-right: 6px; object-fit: cover;">
+                    {% else %}
+                        <i data-lucide="user" style="width:14px;height:14px;vertical-align:middle;margin-right:4px;"></i>
+                    {% endif %}
                     Profile
                 </a>
 
@@ -145,8 +149,35 @@
             </button>
         </div>
         
-        <form method="POST" action="{{ url_for('auth.profile_update') }}" id="profile-form">
+        <form method="POST" action="{{ url_for('auth.profile_update') }}" id="profile-form" enctype="multipart/form-data">
             <input type="hidden" name="csrf_token" value="{{ csrf_token() }}"/>
+            
+            <!-- Profile Picture -->
+            <div class="auth-form-group" style="text-align: center; margin-bottom: 20px;">
+                <div style="position: relative; display: inline-block;">
+                    {% if current_user.profile_picture and current_user.profile_picture != 'default.png' %}
+                        <img id="profile_preview" src="{{ url_for('static', filename='uploads/profiles/' + current_user.profile_picture) }}" alt="Profile" style="width: 80px; height: 80px; border-radius: 50%; object-fit: cover; border: 2px solid var(--primary-color);">
+                    {% else %}
+                        <img id="profile_preview" src="#" alt="Profile" style="display: none; width: 80px; height: 80px; border-radius: 50%; object-fit: cover; border: 2px solid var(--primary-color);">
+                        <div id="profile_placeholder" style="width: 80px; height: 80px; border-radius: 50%; background: var(--glass-bg); border: 2px solid var(--glass-border); display: flex; align-items: center; justify-content: center;">
+                            <i data-lucide="user" style="width: 40px; height: 40px; color: var(--text-muted);"></i>
+                        </div>
+                    {% endif %}
+                    <label for="profile_picture" style="position: absolute; bottom: -4px; right: -4px; background: var(--primary-color); border-radius: 50%; width: 32px; height: 32px; display: flex; align-items: center; justify-content: center; cursor: pointer; border: 3px solid #1a1a2e; z-index: 10; box-shadow: 0 4px 6px rgba(0,0,0,0.3); transition: transform 0.2s ease;" onmouseover="this.style.transform='scale(1.1)'" onmouseout="this.style.transform='scale(1)'">
+                        <i data-lucide="camera" style="width: 16px; height: 16px; color: white;"></i>
+                    </label>
+                    <input type="file" id="profile_picture" name="profile_picture" style="display: none;" accept="image/*" onchange="previewProfileImage(event)">
+                </div>
+                <input type="hidden" name="remove_picture" id="remove_picture" value="false">
+                {% if current_user.profile_picture and current_user.profile_picture != 'default.png' %}
+                    <div style="margin-top: 8px;">
+                        <button type="button" id="remove_picture_btn" onclick="removeProfileImage()" style="background: none; border: none; color: #ff4757; font-size: 13px; cursor: pointer; display: inline-flex; align-items: center;">
+                            <i data-lucide="trash-2" style="width: 14px; height: 14px; margin-right: 4px;"></i> Remove
+                        </button>
+                    </div>
+                {% endif %}
+            </div>
+
             <!-- Full Name -->
             <div class="auth-form-group">
                 <label for="profile_name">Full Name</label>
@@ -232,6 +263,39 @@
         if (sidebar.classList.contains('open') && notifDropdown) {
             notifDropdown.style.display = 'none';
         }
+    }
+
+    function previewProfileImage(event) {
+        const file = event.target.files[0];
+        if (file) {
+            const reader = new FileReader();
+            reader.onload = function(e) {
+                const preview = document.getElementById('profile_preview');
+                const placeholder = document.getElementById('profile_placeholder');
+                
+                preview.src = e.target.result;
+                preview.style.display = 'inline-block';
+                
+                if (placeholder) {
+                    placeholder.style.display = 'none';
+                }
+            };
+            reader.readAsDataURL(file);
+            document.getElementById('remove_picture').value = 'false';
+        }
+    }
+
+    function removeProfileImage() {
+        document.getElementById('remove_picture').value = 'true';
+        document.getElementById('profile_picture').value = '';
+        
+        const preview = document.getElementById('profile_preview');
+        const placeholder = document.getElementById('profile_placeholder');
+        const removeBtn = document.getElementById('remove_picture_btn');
+        
+        if (preview) preview.style.display = 'none';
+        if (placeholder) placeholder.style.display = 'flex';
+        if (removeBtn) removeBtn.style.display = 'none';
     }
 
     function toggleSidebarPassword(fieldId, btn) {

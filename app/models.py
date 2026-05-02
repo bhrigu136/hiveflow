@@ -13,6 +13,7 @@ class User(UserMixin, db.Model):
     name = db.Column(db.String(120), nullable=True)
     email = db.Column(db.String(120), unique=True, nullable=True)
     password_hash = db.Column(db.String(200), nullable=False)
+    profile_picture = db.Column(db.String(255), nullable=True, default='default.png')
 
     # Password reset
     reset_code = db.Column(db.String(6), nullable=True)

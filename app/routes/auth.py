@@ -5,7 +5,8 @@ from email.mime.text import MIMEText
 from email.mime.multipart import MIMEMultipart
 from datetime import datetime, timedelta
 
-from flask import Blueprint, render_template, request, redirect, url_for, flash
+from werkzeug.utils import secure_filename
+from flask import Blueprint, render_template, request, redirect, url_for, flash, current_app
 from flask_login import login_user, logout_user, login_required, current_user
 from app.models import User
 from app.extensions import db, limiter
@@ -274,6 +275,35 @@ def profile_update():
     # Update basic info
     if name:
         current_user.name = name
+        
+    remove_picture = request.form.get('remove_picture') == 'true'
+    
+    if remove_picture:
+        if current_user.profile_picture and current_user.profile_picture != 'default.png':
+            old_file_path = os.path.join(current_app.root_path, 'static', 'uploads', 'profiles', current_user.profile_picture)
+            if os.path.exists(old_file_path):
+                os.remove(old_file_path)
+        current_user.profile_picture = 'default.png'
+    else:
+        file = request.files.get('profile_picture')
+        if file and file.filename != '':
+            # Delete old profile picture if it exists
+            if current_user.profile_picture and current_user.profile_picture != 'default.png':
+                old_file_path = os.path.join(current_app.root_path, 'static', 'uploads', 'profiles', current_user.profile_picture)
+                if os.path.exists(old_file_path):
+                    os.remove(old_file_path)
+                    
+            filename = secure_filename(file.filename)
+            # Create unique filename
+            ext = filename.rsplit('.', 1)[1].lower() if '.' in filename else 'jpg'
+            unique_filename = f"user_{current_user.id}_{int(datetime.utcnow().timestamp())}.{ext}"
+            
+            upload_folder = os.path.join(current_app.root_path, 'static', 'uploads', 'profiles')
+            os.makedirs(upload_folder, exist_ok=True)
+            
+            file_path = os.path.join(upload_folder, unique_filename)
+            file.save(file_path)
+            current_user.profile_picture = unique_filename
     
     if email and email != current_user.email:
         existing = User.query.filter_by(email=email).first()
