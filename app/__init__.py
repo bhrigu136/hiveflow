@@ -26,7 +26,7 @@ def create_app():
     # Uses PostgreSQL in production (via DATABASE_URL), SQLite locally
     database_url = os.environ.get('DATABASE_URL', 'sqlite:///todo.db')
 
-    # Render/Heroku provide postgres:// but SQLAlchemy 1.4+ needs postgresql://
+    # Render provide postgres:// but SQLAlchemy 1.4+ needs postgresql://
     if database_url.startswith('postgres://'):
         database_url = database_url.replace('postgres://', 'postgresql://', 1)
 

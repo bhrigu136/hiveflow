@@ -82,7 +82,7 @@
             <button onclick="document.getElementById('newTaskModal').style.display='none'" style="background: none; border: none; color: var(--text-muted); cursor: pointer;"><i data-lucide="x"></i></button>
         </h3>
         
-        <form method="POST" action="{{ url_for('projects.add_task', project_id=project.id) }}">
+        <form method="POST" action="{{ url_for('projects.add_task', project_id=project.id) }}" onsubmit="if(this.dataset.submitting) return false; this.dataset.submitting = true; const btn = this.querySelector('button[type=submit]'); btn.style.opacity = '0.7'; btn.innerHTML = 'Creating...'; return true;">
             <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
             
             <div style="margin-bottom: 15px;">
@@ -119,11 +119,6 @@
     </div>
 </div>
 
-<div style="margin-top: 40px; max-width: 800px;">
-    {% set show_project = False %}
-    {% include 'components/_activity_feed.html' %}
-</div>
-
 {% if is_admin %}
 <!-- Edit Task Modal (admin only) -->
 <div id="editTaskModal" style="display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.5); z-index: 1000; align-items: center; justify-content: center; backdrop-filter: blur(4px);">
@@ -133,7 +128,7 @@
             <button type="button" onclick="document.getElementById('editTaskModal').style.display='none'" style="background: none; border: none; color: var(--text-muted); cursor: pointer;"><i data-lucide="x"></i></button>
         </h3>
 
-        <form id="editTaskForm" method="POST">
+        <form id="editTaskForm" method="POST" onsubmit="if(this.dataset.submitting) return false; this.dataset.submitting = true; const btn = this.querySelector('button[type=submit]'); btn.style.opacity = '0.7'; btn.innerHTML = 'Saving...'; return true;">
             <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
             <input type="hidden" name="next" value="{{ request.url }}">
 

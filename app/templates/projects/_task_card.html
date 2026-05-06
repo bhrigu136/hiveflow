@@ -1,18 +1,18 @@
-<div class="task-card" style="background: rgba(0,0,0,0.2); border: 1px solid var(--glass-border); border-radius: 8px; padding: 15px; margin-bottom: 12px; position: relative;">
-    <div style="display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 10px;">
-        <h4 style="margin: 0; font-size: 14px; font-weight: 500; padding-right: 20px;">{{ task.title }}</h4>
+<div class="kanban-task-card" style="background: var(--surface-solid); border: 1px solid var(--glass-border); border-radius: 12px; padding: 16px; margin-bottom: 16px; position: relative; display: flex; flex-direction: column; gap: 12px; transition: transform 0.2s ease, box-shadow 0.2s ease;" onmouseover="this.style.transform='translateY(-2px)'; this.style.boxShadow='0 8px 24px rgba(0,0,0,0.2)'; this.style.borderColor='var(--accent)';" onmouseout="this.style.transform='none'; this.style.boxShadow='none'; this.style.borderColor='var(--glass-border)';">
+    <div style="display: flex; justify-content: space-between; align-items: flex-start; gap: 12px;">
+        <h4 style="margin: 0; font-size: 15px; font-weight: 600; color: var(--text); line-height: 1.4; word-wrap: break-word;">{{ task.title }}</h4>
         
         <!-- Priority badge -->
-        <span style="font-size: 10px; text-transform: uppercase; padding: 2px 6px; border-radius: 4px; border: 1px solid currentColor;
-            {% if task.priority == 'High' %}color: #ff5252;
-            {% elif task.priority == 'Medium' %}color: #ffeb3b;
-            {% else %}color: #4caf50;{% endif %}
+        <span style="flex-shrink: 0; font-size: 10px; font-weight: 700; text-transform: uppercase; padding: 4px 8px; border-radius: 6px; 
+            {% if task.priority == 'High' %}background: rgba(239,68,68,0.1); color: #ef4444; border: 1px solid rgba(239,68,68,0.2);
+            {% elif task.priority == 'Medium' %}background: rgba(245,158,11,0.1); color: #f59e0b; border: 1px solid rgba(245,158,11,0.2);
+            {% else %}background: rgba(16,185,129,0.1); color: #10b981; border: 1px solid rgba(16,185,129,0.2);{% endif %}
         ">
             {{ task.priority }}
         </span>
     </div>
     
-    <div style="display: flex; justify-content: space-between; align-items: center; margin-top: 15px;">
+    <div style="display: flex; justify-content: space-between; align-items: center; margin-top: 4px;">
         <!-- Assignee -->
         <div style="display: flex; align-items: center; gap: 6px; font-size: 12px; color: var(--text-muted);">
             {% if task.assignee %}
@@ -74,11 +74,11 @@
     </div>
     
     <!-- Task Comments -->
-    <details style="margin-top: 15px; font-size: 13px; color: var(--text-muted);">
-        <summary style="cursor: pointer; user-select: none; padding: 4px 0; border-top: 1px solid var(--glass-border); margin-top: 10px; display: flex; align-items: center; gap: 4px;">
-            <i data-lucide="message-circle" style="width: 14px; height: 14px;"></i> Comments ({{ task.comments.count() }})
+    <details style="font-size: 13px; color: var(--text-secondary);">
+        <summary style="cursor: pointer; user-select: none; padding: 8px 0; border-top: 1px solid var(--glass-border); display: flex; align-items: center; gap: 6px; transition: color 0.2s;" onmouseover="this.style.color='var(--accent-light)'" onmouseout="this.style.color=''">
+            <i data-lucide="message-square" style="width: 14px; height: 14px;"></i> Comments ({{ task.comments.count() }})
         </summary>
-        <div style="padding-top: 10px; padding-bottom: 10px; display: flex; flex-direction: column; gap: 10px;">
+        <div style="padding-top: 8px; display: flex; flex-direction: column; gap: 12px;">
             {% for comment in task.comments %}
             <div style="background: rgba(255,255,255,0.05); padding: 8px; border-radius: 6px;">
                 <div style="display: flex; justify-content: space-between; margin-bottom: 4px;">
@@ -88,11 +88,13 @@
                 <div style="color: var(--text-color);">{{ comment.content }}</div>
             </div>
             {% endfor %}
-            <form action="{{ url_for('discussions.add_task_comment', task_id=task.id) }}" method="POST" style="margin-top: 5px; display: flex; gap: 6px;">
+            <form action="{{ url_for('discussions.add_task_comment', task_id=task.id) }}" method="POST" style="margin-top: 4px; display: flex; gap: 8px; align-items: stretch;" onsubmit="if(this.dataset.submitting) return false; this.dataset.submitting = true; this.querySelector('button[type=submit]').style.opacity = '0.5'; return true;">
                 <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
                 <input type="hidden" name="next" value="{{ request.url }}">
-                <input type="text" name="content" required placeholder="Add a comment..." style="flex: 1; padding: 6px 10px; border-radius: 4px; border: 1px solid var(--glass-border); background: var(--bg-color); color: var(--text-color); font-size: 12px;">
-                <button type="submit" class="btn primary" style="padding: 4px 10px; font-size: 12px;">Post</button>
+                <input type="text" name="content" required placeholder="Write a comment..." style="flex: 1; padding: 8px 12px; border-radius: 8px; border: 1px solid var(--glass-border); background: rgba(0,0,0,0.2); color: var(--text); font-size: 13px; transition: all 0.2s; outline: none;" onfocus="this.style.borderColor='var(--accent)';" onblur="this.style.borderColor='var(--glass-border)';">
+                <button type="submit" style="padding: 0 14px; border-radius: 8px; display: flex; align-items: center; justify-content: center; background: linear-gradient(135deg, var(--accent), #6366f1); border: none; box-shadow: 0 2px 10px var(--accent-glow); transition: all 0.2s; cursor: pointer;" title="Post comment" onmouseover="this.style.transform='translateY(-1px)'" onmouseout="this.style.transform='none'">
+                    <i data-lucide="send" style="width: 14px; height: 14px; color: white;"></i>
+                </button>
             </form>
         </div>
     </details>

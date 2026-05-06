@@ -261,6 +261,24 @@ def reset_password():
     return render_template('reset_password.html', email=email)
 
 
+# ─── Profile Page ────────────────────────────────────────
+@auth_bp.route('/profile', methods=['GET'])
+@login_required
+def profile():
+    today = datetime.now().date()
+    total_tasks = len(current_user.tasks)
+    completed_tasks = sum(1 for t in current_user.tasks if t.status == 'Completed')
+    orgs_joined = len(current_user.org_memberships)
+    
+    # Calculate tasks due today (not completed)
+    due_today = sum(1 for t in current_user.tasks if t.deadline == today and t.status != 'Completed')
+    
+    return render_template('profile.html', 
+                           total_tasks=total_tasks, 
+                           completed_tasks=completed_tasks, 
+                           orgs_joined=orgs_joined,
+                           due_today=due_today)
+
 # ─── Profile Update ──────────────────────────────────────
 
 @auth_bp.route('/profile_update', methods=['POST'])

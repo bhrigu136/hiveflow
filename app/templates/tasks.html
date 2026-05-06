@@ -3,7 +3,11 @@
 
 {% block content %}
 
-<div class="task-box">
+<style>
+@keyframes spin { 100% { transform: rotate(360deg); } }
+.spin { animation: spin 1s linear infinite; }
+</style>
+<div class="task-box" style="background: var(--surface-solid); border: 1px solid var(--glass-border); border-radius: 20px; padding: 35px; box-shadow: 0 15px 35px rgba(0,0,0,0.25); backdrop-filter: blur(20px);">
 
     <!--  HEADER  -->
     <div class="task-header">
@@ -34,142 +38,138 @@
         {% endif %}
     </div>
 
-    <!--  ADD TASK  -->
-    <form action="{{ url_for('tasks.add_task') }}" method="POST" class="task-form">
+    <!--  ADD TASK OMNIBAR  -->
+    <form action="{{ url_for('tasks.add_task') }}" method="POST" class="omnibar-form" id="omnibar-form" style="border: 2px solid var(--glass-border); border-radius: 16px; transition: all 0.3s ease; background: rgba(0,0,0,0.2);" onfocusin="this.style.borderColor='var(--accent)'; this.style.boxShadow='0 0 0 4px var(--accent-glow)';" onfocusout="this.style.borderColor='var(--glass-border)'; this.style.boxShadow='none';">
         <input type="hidden" name="csrf_token" value="{{ csrf_token() }}"/>
-        <input type="text" name="title" placeholder="✦  What needs to be done?" required>
-
-        <select name="priority">
-            <option value="Low">Low</option>
-            <option value="Medium" selected>Medium</option>
-            <option value="High">High</option>
-        </select>
-
-        <input type="date" name="deadline">
-        <input type="time" name="time_slot">
-
-        <button type="submit" class="btn">
-            <i data-lucide="plus" style="width:16px;height:16px;"></i>
-            Add Task
-        </button>
+        
+        <div class="omnibar-input-wrapper">
+            <i data-lucide="plus" class="omnibar-icon"></i>
+            <input type="text" name="title" id="omnibar-title" placeholder="What needs to be done?" required maxlength="100" autocomplete="off" onfocus="expandOmnibar()">
+        </div>
+        
+        <div class="omnibar-details" id="omnibar-details">
+            <div class="omnibar-options">
+                <div class="omnibar-field">
+                    <label>Priority</label>
+                    <select name="priority">
+                        <option value="Low">Low</option>
+                        <option value="Medium" selected>Medium</option>
+                        <option value="High">High</option>
+                    </select>
+                </div>
+                <div class="omnibar-field">
+                    <label>Date</label>
+                    <input type="date" name="deadline">
+                </div>
+                <div class="omnibar-field">
+                    <label>Time</label>
+                    <input type="time" name="time_slot">
+                </div>
+            </div>
+            
+            <button type="submit" class="btn omnibar-submit">
+                <i data-lucide="arrow-up" style="width:16px;height:16px;margin-right:4px;"></i>
+                Add
+            </button>
+        </div>
     </form>
 
     <div class="divider"></div>
 
-    <!--  DAY NAVIGATION  -->
-    <div class="day-nav" style="display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap;background:var(--glass-bg);border:1px solid var(--glass-border);border-radius:10px;padding:10px 14px;margin-bottom:14px;">
-        {% if not show_all %}
-        <a href="{{ url_for('tasks.view_tasks', date=prev_date, **nav_args) }}" class="btn-small" style="text-decoration:none;display:inline-flex;align-items:center;gap:4px;">
-            <i data-lucide="chevron-left" style="width:14px;height:14px;"></i> Previous
-        </a>
-        {% else %}
-        <span></span>
-        {% endif %}
+    <!--  VIEW CONTROLS  -->
+    <div class="view-controls">
+        <div class="view-controls-top">
+            <!-- Day Navigation -->
+            <div class="day-nav-group">
+                {% if not show_all %}
+                <a href="{{ url_for('tasks.view_tasks', date=prev_date, **nav_args) }}" class="icon-btn" title="Previous Day">
+                    <i data-lucide="chevron-left" style="width:16px;height:16px;"></i>
+                </a>
+                {% endif %}
+                
+                <div class="current-day-display">
+                    <i data-lucide="calendar" style="width:14px;height:14px;color:var(--accent-light);"></i>
+                    <span class="day-label">{{ day_label }}</span>
+                </div>
+                
+                {% if not show_all %}
+                <a href="{{ url_for('tasks.view_tasks', date=next_date, **nav_args) }}" class="icon-btn" title="Next Day">
+                    <i data-lucide="chevron-right" style="width:16px;height:16px;"></i>
+                </a>
+                {% endif %}
+                
+                <div class="day-nav-actions">
+                    <form method="GET" action="{{ url_for('tasks.view_tasks') }}" style="margin:0;display:inline-block;">
+                        {% for k, v in nav_args.items() %}
+                        <input type="hidden" name="{{ k }}" value="{{ v }}">
+                        {% endfor %}
+                        <label class="icon-btn jump-date-btn" title="Jump to Date">
+                            <i data-lucide="calendar-days" style="width:14px;height:14px;"></i>
+                            <input type="date" name="date" value="{{ date_filter or '' }}" onchange="this.form.submit()">
+                        </label>
+                    </form>
+                    
+                    {% if not is_today %}
+                    <a href="{{ url_for('tasks.view_tasks', **nav_args) }}" class="btn-small">Today</a>
+                    {% endif %}
+                    
+                    {% if show_all %}
+                    <a href="{{ url_for('tasks.view_tasks', **nav_args) }}" class="btn-small">Exit All</a>
+                    {% else %}
+                    <a href="{{ url_for('tasks.view_tasks', date='all', **nav_args) }}" class="btn-small">Show All</a>
+                    {% endif %}
+                </div>
+            </div>
 
-        <div style="text-align:center;flex:1;min-width:160px;">
-            <div style="font-weight:600;font-size:15px;color:var(--text-color);">
-                <i data-lucide="calendar" style="width:14px;height:14px;vertical-align:middle;margin-right:4px;"></i>
-                {{ day_label }}
+            <!-- Filters Toggle & Export -->
+            <div class="view-actions-group">
+                <button type="button" class="btn-small" onclick="document.getElementById('filter-panel').classList.toggle('open')">
+                    <i data-lucide="filter" style="width:14px;height:14px;margin-right:4px;"></i> Filters
+                </button>
+                
+                {% if tasks %}
+                <button type="button" class="btn-small btn-export" onclick="toggleExportPanel()">
+                    <i data-lucide="download" style="width:14px;height:14px;margin-right:4px;"></i> Export
+                </button>
+                {% endif %}
             </div>
-            {% if selected_date and day_label in ['Today', 'Yesterday', 'Tomorrow'] %}
-            <div style="font-size:12px;color:var(--text-muted);margin-top:2px;">
-                {{ selected_date.strftime('%a, %b %d, %Y') }}
-            </div>
-            {% endif %}
         </div>
 
-        <div style="display:flex;gap:6px;align-items:center;">
-            {# Calendar-icon "jump to date" — transparent date input layered over the icon (click = native picker) #}
-            <form method="GET" action="{{ url_for('tasks.view_tasks') }}" style="display:inline-block;margin:0;">
-                {% for k, v in nav_args.items() %}
-                <input type="hidden" name="{{ k }}" value="{{ v }}">
-                {% endfor %}
-                <label class="jump-date-wrapper" title="Jump to a specific day"
-                       style="position:relative;display:inline-flex;align-items:center;justify-content:center;width:36px;height:30px;border:1px solid var(--glass-border);border-radius:6px;background:rgba(0,0,0,0.25);cursor:pointer;color:var(--text-color);">
-                    <i data-lucide="calendar-days" style="width:14px;height:14px;pointer-events:none;"></i>
-                    <input type="date" class="jump-date-input" name="date" value="{{ date_filter or '' }}"
-                           onchange="this.form.submit()"
-                           style="position:absolute;inset:0;width:100%;height:100%;opacity:0;cursor:pointer;border:0;padding:0;margin:0;background:transparent;color:transparent;">
-                </label>
+        <!-- Collapsible Filter Panel -->
+        <div class="filter-panel" id="filter-panel">
+            <form method="GET" action="{{ url_for('tasks.view_tasks') }}" class="filter-form-inner">
+                <input type="text" name="q" placeholder="🔍 Search tasks..." value="{{ search or '' }}">
+                <select name="status">
+                    <option value="all">All Status</option>
+                    <option value="Pending" {% if status_filter=='Pending' %}selected{% endif %}>Pending</option>
+                    <option value="Working" {% if status_filter=='Working' %}selected{% endif %}>Working</option>
+                    <option value="Completed" {% if status_filter=='Completed' %}selected{% endif %}>Completed</option>
+                </select>
+                <select name="priority">
+                    <option value="all">All Priority</option>
+                    <option value="Low" {% if priority_filter=='Low' %}selected{% endif %}>Low</option>
+                    <option value="Medium" {% if priority_filter=='Medium' %}selected{% endif %}>Medium</option>
+                    <option value="High" {% if priority_filter=='High' %}selected{% endif %}>High</option>
+                </select>
+                <input type="hidden" name="date" value="{{ date_filter if not show_all else 'all' }}">
+                <button type="submit" class="btn-small">Apply</button>
+                {% if search or status_filter != 'all' or priority_filter != 'all' %}
+                <a href="{{ url_for('tasks.view_tasks') }}" class="btn-small" style="background:rgba(248,113,113,0.1);color:var(--danger);border-color:rgba(248,113,113,0.3);text-decoration:none;">Reset</a>
+                {% endif %}
             </form>
-
-            {% if not show_all %}
-            <a href="{{ url_for('tasks.view_tasks', date=next_date, **nav_args) }}" class="btn-small" style="text-decoration:none;display:inline-flex;align-items:center;gap:4px;">
-                Next <i data-lucide="chevron-right" style="width:14px;height:14px;"></i>
-            </a>
-            {% endif %}
-            {% if not is_today %}
-            <a href="{{ url_for('tasks.view_tasks', **nav_args) }}" class="btn-small" style="text-decoration:none;">
-                <i data-lucide="circle-dot" style="width:14px;height:14px;vertical-align:middle;margin-right:4px;"></i>Today
-            </a>
-            {% endif %}
-            {% if show_all %}
-            <a href="{{ url_for('tasks.view_tasks', **nav_args) }}" class="btn-small" style="text-decoration:none;">
-                <i data-lucide="x" style="width:14px;height:14px;vertical-align:middle;margin-right:4px;"></i>Exit All
-            </a>
-            {% else %}
-            <a href="{{ url_for('tasks.view_tasks', date='all', **nav_args) }}" class="btn-small" style="text-decoration:none;">
-                <i data-lucide="layers" style="width:14px;height:14px;vertical-align:middle;margin-right:4px;"></i>Show All
-            </a>
-            {% endif %}
         </div>
     </div>
 
-    <!--  FILTERS  -->
-    <form method="GET" action="{{ url_for('tasks.view_tasks') }}" class="filter-form">
-        <input type="text" name="q" placeholder="🔍  Search tasks..." value="{{ search or '' }}">
-
-        <select name="status">
-            <option value="all">All Status</option>
-            <option value="Pending" {% if status_filter=='Pending' %}selected{% endif %}>Pending</option>
-            <option value="Working" {% if status_filter=='Working' %}selected{% endif %}>Working</option>
-            <option value="Completed" {% if status_filter=='Completed' %}selected{% endif %}>Completed</option>
-        </select>
-
-        <select name="priority">
-            <option value="all">All Priority</option>
-            <option value="Low" {% if priority_filter=='Low' %}selected{% endif %}>Low</option>
-            <option value="Medium" {% if priority_filter=='Medium' %}selected{% endif %}>Medium</option>
-            <option value="High" {% if priority_filter=='High' %}selected{% endif %}>High</option>
-        </select>
-
-        {# Preserve current day when applying status/priority/search filters #}
-        <input type="hidden" name="date" value="{{ date_filter if not show_all else 'all' }}">
-
-        <button type="submit" class="btn-small">
-            <i data-lucide="filter" style="width:14px;height:14px;vertical-align:middle;margin-right:4px;"></i>Apply
-        </button>
-
-        {% if search or status_filter != 'all' or priority_filter != 'all' %}
-        <a href="{{ url_for('tasks.view_tasks') }}" class="btn-small" style="text-decoration:none;">
-            <i data-lucide="x" style="width:14px;height:14px;vertical-align:middle;margin-right:4px;"></i>Reset
-        </a>
-        {% endif %}
-    </form>
-
-    <!--  ACTION BAR  -->
+    <!-- Action Bar (Task Count & Clear) -->
     {% if tasks %}
-    <div class="action-bar">
-        <div>
-            <span class="task-count">
-                <span class="count-num">{{ tasks|length }}</span> tasks found
-            </span>
-
-            <form method="POST" action="{{ url_for('tasks.clear_tasks') }}" style="display:inline;">
-                <input type="hidden" name="csrf_token" value="{{ csrf_token() }}"/>
-                <button type="submit" class="btn-clear">
-                    <i data-lucide="trash-2" style="width:14px;height:14px;vertical-align:middle;margin-right:4px;"></i>
-                    Clear All
-                </button>
-            </form>
-        </div>
-
-        <div>
-            <button type="button" class="btn-small btn-export" onclick="toggleExportPanel()">
-                <i data-lucide="download" style="width:14px;height:14px;vertical-align:middle;margin-right:4px;"></i>
-                Export CSV
+    <div class="action-bar-minimal">
+        <span class="task-count">{{ tasks|length }} tasks</span>
+        <form method="POST" action="{{ url_for('tasks.clear_tasks') }}" style="display:inline;">
+            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}"/>
+            <button type="submit" class="btn-clear-text" title="Clear all tasks">
+                <i data-lucide="trash-2" style="width:14px;height:14px;margin-right:4px;"></i> Clear All
             </button>
-        </div>
+        </form>
     </div>
 
     <!--  EXPORT CSV PANEL  -->
@@ -199,88 +199,74 @@
 
     <!--  TASK LIST  -->
     {% if tasks %}
-    <div class="table-responsive">
-    <table class="task-table">
-        <thead>
-            <tr>
-                <th>Task</th>
-                <th>Status</th>
-                <th>Priority</th>
-                <th>Time</th>
-                <th>Change</th>
-                <th>Edit</th>
-                <th>Delete</th>
-            </tr>
-        </thead>
-
-        <tbody>
-            {% for task in tasks %}
-            <tr>
-                <td style="font-weight:500;">{{ task.title }}</td>
-
-                <td>
-                    {% if task.status == 'Pending' %}
-                    <span class="badge badge-pending">● Pending</span>
-                    {% elif task.status == 'Working' %}
-                    <span class="badge badge-working">◉ Working</span>
-                    {% else %}
-                    <span class="badge badge-done">✓ Completed</span>
+    <div class="task-list">
+        {% for task in tasks %}
+        <div class="task-card">
+            <div class="task-card-main">
+                <div class="task-card-header">
+                    <h4 class="task-title">{{ task.title }}</h4>
+                </div>
+                <div class="task-card-meta">
+                    {% if task.time_slot %}
+                    <span class="task-time"><i data-lucide="clock" style="width:12px;height:12px;vertical-align:middle;margin-right:4px;"></i>{{ task.time_slot.strftime('%I:%M %p') }}</span>
                     {% endif %}
-                </td>
+                    
+                    <div class="task-card-badges">
+                        {% if task.status == 'Pending' %}
+                        <span class="badge badge-pending">● Pending</span>
+                        {% elif task.status == 'Working' %}
+                        <span class="badge badge-working">◉ Working</span>
+                        {% else %}
+                        <span class="badge badge-done">✓ Completed</span>
+                        {% endif %}
 
-                <td>
-                    {% if task.priority == 'Low' %}
-                    <span class="badge badge-low">↓ Low</span>
-                    {% elif task.priority == 'Medium' %}
-                    <span class="badge badge-medium">→ Medium</span>
-                    {% else %}
-                    <span class="badge badge-high">↑ High</span>
-                    {% endif %}
-                </td>
+                        {% if task.priority == 'Low' %}
+                        <span class="badge badge-low">↓ Low</span>
+                        {% elif task.priority == 'Medium' %}
+                        <span class="badge badge-medium">→ Medium</span>
+                        {% else %}
+                        <span class="badge badge-high">↑ High</span>
+                        {% endif %}
+                    </div>
+                </div>
+            </div>
 
-                <td>{{ task.time_slot.strftime('%I:%M %p') if task.time_slot else '—' }}</td>
-
-                <td>
-                    <form action="{{ url_for('tasks.toggle_status', task_id=task.id) }}" method="POST"
-                        style="display:inline;">
-                        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}"/>
-                        <input type="hidden" name="next" value="{{ request.url }}"/>
-                        <button class="btn-small" type="submit">
-                            <i data-lucide="arrow-right" style="width:14px;height:14px;vertical-align:middle;"></i>
-                        </button>
-                    </form>
-                </td>
-
-                <td>
-                    <button class="btn-small btn-edit edit-task-btn" data-id="{{ task.id }}"
-                        data-title="{{ task.title }}" data-priority="{{ task.priority }}"
-                        data-deadline="{{ task.deadline or '' }}" data-time="{{ task.time_slot or '' }}">
-                        <i data-lucide="pencil" style="width:14px;height:14px;vertical-align:middle;"></i>
+            <div class="task-card-actions">
+                <form action="{{ url_for('tasks.toggle_status', task_id=task.id) }}" method="POST" style="margin:0;">
+                    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}"/>
+                    <input type="hidden" name="next" value="{{ request.url }}"/>
+                    <button class="action-btn advance-btn" type="submit" title="Advance Status">
+                        <i data-lucide="arrow-right" style="width:16px;height:16px;"></i>
                     </button>
-                </td>
+                </form>
 
-                <td>
-                    <form action="{{ url_for('tasks.delete_task', task_id=task.id) }}" method="POST">
-                        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}"/>
-                        <input type="hidden" name="next" value="{{ request.url }}"/>
-                        <button class="btn-small btn-delete">
-                            <i data-lucide="trash-2" style="width:14px;height:14px;vertical-align:middle;"></i>
-                        </button>
-                    </form>
-                </td>
-            </tr>
-            {% endfor %}
-        </tbody>
+                <button class="action-btn edit-task-btn" data-id="{{ task.id }}"
+                    data-title="{{ task.title }}" data-priority="{{ task.priority }}"
+                    data-deadline="{{ task.deadline or '' }}" data-time="{{ task.time_slot or '' }}" title="Edit Task">
+                    <i data-lucide="pencil" style="width:16px;height:16px;"></i>
+                </button>
 
-    </table>
+                <form action="{{ url_for('tasks.delete_task', task_id=task.id) }}" method="POST" style="margin:0;">
+                    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}"/>
+                    <input type="hidden" name="next" value="{{ request.url }}"/>
+                    <button class="action-btn delete-btn" type="submit" title="Delete Task">
+                        <i data-lucide="trash-2" style="width:16px;height:16px;"></i>
+                    </button>
+                </form>
+            </div>
+        </div>
+        {% endfor %}
     </div>
 
     {% else %}
     <!--  EMPTY STATE  -->
     <div class="empty-state">
-        <span class="empty-icon">📋</span>
-        <h3>No tasks yet</h3>
-        <p>Add your first task above and start organizing your day.</p>
+        <div class="empty-state-icon">
+            <i data-lucide="check-circle-2" style="width:48px;height:48px;color:var(--success);"></i>
+            <div class="empty-state-glow"></div>
+        </div>
+        <h3>You're all caught up!</h3>
+        <p>Enjoy your free time, or add a new task above to get started.</p>
     </div>
     {% endif %}
 
@@ -312,7 +298,7 @@
 
                 <div class="form-group">
                     <label for="edit-title">Task Title</label>
-                    <input type="text" id="edit-title" name="title" required placeholder="What needs to be done?">
+                    <input type="text" id="edit-title" name="title" required maxlength="100" placeholder="What needs to be done?">
                 </div>
 
                 <div class="modal-row">
@@ -454,6 +440,54 @@
 
         window.location.href = url;
     }
+
+    /* ---- Omnibar scripts ---- */
+    function expandOmnibar() {
+        document.getElementById('omnibar-form').classList.add('expanded');
+    }
+
+    // Click outside to collapse
+    document.addEventListener('click', function(e) {
+        const form = document.getElementById('omnibar-form');
+        if (form && form.classList.contains('expanded') && !form.contains(e.target)) {
+            const title = document.getElementById('omnibar-title').value.trim();
+            if (title === '') {
+                form.classList.remove('expanded');
+            }
+        }
+    });
+
+    /* ---- Micro-interactions ---- */
+    document.addEventListener('submit', function(e) {
+        // e.submitter is the button that was clicked
+        const submitBtn = e.submitter;
+        const form = e.target;
+        
+        if (submitBtn && submitBtn.classList.contains('advance-btn')) {
+            e.preventDefault();
+            submitBtn.disabled = true;
+            submitBtn.style.opacity = '0.5';
+            const icon = submitBtn.querySelector('i');
+            if(icon) {
+                icon.setAttribute('data-lucide', 'loader');
+                icon.classList.add('spin');
+                lucide.createIcons();
+            }
+            form.submit();
+        }
+        else if (submitBtn && submitBtn.classList.contains('delete-btn')) {
+            e.preventDefault();
+            const card = form.closest('.task-card');
+            if (card) {
+                card.classList.add('task-deleting');
+                setTimeout(() => {
+                    form.submit();
+                }, 350); // Wait for animation
+            } else {
+                form.submit();
+            }
+        }
+    });
 </script>
 
 {% endblock %}

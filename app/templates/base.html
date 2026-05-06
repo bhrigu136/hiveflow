@@ -29,8 +29,8 @@
 
             <nav>
                 <a href="{{ url_for('tasks.view_tasks') }}">
-                    <i data-lucide="home"
-                        style="width:16px;height:16px;vertical-align:middle;margin-right:4px;"></i>Home
+                    <i data-lucide="check-square"
+                        style="width:16px;height:16px;vertical-align:middle;margin-right:4px;"></i>My Tasks
                 </a>
 
                 {% if current_user.is_authenticated %}
@@ -79,11 +79,11 @@
                     </div>
                 </div>
 
-                <a href="#" onclick="toggleProfileSidebar(event);" class="nav-username" style="cursor: pointer; text-decoration: none; display: inline-flex; align-items: center;">
+                <a href="{{ url_for('auth.profile') }}" style="text-decoration: none; display: inline-flex; align-items: center;">
                     {% if current_user.profile_picture and current_user.profile_picture != 'default.png' %}
                         <img src="{{ url_for('static', filename='uploads/profiles/' + current_user.profile_picture) }}" alt="Profile" style="width: 24px; height: 24px; border-radius: 50%; margin-right: 6px; object-fit: cover;">
                     {% else %}
-                        <i data-lucide="user" style="width:14px;height:14px;vertical-align:middle;margin-right:4px;"></i>
+                        <i data-lucide="user" style="width:16px;height:16px;vertical-align:middle;margin-right:4px;"></i>
                     {% endif %}
                     Profile
                 </a>
@@ -137,181 +137,7 @@
     <script src="{{ url_for('static', filename='js/script.js') }}"></script>
     <script>lucide.createIcons();</script>
     {% if current_user.is_authenticated %}
-    <!-- Profile Sidebar Overlay -->
-    <div id="profileSidebarOverlay" class="profile-sidebar-overlay" onclick="toggleProfileSidebar(event)"></div>
-
-    <!-- Profile Sidebar -->
-    <div id="profileSidebar" class="profile-sidebar">
-        <div class="profile-sidebar-header">
-            <h2><i data-lucide="user"></i> Your Profile</h2>
-            <button class="profile-sidebar-close" onclick="toggleProfileSidebar(event)">
-                <i data-lucide="x"></i>
-            </button>
-        </div>
-        
-        <form method="POST" action="{{ url_for('auth.profile_update') }}" id="profile-form" enctype="multipart/form-data">
-            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}"/>
-            
-            <!-- Profile Picture -->
-            <div class="auth-form-group" style="text-align: center; margin-bottom: 20px;">
-                <div style="position: relative; display: inline-block;">
-                    {% if current_user.profile_picture and current_user.profile_picture != 'default.png' %}
-                        <img id="profile_preview" src="{{ url_for('static', filename='uploads/profiles/' + current_user.profile_picture) }}" alt="Profile" style="width: 80px; height: 80px; border-radius: 50%; object-fit: cover; border: 2px solid var(--primary-color);">
-                    {% else %}
-                        <img id="profile_preview" src="#" alt="Profile" style="display: none; width: 80px; height: 80px; border-radius: 50%; object-fit: cover; border: 2px solid var(--primary-color);">
-                        <div id="profile_placeholder" style="width: 80px; height: 80px; border-radius: 50%; background: var(--glass-bg); border: 2px solid var(--glass-border); display: flex; align-items: center; justify-content: center;">
-                            <i data-lucide="user" style="width: 40px; height: 40px; color: var(--text-muted);"></i>
-                        </div>
-                    {% endif %}
-                    <label for="profile_picture" style="position: absolute; bottom: -4px; right: -4px; background: var(--primary-color); border-radius: 50%; width: 32px; height: 32px; display: flex; align-items: center; justify-content: center; cursor: pointer; border: 3px solid #1a1a2e; z-index: 10; box-shadow: 0 4px 6px rgba(0,0,0,0.3); transition: transform 0.2s ease;" onmouseover="this.style.transform='scale(1.1)'" onmouseout="this.style.transform='scale(1)'">
-                        <i data-lucide="camera" style="width: 16px; height: 16px; color: white;"></i>
-                    </label>
-                    <input type="file" id="profile_picture" name="profile_picture" style="display: none;" accept="image/*" onchange="previewProfileImage(event)">
-                </div>
-                <input type="hidden" name="remove_picture" id="remove_picture" value="false">
-                {% if current_user.profile_picture and current_user.profile_picture != 'default.png' %}
-                    <div style="margin-top: 8px;">
-                        <button type="button" id="remove_picture_btn" onclick="removeProfileImage()" style="background: none; border: none; color: #ff4757; font-size: 13px; cursor: pointer; display: inline-flex; align-items: center;">
-                            <i data-lucide="trash-2" style="width: 14px; height: 14px; margin-right: 4px;"></i> Remove
-                        </button>
-                    </div>
-                {% endif %}
-            </div>
-
-            <!-- Full Name -->
-            <div class="auth-form-group">
-                <label for="profile_name">Full Name</label>
-                <div class="auth-input-wrapper">
-                    <span class="auth-input-icon"><i data-lucide="user" style="width:18px;height:18px;"></i></span>
-                    <input type="text" id="profile_name" name="name" 
-                           value="{{ current_user.name if current_user.name else '' }}" 
-                           placeholder="Enter your full name">
-                </div>
-            </div>
-
-            <!-- Email -->
-            <div class="auth-form-group">
-                <label for="profile_email">Email Address</label>
-                <div class="auth-input-wrapper">
-                    <span class="auth-input-icon"><i data-lucide="mail" style="width:18px;height:18px;"></i></span>
-                    <input type="email" id="profile_email" name="email" 
-                           value="{{ current_user.email if current_user.email else '' }}" 
-                           placeholder="Enter your email address" required>
-                </div>
-            </div>
-            
-            <hr style="border: none; border-top: 1px solid var(--glass-border); margin: 30px 0;">
-
-            <div class="profile-sidebar-header" style="border:none; margin-bottom: 10px; padding-bottom:0;">
-                <h2 style="font-size: 18px;">Change Password</h2>
-            </div>
-            <p style="color:var(--text-muted); font-size: 13px; margin-bottom: 20px;">Leave blank to keep current</p>
-
-            <!-- Current Password -->
-            <div class="auth-form-group">
-                <label for="profile_current_password">Current Password</label>
-                <div class="auth-input-wrapper">
-                    <span class="auth-input-icon"><i data-lucide="lock" style="width:18px;height:18px;"></i></span>
-                    <input type="password" id="profile_current_password" name="current_password" placeholder="Current password">
-                    <button type="button" class="auth-password-toggle" onclick="toggleSidebarPassword('profile_current_password', this)">
-                        <i data-lucide="eye" style="width:18px;height:18px;"></i>
-                    </button>
-                </div>
-            </div>
-
-            <!-- New Password -->
-            <div class="auth-form-group">
-                <label for="profile_new_password">New Password</label>
-                <div class="auth-input-wrapper">
-                    <span class="auth-input-icon"><i data-lucide="lock" style="width:18px;height:18px;"></i></span>
-                    <input type="password" id="profile_new_password" name="new_password" placeholder="New password" minlength="6">
-                    <button type="button" class="auth-password-toggle" onclick="toggleSidebarPassword('profile_new_password', this)">
-                        <i data-lucide="eye" style="width:18px;height:18px;"></i>
-                    </button>
-                </div>
-            </div>
-
-            <!-- Confirm Password -->
-            <div class="auth-form-group">
-                <label for="profile_confirm_password">Confirm New Password</label>
-                <div class="auth-input-wrapper">
-                    <span class="auth-input-icon"><i data-lucide="lock" style="width:18px;height:18px;"></i></span>
-                    <input type="password" id="profile_confirm_password" name="confirm_password" placeholder="Confirm new password">
-                    <button type="button" class="auth-password-toggle" onclick="toggleSidebarPassword('profile_confirm_password', this)">
-                        <i data-lucide="eye" style="width:18px;height:18px;"></i>
-                    </button>
-                </div>
-            </div>
-
-            <button type="submit" class="auth-btn orange" style="margin-top: 10px;">
-                Save Changes
-                <i data-lucide="save" style="width:16px;height:16px;"></i>
-            </button>
-        </form>
-    </div>
-
     <script>
-    function toggleProfileSidebar(e) {
-        if(e) e.preventDefault();
-        const sidebar = document.getElementById('profileSidebar');
-        const overlay = document.getElementById('profileSidebarOverlay');
-        const notifDropdown = document.getElementById('notificationsDropdown');
-        
-        sidebar.classList.toggle('open');
-        overlay.classList.toggle('open');
-        
-        if (sidebar.classList.contains('open') && notifDropdown) {
-            notifDropdown.style.display = 'none';
-        }
-    }
-
-    function previewProfileImage(event) {
-        const file = event.target.files[0];
-        if (file) {
-            const reader = new FileReader();
-            reader.onload = function(e) {
-                const preview = document.getElementById('profile_preview');
-                const placeholder = document.getElementById('profile_placeholder');
-                
-                preview.src = e.target.result;
-                preview.style.display = 'inline-block';
-                
-                if (placeholder) {
-                    placeholder.style.display = 'none';
-                }
-            };
-            reader.readAsDataURL(file);
-            document.getElementById('remove_picture').value = 'false';
-        }
-    }
-
-    function removeProfileImage() {
-        document.getElementById('remove_picture').value = 'true';
-        document.getElementById('profile_picture').value = '';
-        
-        const preview = document.getElementById('profile_preview');
-        const placeholder = document.getElementById('profile_placeholder');
-        const removeBtn = document.getElementById('remove_picture_btn');
-        
-        if (preview) preview.style.display = 'none';
-        if (placeholder) placeholder.style.display = 'flex';
-        if (removeBtn) removeBtn.style.display = 'none';
-    }
-
-    function toggleSidebarPassword(fieldId, btn) {
-        const input = document.getElementById(fieldId);
-        const icon = btn.querySelector('[data-lucide]');
-        if (input.type === 'password') {
-            input.type = 'text';
-            icon.setAttribute('data-lucide', 'eye-off');
-        } else {
-            input.type = 'password';
-            icon.setAttribute('data-lucide', 'eye');
-        }
-        if (typeof lucide !== 'undefined') {
-            lucide.createIcons();
-        }
-    }
     
     function toggleNotifications(e) {
         if(e) e.preventDefault();

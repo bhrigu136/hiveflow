@@ -124,6 +124,10 @@ def add_task():
     if not title:
         flash('Task title cannot be empty.', 'danger')
         return redirect(url_for('tasks.view_tasks'))
+    
+    if len(title) > 100:
+        flash('Task title must be 100 characters or less.', 'danger')
+        return redirect(url_for('tasks.view_tasks'))
 
     
     # DEADLINE PARSING (DATE)
@@ -296,6 +300,10 @@ def edit_task(task_id):
 
     if not title:
         flash("Task title cannot be empty.", "danger")
+        return redirect(fallback_redirect)
+
+    if len(title) > 100:
+        flash("Task title must be 100 characters or less.", "danger")
         return redirect(fallback_redirect)
 
 

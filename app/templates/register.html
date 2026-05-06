@@ -17,110 +17,107 @@
 <body class="auth-page">
 
     <!-- Animated background shapes -->
-    <div class="auth-bg-shapes">
-        <div class="shape shape-1"></div>
-        <div class="shape shape-2"></div>
-        <div class="shape shape-3"></div>
-    </div>
-
-    <div class="auth-layout">
-
-        <!-- Flash Messages -->
-        {% with messages = get_flashed_messages(with_categories=true) %}
-        {% if messages %}
-        {% for category, message in messages %}
-        <div class="flash {{ category }}">{{ message }}</div>
-        {% endfor %}
-        {% endif %}
-        {% endwith %}
-
-        <!-- Hero -->
-        <div class="auth-hero">
-            <div class="auth-hero-icon blue">
-                <i data-lucide="user-plus" style="width:28px;height:28px;"></i>
+    <div class="auth-layout-split">
+        <!-- Left Side: Showcase -->
+        <div class="auth-showcase">
+            <div class="auth-showcase-content">
+                <div class="logo">
+                    <i data-lucide="layers" style="width:32px;height:32px;color:var(--accent-light);"></i>
+                    <span>HiveFlow</span>
+                </div>
+                <h1>Start your journey<br>to better productivity.</h1>
+                <p>Join thousands of professionals who use HiveFlow to bring order to their chaotic workdays.</p>
+                
+                <div class="feature-pills">
+                    <div class="feature-pill"><i data-lucide="check-circle-2"></i> Smart Tasks</div>
+                    <div class="feature-pill"><i data-lucide="calendar"></i> Calendar Sync</div>
+                    <div class="feature-pill"><i data-lucide="users"></i> Team Projects</div>
+                </div>
             </div>
-            <h1>Create Account</h1>
-            <p>Fill in your details to create your account</p>
-        </div>
-
-        <!-- Card -->
-        <div class="auth-card">
-            <div class="auth-card-header">
-                <h2>Register</h2>
-                <p>Create your account and start organizing your tasks</p>
-            </div>
-
-            <form method="POST" id="register-form">
-                <input type="hidden" name="csrf_token" value="{{ csrf_token() }}"/>
-                <!-- Full Name -->
-                <div class="auth-form-group">
-                    <label for="name">Full Name</label>
-                    <div class="auth-input-wrapper">
-                        <span class="auth-input-icon">
-                            <i data-lucide="user" style="width:18px;height:18px;"></i>
-                        </span>
-                        <input type="text" id="name" name="name" placeholder="Enter your full name" required autofocus>
-                    </div>
-                </div>
-
-                <!-- Email -->
-                <div class="auth-form-group">
-                    <label for="email">Email Address</label>
-                    <div class="auth-input-wrapper">
-                        <span class="auth-input-icon">
-                            <i data-lucide="mail" style="width:18px;height:18px;"></i>
-                        </span>
-                        <input type="email" id="email" name="email" placeholder="Enter your email address" required>
-                    </div>
-                </div>
-
-                <!-- Password -->
-                <div class="auth-form-group">
-                    <label for="password">Password</label>
-                    <div class="auth-input-wrapper">
-                        <span class="auth-input-icon">
-                            <i data-lucide="lock" style="width:18px;height:18px;"></i>
-                        </span>
-                        <input type="password" id="password" name="password" placeholder="Create a password" required
-                            minlength="6">
-                        <button type="button" class="auth-password-toggle" onclick="togglePassword('password', this)">
-                            <i data-lucide="eye" style="width:18px;height:18px;"></i>
-                        </button>
-                    </div>
-                </div>
-
-                <!-- Confirm Password -->
-                <div class="auth-form-group">
-                    <label for="confirm_password">Confirm Password</label>
-                    <div class="auth-input-wrapper">
-                        <span class="auth-input-icon">
-                            <i data-lucide="lock" style="width:18px;height:18px;"></i>
-                        </span>
-                        <input type="password" id="confirm_password" name="confirm_password"
-                            placeholder="Confirm your password" required>
-                        <button type="button" class="auth-password-toggle"
-                            onclick="togglePassword('confirm_password', this)">
-                            <i data-lucide="eye" style="width:18px;height:18px;"></i>
-                        </button>
-                    </div>
-                </div>
-
-                <button type="submit" class="auth-btn blue">
-                    Create Account
-                    <i data-lucide="arrow-right" style="width:16px;height:16px;"></i>
-                </button>
-            </form>
-
-            <div class="auth-links">
-                <p>Already have an account? <a href="{{ url_for('auth.login') }}">Sign in</a></p>
+            
+            <div class="abstract-art">
+                <div class="orb orb-1"></div>
+                <div class="orb orb-2"></div>
+                <div class="glass-pane"></div>
             </div>
         </div>
 
-        <!-- Footer -->
-        <div class="auth-footer">
-            By creating an account, you agree to our Terms of Service and Privacy Policy.
-        </div>
+        <!-- Right Side: Auth Form -->
+        <div class="auth-form-side">
+            <!-- Flash Messages -->
+            {% with messages = get_flashed_messages(with_categories=true) %}
+            {% if messages %}
+            {% for category, message in messages %}
+            <div class="flash {{ category }}">{{ message }}</div>
+            {% endfor %}
+            {% endif %}
+            {% endwith %}
 
+            <div class="auth-card">
+                <div class="auth-hero" style="margin-bottom:24px;">
+                    <div class="auth-hero-icon blue">
+                        <i data-lucide="user-plus" style="width:28px;height:28px;"></i>
+                    </div>
+                    <h2>Create Account</h2>
+                    <p>Fill in your details to create your account</p>
+                </div>
+
+                <form method="POST" id="register-form">
+                    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}"/>
+                    
+                    <div class="auth-form-group">
+                        <div class="auth-input-wrapper">
+                            <input type="text" id="name" name="name" placeholder=" " required autofocus>
+                            <label for="name" class="floating-label">Full Name</label>
+                            <span class="auth-input-icon"><i data-lucide="user" style="width:18px;height:18px;"></i></span>
+                        </div>
+                    </div>
+
+                    <div class="auth-form-group">
+                        <div class="auth-input-wrapper">
+                            <input type="email" id="email" name="email" placeholder=" " required>
+                            <label for="email" class="floating-label">Email Address</label>
+                            <span class="auth-input-icon"><i data-lucide="mail" style="width:18px;height:18px;"></i></span>
+                        </div>
+                    </div>
+
+                    <div class="auth-form-group">
+                        <div class="auth-input-wrapper">
+                            <input type="password" id="password" name="password" placeholder=" " required minlength="6">
+                            <label for="password" class="floating-label">Password</label>
+                            <span class="auth-input-icon"><i data-lucide="lock" style="width:18px;height:18px;"></i></span>
+                            <button type="button" class="auth-password-toggle" onclick="togglePassword('password', this)">
+                                <i data-lucide="eye" style="width:18px;height:18px;"></i>
+                            </button>
+                        </div>
+                    </div>
+
+                    <div class="auth-form-group">
+                        <div class="auth-input-wrapper">
+                            <input type="password" id="confirm_password" name="confirm_password" placeholder=" " required>
+                            <label for="confirm_password" class="floating-label">Confirm Password</label>
+                            <span class="auth-input-icon"><i data-lucide="lock" style="width:18px;height:18px;"></i></span>
+                            <button type="button" class="auth-password-toggle" onclick="togglePassword('confirm_password', this)">
+                                <i data-lucide="eye" style="width:18px;height:18px;"></i>
+                            </button>
+                        </div>
+                    </div>
+
+                    <button type="submit" class="auth-btn blue">
+                        Create Account
+                        <i data-lucide="arrow-right" style="width:16px;height:16px;"></i>
+                    </button>
+                </form>
+
+                <div class="auth-links">
+                    <p>Already have an account? <a href="{{ url_for('auth.login') }}">Sign in</a></p>
+                </div>
+            </div>
+            
+            <div class="auth-footer">
+                By creating an account, you agree to our Terms of Service and Privacy Policy.
+            </div>
+        </div>
     </div>
 
     <script>
