@@ -39,7 +39,7 @@
     </div>
 
     <!--  ADD TASK OMNIBAR  -->
-    <form action="{{ url_for('tasks.add_task') }}" method="POST" class="omnibar-form" id="omnibar-form" style="border: 2px solid var(--glass-border); border-radius: 16px; transition: all 0.3s ease; background: rgba(0,0,0,0.2);" onfocusin="this.style.borderColor='var(--accent)'; this.style.boxShadow='0 0 0 4px var(--accent-glow)';" onfocusout="this.style.borderColor='var(--glass-border)'; this.style.boxShadow='none';">
+    <form action="{{ url_for('tasks.add_task') }}" method="POST" class="omnibar-form" id="omnibar-form" style="border: 2px solid var(--glass-border); border-radius: 16px; transition: all 0.3s ease; background: rgba(0,0,0,0.2);" onfocusin="this.style.borderColor='var(--accent)'; this.style.boxShadow='0 0 0 4px var(--accent-glow)';" onfocusout="this.style.borderColor='var(--glass-border)'; this.style.boxShadow='none';" onsubmit="if(this.dataset.submitting) return false; this.dataset.submitting = true; const btn = this.querySelector('button[type=submit]'); btn.style.opacity = '0.7'; btn.innerHTML = '<i data-lucide=\'loader\' class=\'spin\' style=\'width:16px;height:16px;margin-right:4px;\'></i>Adding...'; if(typeof lucide !== 'undefined') lucide.createIcons(); return true;">
         <input type="hidden" name="csrf_token" value="{{ csrf_token() }}"/>
         
         <div class="omnibar-input-wrapper">

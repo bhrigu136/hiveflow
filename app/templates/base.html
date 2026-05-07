@@ -142,15 +142,9 @@
     function toggleNotifications(e) {
         if(e) e.preventDefault();
         const dropdown = document.getElementById('notificationsDropdown');
-        const sidebar = document.getElementById('profileSidebar');
-        const overlay = document.getElementById('profileSidebarOverlay');
         
         if (dropdown.style.display === 'none' || dropdown.style.display === '') {
             dropdown.style.display = 'block';
-            if (sidebar.classList.contains('open')) {
-                sidebar.classList.remove('open');
-                overlay.classList.remove('open');
-            }
         } else {
             dropdown.style.display = 'none';
         }
