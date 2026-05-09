@@ -1,99 +1,89 @@
-<div class="kanban-task-card" style="background: var(--surface-solid); border: 1px solid var(--glass-border); border-radius: 12px; padding: 16px; margin-bottom: 16px; position: relative; display: flex; flex-direction: column; gap: 12px; transition: transform 0.2s ease, box-shadow 0.2s ease;" onmouseover="this.style.transform='translateY(-2px)'; this.style.boxShadow='0 8px 24px rgba(0,0,0,0.2)'; this.style.borderColor='var(--accent)';" onmouseout="this.style.transform='none'; this.style.boxShadow='none'; this.style.borderColor='var(--glass-border)';">
-    <div style="display: flex; justify-content: space-between; align-items: flex-start; gap: 12px;">
-        <h4 style="margin: 0; font-size: 15px; font-weight: 600; color: var(--text); line-height: 1.4; word-wrap: break-word;">{{ task.title }}</h4>
-        
-        <!-- Priority badge -->
-        <span style="flex-shrink: 0; font-size: 10px; font-weight: 700; text-transform: uppercase; padding: 4px 8px; border-radius: 6px; 
-            {% if task.priority == 'High' %}background: rgba(239,68,68,0.1); color: #ef4444; border: 1px solid rgba(239,68,68,0.2);
-            {% elif task.priority == 'Medium' %}background: rgba(245,158,11,0.1); color: #f59e0b; border: 1px solid rgba(245,158,11,0.2);
-            {% else %}background: rgba(16,185,129,0.1); color: #10b981; border: 1px solid rgba(16,185,129,0.2);{% endif %}
-        ">
-            {{ task.priority }}
-        </span>
+<div class="kanban-task-card prio-{{ task.priority|lower }}">
+    <div style="display:flex;justify-content:space-between;align-items:flex-start;gap:12px;">
+        <h4 class="kanban-task-title">{{ task.title }}</h4>
+        <span class="kanban-prio-tag prio-{{ task.priority|lower }}">{{ task.priority }}</span>
     </div>
-    
-    <div style="display: flex; justify-content: space-between; align-items: center; margin-top: 4px;">
-        <!-- Assignee -->
-        <div style="display: flex; align-items: center; gap: 6px; font-size: 12px; color: var(--text-muted);">
+
+    <div class="kanban-card-row">
+        <div class="kanban-assignee">
             {% if task.assignee %}
-            <div style="width: 20px; height: 20px; border-radius: 50%; background: var(--primary-color); color: white; display: flex; align-items: center; justify-content: center; font-size: 10px;" title="{{ task.assignee.name if task.assignee.name else task.assignee.username }}">
+            <div class="kanban-avatar" title="{{ task.assignee.name if task.assignee.name else task.assignee.username }}">
                 {{ task.assignee.name[0].upper() if task.assignee.name else task.assignee.username[0].upper() }}
             </div>
-            <span style="max-width: 80px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;">{{ task.assignee.name if task.assignee.name else task.assignee.username }}</span>
+            <span class="kanban-assignee-name">{{ task.assignee.name if task.assignee.name else task.assignee.username }}</span>
             {% else %}
-            <div style="width: 20px; height: 20px; border-radius: 50%; border: 1px dashed var(--glass-border); display: flex; align-items: center; justify-content: center;">
-                <i data-lucide="user" style="width: 10px; height: 10px;"></i>
+            <div class="kanban-avatar unassigned">
+                <i data-lucide="user" style="width:10px;height:10px;"></i>
             </div>
             <span>Unassigned</span>
             {% endif %}
         </div>
-        
-        <!-- Actions: status toggle for admin or assignee; delete for admin only -->
+
+        {# Actions: status toggle for admin or assignee; delete for admin only #}
         {% set can_toggle = is_admin or (task.assigned_to and task.assigned_to == current_user.id) %}
-        <div style="display: flex; gap: 4px; align-items: center;">
+        <div class="kanban-actions">
             {% if can_toggle %}
-            <form action="{{ url_for('tasks.toggle_status', task_id=task.id) }}" method="POST" style="margin: 0;">
+            <form action="{{ url_for('tasks.toggle_status', task_id=task.id) }}" method="POST" style="margin:0;">
                 <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
                 <input type="hidden" name="next" value="{{ request.url }}">
                 {% if task.status == 'Pending' %}
-                <button type="submit" style="background: none; border: none; color: var(--primary-color); cursor: pointer; padding: 4px;" title="Start working">
-                    <i data-lucide="play-circle" style="width: 16px; height: 16px;"></i>
+                <button type="submit" class="kanban-icon-btn start" title="Start working">
+                    <i data-lucide="play-circle" style="width:16px;height:16px;"></i>
                 </button>
                 {% elif task.status == 'Working' %}
-                <button type="submit" style="background: none; border: none; color: #4caf50; cursor: pointer; padding: 4px;" title="Mark completed">
-                    <i data-lucide="check-circle" style="width: 16px; height: 16px;"></i>
+                <button type="submit" class="kanban-icon-btn complete" title="Mark completed">
+                    <i data-lucide="check-circle" style="width:16px;height:16px;"></i>
                 </button>
                 {% else %}
-                <button type="submit" style="background: none; border: none; color: var(--text-muted); cursor: pointer; padding: 4px;" title="Reopen task">
-                    <i data-lucide="rotate-ccw" style="width: 16px; height: 16px;"></i>
+                <button type="submit" class="kanban-icon-btn reopen" title="Reopen task">
+                    <i data-lucide="rotate-ccw" style="width:16px;height:16px;"></i>
                 </button>
                 {% endif %}
             </form>
             {% endif %}
             {% if is_admin %}
             <button type="button"
-                    class="task-edit-btn"
+                    class="task-edit-btn kanban-icon-btn edit"
                     data-task-id="{{ task.id }}"
                     data-task-title="{{ task.title }}"
                     data-task-priority="{{ task.priority }}"
                     data-task-status="{{ task.status }}"
                     data-task-assigned="{{ task.assigned_to or '' }}"
-                    style="background: none; border: none; color: var(--text-muted); cursor: pointer; padding: 4px;"
                     title="Edit task">
-                <i data-lucide="edit-3" style="width: 16px; height: 16px;"></i>
+                <i data-lucide="edit-3" style="width:16px;height:16px;"></i>
             </button>
-            <form action="{{ url_for('tasks.delete_task', task_id=task.id) }}" method="POST" style="margin: 0;" onsubmit="return confirm('Delete this task?');">
+            <form action="{{ url_for('tasks.delete_task', task_id=task.id) }}" method="POST" style="margin:0;" onsubmit="return confirm('Delete this task?');">
                 <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
                 <input type="hidden" name="next" value="{{ request.url }}">
-                <button type="submit" style="background: none; border: none; color: #ff5252; cursor: pointer; padding: 4px;" title="Delete task">
-                    <i data-lucide="trash-2" style="width: 16px; height: 16px;"></i>
+                <button type="submit" class="kanban-icon-btn delete" title="Delete task">
+                    <i data-lucide="trash-2" style="width:16px;height:16px;"></i>
                 </button>
             </form>
             {% endif %}
         </div>
     </div>
-    
+
     <!-- Task Comments -->
-    <details style="font-size: 13px; color: var(--text-secondary);">
-        <summary style="cursor: pointer; user-select: none; padding: 8px 0; border-top: 1px solid var(--glass-border); display: flex; align-items: center; gap: 6px; transition: color 0.2s;" onmouseover="this.style.color='var(--accent-light)'" onmouseout="this.style.color=''">
-            <i data-lucide="message-square" style="width: 14px; height: 14px;"></i> Comments ({{ task.comments.count() }})
+    <details class="kanban-comments">
+        <summary>
+            <i data-lucide="message-square" style="width:14px;height:14px;"></i> Comments ({{ task.comments.count() }})
         </summary>
-        <div style="padding-top: 8px; display: flex; flex-direction: column; gap: 12px;">
+        <div style="display:flex;flex-direction:column;gap:6px;">
             {% for comment in task.comments %}
-            <div style="background: rgba(255,255,255,0.05); padding: 8px; border-radius: 6px;">
-                <div style="display: flex; justify-content: space-between; margin-bottom: 4px;">
-                    <span style="font-weight: 500; color: var(--text-color);">{{ comment.creator.name if comment.creator.name else comment.creator.username }}</span>
-                    <span style="font-size: 10px;"><time datetime="{{ comment.created_at.strftime('%Y-%m-%dT%H:%M:%SZ') }}" data-fmt="compact">{{ comment.created_at.strftime('%b %d, %H:%M') }}</time></span>
+            <div class="kanban-comment">
+                <div class="kanban-comment-head">
+                    <strong>{{ comment.creator.name if comment.creator.name else comment.creator.username }}</strong>
+                    <time datetime="{{ comment.created_at.strftime('%Y-%m-%dT%H:%M:%SZ') }}" data-fmt="compact">{{ comment.created_at.strftime('%b %d, %H:%M') }}</time>
                 </div>
-                <div style="color: var(--text-color);">{{ comment.content }}</div>
+                <div class="kanban-comment-body">{{ comment.content }}</div>
             </div>
             {% endfor %}
-            <form action="{{ url_for('discussions.add_task_comment', task_id=task.id) }}" method="POST" style="margin-top: 4px; display: flex; gap: 8px; align-items: stretch;" onsubmit="if(this.dataset.submitting) return false; this.dataset.submitting = true; this.querySelector('button[type=submit]').style.opacity = '0.5'; return true;">
+            <form action="{{ url_for('discussions.add_task_comment', task_id=task.id) }}" method="POST" class="kanban-comment-form" onsubmit="if(this.dataset.submitting) return false; this.dataset.submitting = true; this.querySelector('button[type=submit]').style.opacity = '0.5'; return true;">
                 <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
                 <input type="hidden" name="next" value="{{ request.url }}">
-                <input type="text" name="content" required placeholder="Write a comment..." style="flex: 1; padding: 8px 12px; border-radius: 8px; border: 1px solid var(--glass-border); background: rgba(0,0,0,0.2); color: var(--text); font-size: 13px; transition: all 0.2s; outline: none;" onfocus="this.style.borderColor='var(--accent)';" onblur="this.style.borderColor='var(--glass-border)';">
-                <button type="submit" style="padding: 0 14px; border-radius: 8px; display: flex; align-items: center; justify-content: center; background: linear-gradient(135deg, var(--accent), #6366f1); border: none; box-shadow: 0 2px 10px var(--accent-glow); transition: all 0.2s; cursor: pointer;" title="Post comment" onmouseover="this.style.transform='translateY(-1px)'" onmouseout="this.style.transform='none'">
-                    <i data-lucide="send" style="width: 14px; height: 14px; color: white;"></i>
+                <input type="text" name="content" required placeholder="Write a comment...">
+                <button type="submit" class="kanban-comment-send" title="Post comment">
+                    <i data-lucide="send" style="width:14px;height:14px;"></i>
                 </button>
             </form>
         </div>

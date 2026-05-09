@@ -7,6 +7,93 @@
 @keyframes spin { 100% { transform: rotate(360deg); } }
 .spin { animation: spin 1s linear infinite; }
 </style>
+
+{# ─── WELCOME BANNER (greeting + date) ─── #}
+{% set _user_name = current_user.name or current_user.username or 'there' %}
+{% set _open_count = pending_count + working_count %}
+<div class="welcome-banner">
+    <div class="welcome-banner-inner">
+        <div>
+            <h2 class="welcome-greeting" id="greeting-text" data-name="{{ _user_name }}">
+                <span class="wave">👋</span>
+                Hello, {{ _user_name }}!
+            </h2>
+            <p class="welcome-sub">
+                {% if total_count == 0 %}
+                    {% if show_all %}
+                        No tasks yet — add one below to get started.
+                    {% elif is_today %}
+                        A fresh start awaits — add your first task below.
+                    {% else %}
+                        Nothing scheduled for {{ day_label }}.
+                    {% endif %}
+                {% elif completed_count == total_count %}
+                    Amazing — every task done. Treat yourself! 🎉
+                {% else %}
+                    {% if show_all %}
+                        <strong style="color:var(--text);">{{ _open_count }}</strong>
+                        open task{{ '' if _open_count == 1 else 's' }} across all dates.
+                    {% elif is_today %}
+                        You have <strong style="color:var(--text);">{{ _open_count }}</strong>
+                        task{{ '' if _open_count == 1 else 's' }} left to tackle today.
+                    {% else %}
+                        <strong style="color:var(--text);">{{ _open_count }}</strong>
+                        open task{{ '' if _open_count == 1 else 's' }} for {{ day_label }}.
+                    {% endif %}
+                {% endif %}
+            </p>
+        </div>
+        <div class="welcome-date-pill">
+            <i data-lucide="calendar-days" style="width:14px;height:14px;"></i>
+            <span id="welcome-date"></span>
+        </div>
+    </div>
+</div>
+
+{# ─── STATS DASHBOARD ─── #}
+<div class="stats-grid">
+    <div class="stat-card stat-total">
+        <div class="stat-card-row">
+            <div>
+                <div class="stat-label">Total</div>
+                <div class="stat-value">{{ total_count }}</div>
+            </div>
+            <div class="stat-icon"><i data-lucide="layers" style="width:18px;height:18px;"></i></div>
+        </div>
+        <div class="stat-progress"><div class="stat-progress-fill" data-pct="{{ completion_pct }}"></div></div>
+    </div>
+    <div class="stat-card stat-pending">
+        <div class="stat-card-row">
+            <div>
+                <div class="stat-label">Pending</div>
+                <div class="stat-value">{{ pending_count }}</div>
+            </div>
+            <div class="stat-icon"><i data-lucide="circle" style="width:18px;height:18px;"></i></div>
+        </div>
+        <div class="stat-progress"><div class="stat-progress-fill" data-pct="{{ ((pending_count / total_count) * 100) | round | int if total_count else 0 }}"></div></div>
+    </div>
+    <div class="stat-card stat-working">
+        <div class="stat-card-row">
+            <div>
+                <div class="stat-label">In Progress</div>
+                <div class="stat-value">{{ working_count }}</div>
+            </div>
+            <div class="stat-icon"><i data-lucide="zap" style="width:18px;height:18px;"></i></div>
+        </div>
+        <div class="stat-progress"><div class="stat-progress-fill" data-pct="{{ ((working_count / total_count) * 100) | round | int if total_count else 0 }}"></div></div>
+    </div>
+    <div class="stat-card stat-done">
+        <div class="stat-card-row">
+            <div>
+                <div class="stat-label">Completed</div>
+                <div class="stat-value">{{ completed_count }}</div>
+            </div>
+            <div class="stat-icon"><i data-lucide="check-circle-2" style="width:18px;height:18px;"></i></div>
+        </div>
+        <div class="stat-progress"><div class="stat-progress-fill" data-pct="{{ completion_pct }}"></div></div>
+    </div>
+</div>
+
 <div class="task-box" style="background: var(--surface-solid); border: 1px solid var(--glass-border); border-radius: 20px; padding: 35px; box-shadow: 0 15px 35px rgba(0,0,0,0.25); backdrop-filter: blur(20px);">
 
     <!--  HEADER  -->
@@ -201,7 +288,7 @@
     {% if tasks %}
     <div class="task-list">
         {% for task in tasks %}
-        <div class="task-card">
+        <div class="task-card prio-{{ task.priority|lower }} status-{{ task.status|lower }}">
             <div class="task-card-main">
                 <div class="task-card-header">
                     <h4 class="task-title">{{ task.title }}</h4>
@@ -456,6 +543,38 @@
             }
         }
     });
+
+    /* ---- Welcome banner: dynamic greeting + date ---- */
+    (function () {
+        const greeting = document.getElementById('greeting-text');
+        const dateEl = document.getElementById('welcome-date');
+
+        if (greeting) {
+            const hour = new Date().getHours();
+            let timeWord = 'Hello';
+            if (hour < 12)      timeWord = 'Good morning';
+            else if (hour < 18) timeWord = 'Good afternoon';
+            else                timeWord = 'Good evening';
+
+            const userName = (greeting.dataset.name || '').trim() || 'there';
+            greeting.innerHTML =
+                '<span class="wave">👋</span> ' +
+                timeWord + ', ' + userName + '!';
+        }
+
+        if (dateEl) {
+            const now = new Date();
+            dateEl.textContent = now.toLocaleDateString(undefined, {
+                weekday: 'long', month: 'short', day: 'numeric'
+            });
+        }
+
+        /* Animate stat progress bars from data-pct */
+        document.querySelectorAll('.stat-progress-fill').forEach(function (el) {
+            const pct = parseInt(el.getAttribute('data-pct') || '0', 10);
+            requestAnimationFrame(function () { el.style.width = pct + '%'; });
+        });
+    })();
 
     /* ---- Micro-interactions ---- */
     document.addEventListener('submit', function(e) {

@@ -53,7 +53,7 @@ document.addEventListener('DOMContentLoaded', () => {
         });
     }, { threshold: 0.1 });
 
-    document.querySelectorAll('.task-box, .auth-box').forEach(el => {
+    document.querySelectorAll('.task-box').forEach(el => {
         observer.observe(el);
     });
 

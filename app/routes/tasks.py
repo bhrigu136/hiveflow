@@ -69,6 +69,13 @@ def view_tasks():
         Task.created_at.desc()
     ).all()
 
+    # Stats for the dashboard summary — based on the currently visible task set
+    total_count = len(tasks)
+    pending_count = sum(1 for t in tasks if t.status == 'Pending')
+    working_count = sum(1 for t in tasks if t.status == 'Working')
+    completed_count = sum(1 for t in tasks if t.status == 'Completed')
+    completion_pct = int((completed_count / total_count) * 100) if total_count else 0
+
     # Build prev/next dates and a friendly label for the day-navigation bar
     prev_date = (selected_date - timedelta(days=1)).isoformat() if selected_date else None
     next_date = (selected_date + timedelta(days=1)).isoformat() if selected_date else None
@@ -107,6 +114,11 @@ def view_tasks():
         next_date=next_date,
         day_label=day_label,
         nav_args=nav_args,
+        total_count=total_count,
+        pending_count=pending_count,
+        working_count=working_count,
+        completed_count=completed_count,
+        completion_pct=completion_pct,
     )
 
 
