@@ -1,72 +1,110 @@
 # HiveFlow 🐝
 
-> Personal task management, built for the upgrade to team collaboration.
+A task app I started for myself, then kept adding to until it could handle teams too.
 
-A full-stack web app built with Flask — manage your daily tasks with a clean dark UI, set priorities and deadlines, search/filter, export to CSV, and optionally sync everything to Google Calendar. Currently a personal planner, actively being upgraded into a full group project management tool for student teams.
+🔗 **Live demo:** [hiveflow-nadp.onrender.com](https://hiveflow-nadp.onrender.com)
 
----
+It started simple. I just wanted a clean place to write down what I had to do that day, set a deadline, and have it show up in my Google Calendar so I'd actually remember. Over time it grew. Friends said it'd be useful for group projects, so I added organizations, Kanban boards, comments, and notifications. You can still use it as a private to-do list and ignore everything else, or invite people in and run a project with them.
 
-## What it does
-
-At its core, it's a to-do app — but with enough features to actually be useful day-to-day:
-
-- **Login / Register** — Each user has their own account with password hashing. You can also log in with your email or username. Forgot your password? There's an OTP-based reset flow that sends a 6-digit code to your email.
-- **Task Management** — Add tasks with a title, priority (Low / Medium / High), a deadline date, and an optional time slot. You can edit tasks through a modal popup, or delete them one by one (or wipe everything with "Clear All").
-- **Status Tracking** — Every task has a status: `Pending → Working → Completed`. You can cycle through these directly from the task list with a single click — no separate edit required.
-- **Search & Filters** — There's a live search bar and dropdowns to filter tasks by status or priority. These work together so you can narrow things down quickly.
-- **Export to CSV** — You can export your entire task list (or just the last 7 / 15 / 30 days, or a custom date range) as a `.csv` file. Handy for reviewing or sharing.
-- **Google Calendar Sync** — If you connect your Google account via OAuth, any task you create with a deadline will automatically appear as a calendar event. Editing or deleting the task updates/removes the calendar event too.
-- **Profile Management** — There's a side panel (slides in from the right) where you can update your name, email, and change your password. Current password is verified before any changes go through.
+> Heads up: the demo runs on Render's free tier, so the first request after a quiet period takes about 30 seconds while the server wakes up. After that it's quick.
 
 ---
 
-## Tech Stack
+## What's in it
+
+### For yourself
+
+- **Accounts.** Sign in with email or username. Passwords are hashed (Werkzeug). Forgot it? You'll get a 6-digit code by email that's good for 10 minutes.
+- **Profile page.** Upload a picture, change your name or email, swap your password (you have to type the old one first). There's a small dashboard at the top showing how many tasks you have, how many you've finished, what's due today, and how many teams you're in.
+- **Adding tasks.** There's a single bar at the top of the tasks page. Type the title, tab into priority/date/time if you want, hit enter. That's it.
+- **Status.** Every task cycles through Pending → Working → Completed. One click on the arrow advances it. No need to open an edit screen for that.
+- **Greeting + stats.** When you load the page you get "Good morning, [your name]" or afternoon/evening depending on the clock, plus four cards showing total / pending / in-progress / completed with little progress bars.
+- **Filtering.** Search box, status dropdown, priority dropdown. Plus arrows to walk day-by-day, a "Today" button, a date picker, and "Show All" if you want to see everything at once.
+- **CSV export.** Last 7, 15, 30 days, all tasks, or pick your own date range.
+- **Google Calendar (optional).** If you connect your Google account, any task with a deadline shows up as a calendar event with email and popup reminders. Edit the task and the event updates. Delete it and the event goes away.
+
+### For teams
+
+- **Organizations.** Create one, share the invite code, and people can join. You can be in more than one (e.g. your class and your side project).
+- **Projects with a Kanban board.** Three columns: Pending, In Progress, Completed. Each column has its own colour accent and a friendly empty state when there's nothing in it.
+- **Assigning work.** Pick a member, assign a task. They can move it through the columns. Admins handle edits and deletes.
+- **Talking about things.** Discussion threads at the project level, plus comments attached to individual tasks.
+- **Notifications.** Bell icon in the nav with an unread count. Clicking it shows recent notifications; you can mark them read one at a time or all at once.
+- **Activity log.** Each org has a feed of who did what, which is helpful when you come back after a few days and want to know what changed.
+
+---
+
+## What it's built with
 
 | Layer | Tool |
 |---|---|
-| Backend | Flask 3.x (Python) |
-| Database | SQLAlchemy + SQLite (local) / PostgreSQL (production) |
-| Auth | Flask-Login + Werkzeug password hashing |
+| Backend | Flask 3.x |
+| Database | SQLAlchemy. SQLite locally, Postgres in production |
+| Migrations | Flask-Migrate (Alembic under the hood) |
+| Auth | Flask-Login + Werkzeug for password hashing |
 | Forms / CSRF | Flask-WTF |
-| Google Integration | google-auth, google-api-python-client, google-auth-oauthlib |
-| Email (OTP) | Python smtplib + Gmail SMTP |
-| Deployment | Gunicorn + Procfile |
+| Google | google-auth, google-api-python-client, google-auth-oauthlib |
+| Email | smtplib + Gmail SMTP |
+| Frontend | Plain JavaScript, Lucide for icons, Inter for the font, hand-written CSS |
+| Hosting | Gunicorn behind a Procfile |
+
+No frontend framework. I wanted to keep the page weight low and didn't need React for what this does.
 
 ---
 
-## Project Structure
+## How the files are laid out
 
 ```
 Flask-ToDo_App/
 ├── app/
-│   ├── __init__.py        # App factory — creates and wires everything together
-│   ├── extensions.py      # SQLAlchemy, LoginManager, and CSRF instances
-│   ├── models.py          # User and Task database models
+│   ├── __init__.py             # App factory. Wires the extensions and blueprints.
+│   ├── extensions.py           # SQLAlchemy, LoginManager, CSRF, Migrate.
+│   ├── models.py               # User, Task, Organization, OrgMember, Project,
+│   │                           # Discussion, Comment, Notification, ActivityLog.
+│   ├── utils.py                # log_activity() and create_notification().
 │   ├── routes/
-│   │   ├── auth.py        # Login, register, forgot/reset password, profile update
-│   │   ├── tasks.py       # Add, edit, delete, toggle, clear, export CSV
-│   │   └── google.py      # Google OAuth connect/disconnect/callback
-│   ├── templates/         # Jinja2 HTML templates
-│   └── static/            # CSS, JS, and any static assets
-├── instance/              # SQLite database lives here (auto-created, not committed)
-├── Procfile               # Gunicorn startup command for deployment
-├── requirements.txt       # All Python dependencies, pinned
-├── .env.example           # Template showing what env variables you need
-└── run.py                 # Entry point — just runs the app
+│   │   ├── auth.py             # Login, register, forgot/reset password, profile.
+│   │   ├── tasks.py            # Personal tasks. Add/edit/delete/toggle/clear/export.
+│   │   ├── google.py           # OAuth connect, callback, disconnect.
+│   │   ├── orgs.py             # Create/join orgs and manage members.
+│   │   ├── projects.py         # Projects, the Kanban board, assigning tasks.
+│   │   ├── discussions.py      # Threads and per-task comments.
+│   │   └── notifications.py    # The bell dropdown and read/unread state.
+│   ├── templates/
+│   │   ├── base.html           # The shell every page extends.
+│   │   ├── tasks.html          # Welcome banner, stats, omnibar, task list.
+│   │   ├── login / register / forgot_password / reset_password.html
+│   │   ├── profile.html        # The account dashboard page.
+│   │   ├── orgs/               # list, create, dashboard.
+│   │   ├── projects/           # create, dashboard (Kanban), _task_card partial.
+│   │   ├── discussions/        # list, view.
+│   │   └── components/         # _activity_feed.html.
+│   └── static/
+│       ├── css/style.css       # The main stylesheet.
+│       ├── css/auth.css        # The split-screen login/register layout.
+│       ├── js/script.js        # Flash auto-dismiss, button ripple, timezone fixes.
+│       └── uploads/profiles/   # Where uploaded avatars go.
+├── migrations/                 # Alembic migration files.
+├── instance/                   # The local SQLite file lives here. Not committed.
+├── docs/                       # Random notes I've kept while building.
+├── Procfile                    # Tells Render/Heroku how to start the app.
+├── requirements.txt            # Pinned dependencies.
+├── .env.example                # Template for your env file.
+└── run.py                      # Just runs the app.
 ```
 
 ---
 
-## Getting it Running Locally
+## Running it on your machine
 
-### 1. Clone the repo
+### 1. Clone
 
 ```bash
 git clone <your-repo-url>
 cd Flask-ToDo_App
 ```
 
-### 2. Set up a virtual environment
+### 2. Make a virtual environment
 
 ```bash
 python -m venv venv
@@ -78,103 +116,97 @@ venv\Scripts\activate
 source venv/bin/activate
 ```
 
-### 3. Install dependencies
+### 3. Install everything
 
 ```bash
 pip install -r requirements.txt
 ```
 
-### 4. Set up your `.env` file
+### 4. Set up `.env`
 
-Copy the example file and fill in your values:
+Copy the example over and fill it in:
 
 ```bash
 cp .env.example .env
 ```
 
-Open `.env` and set:
+At minimum you need:
 
 ```
-SECRET_KEY=some-long-random-string-here
-GOOGLE_CLIENT_ID=your-client-id-from-google-cloud
-GOOGLE_CLIENT_SECRET=your-client-secret-from-google-cloud
+SECRET_KEY=any-long-random-string
+GOOGLE_CLIENT_ID=your-client-id
+GOOGLE_CLIENT_SECRET=your-client-secret
 ```
 
-For `GOOGLE_CLIENT_ID` and `GOOGLE_CLIENT_SECRET`, you'll need to create an OAuth 2.0 Web Application credential in [Google Cloud Console](https://console.cloud.google.com). Make sure to add `http://127.0.0.1:5000/google/callback` as an authorized redirect URI.
+The Google bits are only needed if you want calendar sync. To get them, head to [Google Cloud Console](https://console.cloud.google.com), create an OAuth 2.0 Web Application credential, and add `http://127.0.0.1:5000/google/callback` as an authorized redirect URI. Skip them entirely if you don't care about calendar sync. The rest of the app still works.
 
-If you don't want Google Calendar sync at all, you can skip the Google credentials — everything else works fine without them.
-
-For the email OTP (forgot password), add these two as well if you want it to actually send emails:
+If you also want the forgot-password emails to actually go out, add:
 
 ```
 MAIL_USERNAME=your-gmail@gmail.com
 MAIL_PASSWORD=your-gmail-app-password
 ```
 
-Without these, the OTP code gets shown in a flash message instead (which is fine for local dev/testing).
+(That has to be an [App Password](https://myaccount.google.com/apppasswords), not your actual Gmail password.) If you don't set these, the OTP code just gets flashed on screen, which is fine while you're testing locally.
 
-### 5. Run the app
+### 5. Run migrations
+
+```bash
+flask db upgrade
+```
+
+### 6. Start it
 
 ```bash
 python run.py
 ```
 
-Go to `http://127.0.0.1:5000` — it'll auto-create the SQLite database on first run.
+Open `http://127.0.0.1:5000` in your browser.
 
 ---
 
-## Roadmap — Upgrading to HiveFlow Collab
+## Putting it on Render
 
-The next version is being built to support student group projects:
+The live demo is hosted at [hiveflow-nadp.onrender.com](https://hiveflow-nadp.onrender.com). If you want your own copy somewhere:
 
-- **Organizations** — create or join a team/class with an invite code
-- **Projects** — multiple projects inside each org with a Kanban board view
-- **Task Assignment** — assign tasks to specific team members
-- **Discussions** — project-level threads + per-task comments
-- **Notifications** — get notified when you're assigned a task or someone comments
+1. Spin up a PostgreSQL database on whichever platform you're using.
+2. Copy every variable from your `.env` into the platform's environment settings. Add a `DATABASE_URL` pointing at the Postgres you just made.
+3. Push the code. The platform reads `requirements.txt`, then starts the app from the `Procfile` using Gunicorn.
+4. Run `flask db upgrade` once after the first deploy so the schema is in place.
 
----
+The app picks SQLite or Postgres automatically based on whether `DATABASE_URL` is set, so there's nothing to switch in the code.
 
-## Deploying to Production (Render / Railway / Heroku)
-
-This app is already set up for deployment:
-
-1. Create a PostgreSQL database on your chosen platform.
-2. Add all your environment variables (from `.env`) to the platform's settings, plus `DATABASE_URL` pointing to your Postgres instance.
-3. Push your code — the platform will run `pip install -r requirements.txt` and start the app using the `Procfile` (which uses Gunicorn).
-
-The app automatically switches between SQLite (local) and PostgreSQL (production) based on the `DATABASE_URL` env variable.
-
-> **Note:** Make sure your Google OAuth redirect URI is updated to your production domain in Google Cloud Console when deploying.
+> One thing that's easy to forget: update your Google OAuth redirect URI to the production domain in Google Cloud Console. Otherwise the connect flow breaks.
 
 ---
 
-## Environment Variables Reference
+## Env variables, in one place
 
-| Variable | Required | What it's for |
+| Variable | Required? | What it does |
 |---|---|---|
-| `SECRET_KEY` | Yes | Flask session signing and CSRF protection |
-| `GOOGLE_CLIENT_ID` | Optional | Google Calendar OAuth |
-| `GOOGLE_CLIENT_SECRET` | Optional | Google Calendar OAuth |
-| `MAIL_USERNAME` | Optional | Gmail address to send OTP emails from |
-| `MAIL_PASSWORD` | Optional | Gmail App Password (not your regular password) |
-| `DATABASE_URL` | Production only | PostgreSQL connection string |
+| `SECRET_KEY` | Yes | Signs sessions and CSRF tokens |
+| `GOOGLE_CLIENT_ID` | Optional | For Google Calendar sync |
+| `GOOGLE_CLIENT_SECRET` | Optional | For Google Calendar sync |
+| `MAIL_USERNAME` | Optional | Gmail address that sends OTP emails |
+| `MAIL_PASSWORD` | Optional | Gmail App Password (not your normal one) |
+| `DATABASE_URL` | Production only | Postgres connection string |
 
 ---
 
-## A note on security
+## Security stuff
 
-- Passwords are hashed with Werkzeug (bcrypt-style) — plain-text passwords are never stored.
-- CSRF protection is enabled on all forms via Flask-WTF.
-- The `.env` file is in `.gitignore` — never commit it.
-- Google OAuth tokens are stored per-user in the database (not in the session or files).
+- Passwords go through Werkzeug's hashing. Plaintext never touches the database.
+- Every form has CSRF protection through Flask-WTF. Every POST template includes a `csrf_token` hidden input.
+- Google OAuth tokens are stored per user in the DB, not in the session or in a file on disk.
+- Profile pictures are limited by file extension and saved under `app/static/uploads/profiles/`.
 - The forgot-password OTP expires after 10 minutes.
+- `.env` is in `.gitignore`. Don't ever commit it. Seriously.
 
 ---
 
 ## License
 
-MIT — do whatever you want with it.
+MIT. Use it however you want.
 
 ---
 
