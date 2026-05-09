@@ -70,3 +70,6 @@ htmlcov/
 # == Uploads ======
 app/static/uploads/profiles/*
 !app/static/uploads/profiles/.gitkeep
+
+# == Internal docs (kept local, not published) ==
+docs/
