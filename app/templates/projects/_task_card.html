@@ -46,6 +46,7 @@
                     class="task-edit-btn kanban-icon-btn edit"
                     data-task-id="{{ task.id }}"
                     data-task-title="{{ task.title }}"
+                    data-task-description="{{ task.description or '' }}"
                     data-task-priority="{{ task.priority }}"
                     data-task-status="{{ task.status }}"
                     data-task-assigned="{{ task.assigned_to or '' }}"

@@ -106,6 +106,11 @@
                 <label style="display: block; margin-bottom: 5px; font-size: 14px;">Task Title</label>
                 <input type="text" name="title" required placeholder="What needs to be done?" style="width: 100%; padding: 10px; border-radius: 8px; border: 1px solid var(--glass-border); background: rgba(0,0,0,0.2); color: white; box-sizing: border-box;">
             </div>
+
+            <div style="margin-bottom: 15px;">
+                <label style="display: block; margin-bottom: 5px; font-size: 14px;">Description</label>
+                <textarea name="description" rows="3" placeholder="Add details or notes..." style="width: 100%; padding: 10px; border-radius: 8px; border: 1px solid var(--glass-border); background: rgba(0,0,0,0.2); color: white; resize: vertical; box-sizing: border-box;"></textarea>
+            </div>
             
             <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 15px; margin-bottom: 20px;">
                 <div>
@@ -152,6 +157,11 @@
             <div style="margin-bottom: 15px;">
                 <label style="display: block; margin-bottom: 5px; font-size: 14px;">Task Title</label>
                 <input type="text" name="title" id="editTaskTitle" required style="width: 100%; padding: 10px; border-radius: 8px; border: 1px solid var(--glass-border); background: rgba(0,0,0,0.2); color: white; box-sizing: border-box;">
+            </div>
+
+            <div style="margin-bottom: 15px;">
+                <label style="display: block; margin-bottom: 5px; font-size: 14px;">Description</label>
+                <textarea name="description" id="editTaskDescription" rows="3" placeholder="Add details or notes..." style="width: 100%; padding: 10px; border-radius: 8px; border: 1px solid var(--glass-border); background: rgba(0,0,0,0.2); color: white; resize: vertical; box-sizing: border-box;"></textarea>
             </div>
 
             <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 15px; margin-bottom: 15px;">
@@ -201,6 +211,7 @@
         var form = document.getElementById('editTaskForm');
         form.action = '/edit/' + taskId;
         document.getElementById('editTaskTitle').value = btn.dataset.taskTitle || '';
+        document.getElementById('editTaskDescription').value = btn.dataset.taskDescription || '';
         document.getElementById('editTaskPriority').value = btn.dataset.taskPriority || 'Medium';
         document.getElementById('editTaskStatus').value = btn.dataset.taskStatus || 'Pending';
         document.getElementById('editTaskAssigned').value = btn.dataset.taskAssigned || '';

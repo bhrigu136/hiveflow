@@ -2,9 +2,9 @@ import re
 import secrets
 from flask import Blueprint, render_template, request, redirect, url_for, flash
 from flask_login import login_required, current_user
-from app.models import Organization, OrgMember, User, ActivityLog
+from app.models import Organization, OrgMember, User
 from app.extensions import db, limiter
-from app.utils import log_activity, create_notification
+from app.utils import create_notification
 
 orgs_bp = Blueprint('orgs', __name__, url_prefix='/orgs')
 
@@ -61,7 +61,7 @@ def create_org():
         member = OrgMember(org_id=new_org.id, user_id=current_user.id, role="Admin")
         db.session.add(member)
         
-        log_activity(new_org.id, current_user.id, "created the organization")
+
         
         db.session.commit()
         flash(f'Organization "{name}" created successfully!', 'success')
@@ -95,7 +95,7 @@ def join_org():
     member = OrgMember(org_id=org.id, user_id=current_user.id, role="Member")
     db.session.add(member)
     
-    log_activity(org.id, current_user.id, "joined the organization")
+
     
     if org.created_by != current_user.id:
         create_notification(org.created_by, f"{current_user.name or current_user.username} joined your organization '{org.name}'", url_for('orgs.dashboard', slug=org.slug))
@@ -118,6 +118,4 @@ def dashboard(slug):
         
     members = OrgMember.query.filter_by(org_id=org.id).all()
     
-    activities = ActivityLog.query.filter_by(org_id=org.id).order_by(ActivityLog.created_at.desc()).limit(15).all()
-    
-    return render_template('orgs/dashboard.html', org=org, membership=membership, members=members, activities=activities)
+    return render_template('orgs/dashboard.html', org=org, membership=membership, members=members)

@@ -42,6 +42,7 @@ class User(UserMixin, db.Model):
 class Task(db.Model):
     id = db.Column(db.Integer, primary_key=True)
     title = db.Column(db.String(100), nullable=False)
+    description = db.Column(db.Text, nullable=True)
     status = db.Column(db.String(20), default="Pending", index=True)
 
     priority = db.Column(db.String(20), default="Medium", index=True)
@@ -152,22 +153,7 @@ class TaskComment(db.Model):
     creator = db.relationship('User', foreign_keys=[created_by])
     task = db.relationship('Task', backref=db.backref('comments', lazy='dynamic', cascade='all, delete-orphan'))
 
-# ── Phase 4: Activity Feed ──────────────────────────────────────────────────
 
-class ActivityLog(db.Model):
-    id = db.Column(db.Integer, primary_key=True)
-    org_id = db.Column(db.Integer, db.ForeignKey('organization.id'), nullable=False, index=True)
-    project_id = db.Column(db.Integer, db.ForeignKey('project.id'), nullable=True, index=True)
-    user_id = db.Column(db.Integer, db.ForeignKey('user.id'), nullable=False, index=True)
-    
-    # E.g., "created project X", "moved task Y to Completed"
-    action = db.Column(db.String(255), nullable=False)
-    
-    created_at = db.Column(db.DateTime, default=lambda: datetime.now(timezone.utc), index=True)
-
-    user = db.relationship('User', foreign_keys=[user_id])
-    organization = db.relationship('Organization', backref=db.backref('activities', lazy='dynamic', cascade='all, delete-orphan'))
-    project = db.relationship('Project', backref=db.backref('activities', lazy='dynamic', cascade='all, delete-orphan'))
 
 class Notification(db.Model):
     id = db.Column(db.Integer, primary_key=True)

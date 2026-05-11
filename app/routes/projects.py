@@ -1,8 +1,8 @@
 from flask import Blueprint, render_template, request, redirect, url_for, flash
 from flask_login import login_required, current_user
-from app.models import Organization, OrgMember, Project, Task, User, ActivityLog
+from app.models import Organization, OrgMember, Project, Task, User
 from app.extensions import db
-from app.utils import log_activity, create_notification
+from app.utils import create_notification
 
 projects_bp = Blueprint('projects', __name__, url_prefix='/projects')
 
@@ -34,7 +34,7 @@ def create_project(org_slug):
         db.session.add(new_project)
         db.session.flush() # flush to get new_project.id
         
-        log_activity(org.id, current_user.id, f"created project '{name}'", new_project.id)
+
         
         db.session.commit()
         
@@ -66,8 +66,7 @@ def dashboard(project_id):
     # Get organization members for task assignment
     org_members = OrgMember.query.filter_by(org_id=org.id).all()
 
-    # Get recent activity for this project
-    activities = ActivityLog.query.filter_by(project_id=project.id).order_by(ActivityLog.created_at.desc()).limit(15).all()
+
 
     is_admin = membership.role == 'Admin'
 
@@ -78,7 +77,6 @@ def dashboard(project_id):
                            working_tasks=working_tasks,
                            completed_tasks=completed_tasks,
                            org_members=org_members,
-                           activities=activities,
                            is_admin=is_admin)
 
 @projects_bp.route('/<int:project_id>/task/add', methods=['POST'])
@@ -94,6 +92,7 @@ def add_task(project_id):
         return redirect(url_for('orgs.list_orgs'))
         
     title = request.form.get('title', '').strip()
+    description = request.form.get('description', '').strip()
     priority = request.form.get('priority', 'Medium')
     assigned_to = request.form.get('assigned_to')
     
@@ -103,6 +102,7 @@ def add_task(project_id):
         
     new_task = Task(
         title=title,
+        description=description if description else None,
         priority=priority,
         project_id=project.id,
         user_id=current_user.id, # The owner concept still defaults to creator if unassigned
@@ -113,8 +113,7 @@ def add_task(project_id):
     
     db.session.add(new_task)
     
-    log_activity(org.id, current_user.id, f"added task '{title}'", project.id)
-    
+
     if new_task.assigned_to and new_task.assigned_to != current_user.id:
         create_notification(
             new_task.assigned_to,

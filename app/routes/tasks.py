@@ -6,7 +6,6 @@ from datetime import datetime, time, timedelta, date
 from sqlalchemy import or_
 from app.extensions import db
 from app.models import Task, Project, OrgMember
-from app.utils import log_activity
 
 from google.oauth2.credentials import Credentials
 from googleapiclient.discovery import build
@@ -129,6 +128,7 @@ def view_tasks():
 @login_required
 def add_task():
     title = request.form.get('title', '').strip()
+    description = request.form.get('description', '').strip()
     priority = request.form.get('priority', 'Medium')
     deadline_str = request.form.get('deadline', '').strip()
     time_str = request.form.get('time_slot', '').strip()
@@ -182,6 +182,7 @@ def add_task():
     
     task = Task(
         title=title,
+        description=description if description else None,
         priority=priority,
         deadline=deadline,
         time_slot=time_slot,
@@ -301,6 +302,7 @@ def edit_task(task_id):
     task = _authorize_task(task_id, 'edit')
 
     title = request.form.get('title', '').strip()
+    description = request.form.get('description', '').strip()
     priority = request.form.get('priority', 'Medium')
     deadline_str = request.form.get('deadline', '').strip()
     time_str = request.form.get('time_slot', '').strip()
@@ -341,6 +343,7 @@ def edit_task(task_id):
     # UPDATE TASK
 
     task.title = title
+    task.description = description if description else None
     task.priority = priority
     task.deadline = deadline
     task.time_slot = time_slot
@@ -428,9 +431,6 @@ def toggle_status(task_id):
     else:
         task.status = 'Pending'
 
-    if task.project_id:
-        log_activity(task.project.org_id, current_user.id, f"moved task '{task.title}' to {task.status}", task.project_id)
-
     db.session.commit()
     next_url = request.form.get('next')
     return redirect(next_url or url_for('tasks.view_tasks'))
@@ -474,8 +474,8 @@ def delete_task(task_id):
     
     # DELETE LOCAL TASK
     
-    if task.project_id:
-        log_activity(task.project.org_id, current_user.id, f"deleted task '{task.title}'", task.project_id)
+
+
         
     db.session.delete(task)
     db.session.commit()

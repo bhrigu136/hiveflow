@@ -2,7 +2,7 @@ from flask import Blueprint, render_template, request, redirect, url_for, flash
 from flask_login import login_required, current_user
 from app.models import Project, Discussion, DiscussionComment, Task, TaskComment, OrgMember
 from app.extensions import db
-from app.utils import log_activity, create_notification
+from app.utils import create_notification
 
 discussions_bp = Blueprint('discussions', __name__)
 
@@ -47,7 +47,7 @@ def create_discussion(project_id):
     )
     db.session.add(new_discussion)
     
-    log_activity(project.org_id, current_user.id, f"started a discussion '{title}'", project.id)
+
     
     # Notify all other org members
     org_members = OrgMember.query.filter_by(org_id=project.org_id).all()
@@ -91,7 +91,7 @@ def add_discussion_comment(discussion_id):
     )
     db.session.add(comment)
     
-    log_activity(discussion.project.org_id, current_user.id, f"commented on discussion '{discussion.title}'", discussion.project_id)
+
     
     # Notify all other org members
     org_members = OrgMember.query.filter_by(org_id=discussion.project.org_id).all()
@@ -132,7 +132,7 @@ def add_task_comment(task_id):
         db.session.add(comment)
         
         if task.project_id:
-            log_activity(task.project.org_id, current_user.id, f"commented on task '{task.title}'", task.project_id)
+
             
             notified_users = set()
             if task.assigned_to and task.assigned_to != current_user.id:
