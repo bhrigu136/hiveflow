@@ -91,6 +91,19 @@
                     <p>Don't have an account? <a href="{{ url_for('auth.register') }}">Sign up</a></p>
                     <p>Forgot your password? <a href="{{ url_for('auth.forgot_password') }}">Reset it here</a></p>
                 </div>
+
+                {% if show_resend is defined and show_resend %}
+                <div style="background:rgba(67,97,238,0.1);border:1px solid rgba(67,97,238,0.3);border-radius:12px;padding:16px;margin-top:16px;text-align:center;">
+                    <p style="color:#b0b0d0;font-size:13px;margin:0 0 10px;">Didn't receive the email? Check spam or:</p>
+                    <form method="POST" action="{{ url_for('auth.resend_verification') }}" style="margin:0;">
+                        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                        <input type="hidden" name="email" value="{{ resend_email }}">
+                        <button type="submit" class="auth-btn blue" style="padding:10px 20px;font-size:13px;">
+                            Resend Verification Email
+                        </button>
+                    </form>
+                </div>
+                {% endif %}
             </div>
             
             <div class="auth-footer">

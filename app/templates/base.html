@@ -134,7 +134,9 @@
     <footer>
         <div class="container">
             <p>
-                &copy; {{ current_year }} HiveFlow &bull; Built with Flask &amp; Google Calendar API
+                &copy; {{ current_year }} HiveFlow &bull;
+                <a href="{{ url_for('auth.privacy') }}" style="color:inherit;text-decoration:underline;">Privacy Policy</a> &bull;
+                <a href="{{ url_for('auth.terms') }}" style="color:inherit;text-decoration:underline;">Terms of Service</a>
             </p>
         </div>
     </footer>

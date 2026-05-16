@@ -58,6 +58,73 @@ def _validate_image_upload(file) -> str | None:
     return None
 
 
+def validate_password(password: str) -> str | None:
+    """Return an error message if the password is weak, or None if acceptable.
+
+    Rules (NIST-inspired):
+    • At least 8 characters
+    • At least one uppercase letter
+    • At least one digit
+    """
+    import re
+    if len(password) < 8:
+        return 'Password must be at least 8 characters.'
+    if not re.search(r'[A-Z]', password):
+        return 'Password must contain at least one uppercase letter.'
+    if not re.search(r'[0-9]', password):
+        return 'Password must contain at least one number.'
+    return None
+
+
+def send_verification_email(to_email: str, username: str, verify_url: str) -> str:
+    """Send an email-verification link.
+
+    Returns 'sent', 'unconfigured', or 'failed'.
+    """
+    smtp_email = os.environ.get('MAIL_USERNAME')
+    smtp_password = os.environ.get('MAIL_PASSWORD')
+    if not smtp_email or not smtp_password:
+        return 'unconfigured'
+    smtp_password = smtp_password.replace(' ', '')
+
+    msg = MIMEMultipart('alternative')
+    msg['Subject'] = 'HiveFlow — Verify Your Email'
+    msg['From'] = smtp_email
+    msg['To'] = to_email
+
+    html = f"""
+    <div style="font-family:'Segoe UI',Arial,sans-serif;max-width:480px;margin:0 auto;padding:32px;">
+        <div style="text-align:center;margin-bottom:24px;">
+            <h2 style="color:#1a1a2e;margin:0;">HiveFlow</h2>
+            <p style="color:#666;font-size:14px;">Email Verification</p>
+        </div>
+        <div style="background:#f8f9fa;border-radius:12px;padding:24px;text-align:center;">
+            <p style="color:#333;font-size:15px;margin-bottom:8px;">Hi <strong>{username}</strong>,</p>
+            <p style="color:#666;font-size:14px;margin-bottom:20px;">Click the button below to verify your email address. This link expires in 24 hours.</p>
+            <a href="{verify_url}" style="display:inline-block;background:linear-gradient(135deg,#4361ee,#7c3aed);color:#fff;padding:14px 32px;border-radius:10px;text-decoration:none;font-weight:600;font-size:15px;">
+                Verify Email
+            </a>
+            <p style="color:#999;font-size:12px;margin-top:20px;">Or copy this link:<br>{verify_url}</p>
+        </div>
+        <p style="color:#999;font-size:12px;text-align:center;margin-top:20px;">
+            If you didn't create a HiveFlow account, please ignore this email.
+        </p>
+    </div>
+    """
+    msg.attach(MIMEText(html, 'html'))
+
+    try:
+        import ssl
+        ctx = ssl.create_default_context()
+        with smtplib.SMTP_SSL('smtp.gmail.com', 465, context=ctx, timeout=15) as server:
+            server.login(smtp_email, smtp_password)
+            server.sendmail(smtp_email, to_email, msg.as_string())
+        return 'sent'
+    except Exception as e:
+        print(f"[VERIFY MAIL ERROR] {type(e).__name__}: {e}")
+        return 'failed'
+
+
 def generate_otp() -> str:
     """Generate a cryptographically secure 6-digit OTP code."""
     return str(secrets.randbelow(900000) + 100000)
@@ -153,8 +220,9 @@ def register():
             flash('Passwords do not match.', 'danger')
             return redirect(url_for('auth.register'))
 
-        if len(password) < 6:
-            flash('Password must be at least 6 characters.', 'danger')
+        pw_error = validate_password(password)
+        if pw_error:
+            flash(pw_error, 'danger')
             return redirect(url_for('auth.register'))
 
         existing_email = User.query.filter_by(email=email).first()
@@ -172,13 +240,88 @@ def register():
 
         user = User(username=username, name=name, email=email)
         user.set_password(password)
+
+        # Generate email verification token
+        token = user.generate_verify_token()
         db.session.add(user)
         db.session.commit()
 
-        flash('Account created successfully! Please sign in.', 'success')
+        # Send verification email
+        verify_url = url_for('auth.verify_email', token=token, _external=True)
+        email_status = send_verification_email(email, name, verify_url)
+
+        if email_status == 'sent':
+            flash(
+                'Account created! Please check your email to verify your address before logging in.',
+                'success'
+            )
+        else:
+            # SMTP not working — still allow registration but warn
+            if os.environ.get('FLASK_ENV') == 'development':
+                flash(
+                    f'[DEV] Account created. Verification link: {verify_url}',
+                    'info'
+                )
+            else:
+                flash(
+                    'Account created! We could not send a verification email right now. '
+                    'You can request one again from the login page.',
+                    'warning'
+                )
+
         return redirect(url_for('auth.login'))
 
     return render_template('register.html')
+
+
+# ─── Email Verification ──────────────────────────────────
+
+@auth_bp.route('/verify-email/<token>')
+def verify_email(token):
+    """Handle email verification link clicks."""
+    user = User.query.filter_by(email_verify_token=token).first()
+
+    if not user:
+        flash('Invalid or expired verification link.', 'danger')
+        return redirect(url_for('auth.login'))
+
+    from datetime import timezone as tz
+    if user.email_verify_expiry and user.email_verify_expiry.replace(tzinfo=tz.utc) < datetime.now(tz.utc):
+        flash('Verification link has expired. Please request a new one.', 'danger')
+        return redirect(url_for('auth.login'))
+
+    user.email_verified = True
+    user.email_verify_token = None
+    user.email_verify_expiry = None
+    db.session.commit()
+
+    flash('Email verified successfully! You can now sign in.', 'success')
+    return redirect(url_for('auth.login'))
+
+
+@auth_bp.route('/resend-verification', methods=['POST'])
+@limiter.limit("3 per minute")
+def resend_verification():
+    """Resend the verification email."""
+    email = request.form.get('email', '').strip().lower()
+    if not email:
+        flash('Please enter your email address.', 'danger')
+        return redirect(url_for('auth.login'))
+
+    user = User.query.filter_by(email=email).first()
+    if not user or user.email_verified:
+        # Don't reveal whether the email exists
+        flash('If an unverified account exists, a verification email has been sent.', 'info')
+        return redirect(url_for('auth.login'))
+
+    token = user.generate_verify_token()
+    db.session.commit()
+
+    verify_url = url_for('auth.verify_email', token=token, _external=True)
+    send_verification_email(email, user.name or user.username, verify_url)
+
+    flash('If an unverified account exists, a verification email has been sent.', 'info')
+    return redirect(url_for('auth.login'))
 
 
 # ─── Login ───────────────────────────────────────────────
@@ -199,6 +342,15 @@ def login():
             user = User.query.filter_by(username=email_or_username).first()
 
         if user and user.check_password(password):
+            # Block login if email is not verified
+            if not user.email_verified:
+                flash(
+                    'Please verify your email before signing in. '
+                    'Check your inbox or request a new verification link below.',
+                    'warning'
+                )
+                return render_template('login.html', show_resend=True, resend_email=email_or_username)
+
             login_user(user)
             flash('Login successful!', 'success')
             next_page = request.args.get('next')
@@ -318,8 +470,9 @@ def reset_password():
             flash('Passwords do not match.', 'danger')
             return redirect(url_for('auth.reset_password', email=email))
 
-        if len(new_password) < 6:
-            flash('Password must be at least 6 characters.', 'danger')
+        pw_error = validate_password(new_password)
+        if pw_error:
+            flash(pw_error, 'danger')
             return redirect(url_for('auth.reset_password', email=email))
 
         user = User.query.filter_by(email=email).first()
@@ -434,8 +587,9 @@ def profile_update():
         if new_password != confirm_password:
             flash('New passwords do not match.', 'danger')
             return redirect(request.referrer or url_for('tasks.view_tasks'))
-        if len(new_password) < 6:
-            flash('New password must be at least 6 characters.', 'danger')
+        pw_error = validate_password(new_password)
+        if pw_error:
+            flash(pw_error, 'danger')
             return redirect(request.referrer or url_for('tasks.view_tasks'))
         
         current_user.set_password(new_password)
@@ -445,3 +599,15 @@ def profile_update():
 
     db.session.commit()
     return redirect(request.referrer or url_for('tasks.view_tasks'))
+
+
+# ─── Legal Pages ─────────────────────────────────────────
+
+@auth_bp.route('/privacy')
+def privacy():
+    return render_template('privacy.html')
+
+
+@auth_bp.route('/terms')
+def terms():
+    return render_template('terms.html')

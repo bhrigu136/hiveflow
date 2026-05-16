@@ -2,6 +2,7 @@ from app.extensions import db, login_manager
 from flask_login import UserMixin
 from werkzeug.security import generate_password_hash, check_password_hash
 from datetime import datetime, timezone
+import secrets
 
 @login_manager.user_loader
 def load_user(user_id):
@@ -14,6 +15,11 @@ class User(UserMixin, db.Model):
     email = db.Column(db.String(120), unique=True, nullable=True)
     password_hash = db.Column(db.String(200), nullable=False)
     profile_picture = db.Column(db.String(255), nullable=True, default='default.png')
+
+    # Email verification
+    email_verified = db.Column(db.Boolean, default=False, nullable=False)
+    email_verify_token = db.Column(db.String(64), nullable=True)
+    email_verify_expiry = db.Column(db.DateTime, nullable=True)
 
     # Password reset
     reset_code = db.Column(db.String(6), nullable=True)
@@ -28,6 +34,14 @@ class User(UserMixin, db.Model):
 
     def set_password(self, password: str):
         self.password_hash = generate_password_hash(password)
+
+    def generate_verify_token(self) -> str:
+        """Generate a secure email verification token (valid 24 hours)."""
+        from datetime import timedelta
+        token = secrets.token_urlsafe(32)
+        self.email_verify_token = token
+        self.email_verify_expiry = datetime.now(timezone.utc) + timedelta(hours=24)
+        return token
 
     def get_recent_notifications(self, limit=10):
         from app.models import Notification
