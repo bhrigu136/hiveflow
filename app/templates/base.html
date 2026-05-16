@@ -66,10 +66,13 @@
                         <div class="notif-list">
                             {% set recent_notifs = current_user.get_recent_notifications(10) %}
                             {% for notif in recent_notifs %}
-                            <a href="{{ url_for('notifications.mark_read', notification_id=notif.id) }}" class="notif-item {{ 'unread' if not notif.is_read else '' }}">
-                                <div class="notif-message">{{ notif.message }}</div>
-                                <div class="notif-time">{{ notif.created_at.strftime('%b %d, %I:%M %p') }}</div>
-                            </a>
+                            <form action="{{ url_for('notifications.mark_read', notification_id=notif.id) }}" method="POST" style="margin:0;">
+                                <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                                <button type="submit" class="notif-item {{ 'unread' if not notif.is_read else '' }}">
+                                    <div class="notif-message">{{ notif.message }}</div>
+                                    <div class="notif-time">{{ notif.created_at.strftime('%b %d, %I:%M %p') }}</div>
+                                </button>
+                            </form>
                             {% else %}
                             <div class="notif-empty">
                                 <i data-lucide="bell-off" style="width:24px;height:24px;"></i>

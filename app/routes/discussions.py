@@ -38,7 +38,15 @@ def create_discussion(project_id):
     if not title or not content:
         flash("Title and content are required.", 'danger')
         return redirect(url_for('discussions.list_discussions', project_id=project.id))
-        
+
+    if len(title) > 200:
+        flash("Discussion title must be 200 characters or less.", 'danger')
+        return redirect(url_for('discussions.list_discussions', project_id=project.id))
+
+    if len(content) > 10000:
+        flash("Discussion content must be 10,000 characters or less.", 'danger')
+        return redirect(url_for('discussions.list_discussions', project_id=project.id))
+
     new_discussion = Discussion(
         title=title,
         content=content,
@@ -83,7 +91,11 @@ def add_discussion_comment(discussion_id):
     if not content:
         flash("Comment cannot be empty.", 'danger')
         return redirect(url_for('discussions.view_discussion', discussion_id=discussion.id))
-        
+
+    if len(content) > 5000:
+        flash("Comment must be 5,000 characters or less.", 'danger')
+        return redirect(url_for('discussions.view_discussion', discussion_id=discussion.id))
+
     comment = DiscussionComment(
         content=content,
         discussion_id=discussion.id,
@@ -123,6 +135,8 @@ def add_task_comment(task_id):
     content = request.form.get('content', '').strip()
     if not content:
         flash("Comment cannot be empty.", 'danger')
+    elif len(content) > 5000:
+        flash("Comment must be 5,000 characters or less.", 'danger')
     else:
         comment = TaskComment(
             content=content,

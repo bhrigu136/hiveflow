@@ -5,16 +5,17 @@ from app.extensions import db
 
 notifications_bp = Blueprint('notifications', __name__, url_prefix='/notifications')
 
-@notifications_bp.route('/read/<int:notification_id>', methods=['POST', 'GET'])
+@notifications_bp.route('/read/<int:notification_id>', methods=['POST'])
 @login_required
 def mark_read(notification_id):
+    # POST-only: accepting GET would allow CSRF via <img src="..."> embeds.
     notif = Notification.query.filter_by(id=notification_id, user_id=current_user.id).first()
     if notif:
         notif.is_read = True
         db.session.commit()
         if notif.link:
             return redirect(notif.link)
-    
+
     next_url = request.args.get('next')
     return redirect(next_url or '/')
 

@@ -1,12 +1,13 @@
 import os
-import random
+import secrets
 import smtplib
 from email.mime.text import MIMEText
 from email.mime.multipart import MIMEMultipart
 from datetime import datetime, timedelta
+from urllib.parse import urlparse, urljoin
 
 from werkzeug.utils import secure_filename
-from flask import Blueprint, render_template, request, redirect, url_for, flash, current_app
+from flask import Blueprint, render_template, request, redirect, url_for, flash, current_app, abort
 from flask_login import login_user, logout_user, login_required, current_user
 from app.models import User
 from app.extensions import db, limiter
@@ -16,9 +17,62 @@ auth_bp = Blueprint('auth', __name__, url_prefix='/auth')
 
 # ─── Helpers ─────────────────────────────────────────────
 
-def generate_otp():
-    """Generate a 6-digit OTP code."""
-    return str(random.randint(100000, 999999))
+_ALLOWED_IMAGE_EXTS = {'jpg', 'jpeg', 'png', 'gif', 'webp'}
+MAX_PROFILE_SIZE = 5 * 1024 * 1024  # 5 MB
+
+# Magic-byte signatures for allowed image types.
+# imghdr was removed in Python 3.13; this replaces it with no extra deps.
+_IMAGE_SIGNATURES: list[tuple[bytes, str]] = [
+    (b'\xff\xd8\xff', 'jpeg'),
+    (b'\x89PNG\r\n\x1a\n', 'png'),
+    (b'GIF87a', 'gif'),
+    (b'GIF89a', 'gif'),
+    (b'RIFF', 'webp'),   # RIFF....WEBP — checked further below
+]
+
+
+def _detect_image_mime(header: bytes) -> str | None:
+    """Return a MIME type string from raw file bytes, or None if unrecognised."""
+    for sig, mime in _IMAGE_SIGNATURES:
+        if header.startswith(sig):
+            if mime == 'webp' and header[8:12] != b'WEBP':
+                return None
+            return mime
+    return None
+
+
+def _validate_image_upload(file) -> str | None:
+    """Return an error message string, or None if the file is valid."""
+    filename = file.filename
+    if not filename or '.' not in filename:
+        return 'File must have a valid image extension.'
+    ext = filename.rsplit('.', 1)[1].lower()
+    if ext not in _ALLOWED_IMAGE_EXTS:
+        return f"Allowed image types: {', '.join(_ALLOWED_IMAGE_EXTS)}."
+    # Read first 16 bytes to detect MIME type from content
+    header = file.read(16)
+    file.seek(0)
+    detected = _detect_image_mime(header)
+    if detected is None:
+        return 'File content does not match an allowed image type.'
+    return None
+
+
+def generate_otp() -> str:
+    """Generate a cryptographically secure 6-digit OTP code."""
+    return str(secrets.randbelow(900000) + 100000)
+
+
+def _is_safe_redirect(target: str) -> bool:
+    """Return True only if target is a relative URL on the same host.
+    Prevents open-redirect attacks via the ?next= query parameter.
+    """
+    ref_url = urlparse(request.host_url)
+    test_url = urlparse(urljoin(request.host_url, target))
+    return (
+        test_url.scheme in ('http', 'https')
+        and ref_url.netloc == test_url.netloc
+    )
 
 
 def send_reset_email(to_email, code, username):
@@ -148,6 +202,9 @@ def login():
             login_user(user)
             flash('Login successful!', 'success')
             next_page = request.args.get('next')
+            # Guard against open-redirect attacks — only follow same-host URLs
+            if next_page and not _is_safe_redirect(next_page):
+                next_page = None
             return redirect(next_page or url_for('tasks.view_tasks'))
         else:
             flash('Invalid email/username or password.', 'danger')
@@ -195,15 +252,40 @@ def forgot_password():
         # Try to send email
         email_status = send_reset_email(email, code, user.name or user.username)
 
+        is_production = os.environ.get('FLASK_ENV') == 'production'
+
         if email_status == 'sent':
             flash('A reset code has been sent to your email.', 'success')
         elif email_status == 'failed':
-            # SMTP is configured but sending raised — show on screen so the
-            # user isn't blocked, but make it obvious something went wrong.
-            flash(f'Email failed to send (check server logs). Reset code: {code}', 'warning')
+            if is_production:
+                # Never expose the code in production — log it server-side only
+                current_app.logger.error(
+                    f"[PASSWORD RESET] SMTP failed for {to_email}. "
+                    f"Code NOT sent. Manual intervention may be needed."
+                )
+                flash(
+                    'We could not send the reset email right now. '
+                    'Please try again in a few minutes or contact support.',
+                    'danger'
+                )
+                return redirect(url_for('auth.forgot_password'))
+            else:
+                # Dev mode only — safe to show the code locally
+                flash(f'[DEV] SMTP failed. Reset code: {code}', 'warning')
         else:
-            # No SMTP configured — pure dev mode
-            flash(f'Reset code (dev mode): {code}', 'info')
+            # SMTP not configured at all
+            if is_production:
+                current_app.logger.critical(
+                    '[PASSWORD RESET] SMTP is not configured in production! '
+                    'Set MAIL_USERNAME and MAIL_PASSWORD env vars.'
+                )
+                flash(
+                    'Password reset is temporarily unavailable. Please contact support.',
+                    'danger'
+                )
+                return redirect(url_for('auth.forgot_password'))
+            else:
+                flash(f'[DEV] SMTP not configured. Reset code: {code}', 'info')
 
         return redirect(url_for('auth.reset_password', email=email))
 
@@ -305,20 +387,34 @@ def profile_update():
     else:
         file = request.files.get('profile_picture')
         if file and file.filename != '':
+            # ── Validate file size ────────────────────────────────────────
+            file.seek(0, 2)  # seek to end
+            file_size = file.tell()
+            file.seek(0)
+            if file_size > MAX_PROFILE_SIZE:
+                flash('Profile picture must be 5 MB or smaller.', 'danger')
+                return redirect(request.referrer or url_for('tasks.view_tasks'))
+
+            # ── Validate extension + actual MIME content ──────────────────
+            upload_error = _validate_image_upload(file)
+            if upload_error:
+                flash(upload_error, 'danger')
+                return redirect(request.referrer or url_for('tasks.view_tasks'))
+
             # Delete old profile picture if it exists
             if current_user.profile_picture and current_user.profile_picture != 'default.png':
                 old_file_path = os.path.join(current_app.root_path, 'static', 'uploads', 'profiles', current_user.profile_picture)
                 if os.path.exists(old_file_path):
                     os.remove(old_file_path)
-                    
+
             filename = secure_filename(file.filename)
-            # Create unique filename
+            # Create a collision-proof unique filename
             ext = filename.rsplit('.', 1)[1].lower() if '.' in filename else 'jpg'
-            unique_filename = f"user_{current_user.id}_{int(datetime.utcnow().timestamp())}.{ext}"
-            
+            unique_filename = f"user_{current_user.id}_{secrets.token_hex(8)}.{ext}"
+
             upload_folder = os.path.join(current_app.root_path, 'static', 'uploads', 'profiles')
             os.makedirs(upload_folder, exist_ok=True)
-            
+
             file_path = os.path.join(upload_folder, unique_filename)
             file.save(file_path)
             current_user.profile_picture = unique_filename

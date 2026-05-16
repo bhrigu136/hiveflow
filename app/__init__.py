@@ -2,8 +2,9 @@ from dotenv import load_dotenv
 load_dotenv()
 
 import os
-from flask import Flask
-from datetime import datetime
+import logging
+from flask import Flask, render_template
+from datetime import datetime, timedelta
 
 from app.extensions import db, login_manager, csrf, migrate, limiter
 
@@ -21,6 +22,18 @@ def create_app():
             raise RuntimeError('SECRET_KEY environment variable must be set in production!')
         secret_key = 'dev-secret-key-change-me'
     app.config['SECRET_KEY'] = secret_key
+
+    # ── Upload Safety ──────────────────────────────────────────────
+    # Reject any request body larger than 5 MB (profile pictures, forms, etc.)
+    app.config['MAX_CONTENT_LENGTH'] = 5 * 1024 * 1024
+
+    # ── Session Cookie Hardening ───────────────────────────────────
+    app.config['SESSION_COOKIE_SECURE'] = True      # HTTPS-only; browsers ignore on HTTP
+    app.config['SESSION_COOKIE_HTTPONLY'] = True     # JS cannot read the cookie
+    app.config['SESSION_COOKIE_SAMESITE'] = 'Lax'   # Mitigates most CSRF via top-level nav
+    app.config['PERMANENT_SESSION_LIFETIME'] = timedelta(days=7)
+    app.config['REMEMBER_COOKIE_SECURE'] = True
+    app.config['REMEMBER_COOKIE_HTTPONLY'] = True
 
     # ── Database ──────────────────────────────────────────────────
     # Uses PostgreSQL in production (via DATABASE_URL), SQLite locally
@@ -53,6 +66,36 @@ def create_app():
     # Jinja global
     app.jinja_env.globals['current_year'] = datetime.now().year
 
+    # ── HTTP Security Headers ──────────────────────────────────────
+    @app.after_request
+    def set_security_headers(response):
+        response.headers['X-Content-Type-Options'] = 'nosniff'
+        response.headers['X-Frame-Options'] = 'DENY'
+        response.headers['X-XSS-Protection'] = '1; mode=block'
+        response.headers['Referrer-Policy'] = 'strict-origin-when-cross-origin'
+        response.headers['Permissions-Policy'] = 'geolocation=(), microphone=(), camera=()'
+        if not app.debug:
+            response.headers['Strict-Transport-Security'] = (
+                'max-age=31536000; includeSubDomains'
+            )
+        return response
+
+    # ── Custom Error Pages ─────────────────────────────────────────
+    @app.errorhandler(404)
+    def page_not_found(e):
+        return render_template('errors/404.html'), 404
+
+    @app.errorhandler(413)
+    def request_entity_too_large(e):
+        from flask import flash, redirect, request as req
+        flash('Upload too large. Maximum file size is 5 MB.', 'danger')
+        return redirect(req.referrer or '/'), 413
+
+    @app.errorhandler(500)
+    def internal_error(e):
+        app.logger.error(f'Server Error: {e}')
+        return render_template('errors/500.html'), 500
+
     # Register blueprints (AFTER extensions)
     from app.routes.auth import auth_bp
     from app.routes.tasks import tasks_bp
@@ -69,6 +112,12 @@ def create_app():
     app.register_blueprint(projects_bp)
     app.register_blueprint(discussions_bp)
     app.register_blueprint(notifications_bp)
+
+    # Serve robots.txt from the static folder at the root path
+    from flask import send_from_directory
+    @app.route('/robots.txt')
+    def robots_txt():
+        return send_from_directory(app.static_folder, 'robots.txt')
 
     # Create tables on first run (migrations handle everything after that)
     with app.app_context():

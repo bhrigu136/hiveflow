@@ -1,0 +1,20 @@
+User-agent: *
+
+# Block authenticated app routes from being indexed
+Disallow: /auth/
+Disallow: /orgs/
+Disallow: /projects/
+Disallow: /notifications/
+Disallow: /google/
+Disallow: /tasks/add
+Disallow: /tasks/edit/
+Disallow: /tasks/delete/
+Disallow: /tasks/toggle/
+Disallow: /tasks/clear
+Disallow: /discussions/
+Disallow: /export-csv
+
+# Allow public pages
+Allow: /
+Allow: /auth/login
+Allow: /auth/register

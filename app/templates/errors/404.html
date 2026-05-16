@@ -1,0 +1,28 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>404 — Page Not Found | HiveFlow</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+    <style>
+        body { font-family: 'Inter', sans-serif; background: #0f0f1a; color: #e0e0f0; display: flex; align-items: center; justify-content: center; min-height: 100vh; margin: 0; }
+        .error-box { text-align: center; padding: 48px 32px; max-width: 480px; }
+        .error-code { font-size: 120px; font-weight: 800; line-height: 1; background: linear-gradient(135deg, #4361ee, #7c3aed); -webkit-background-clip: text; -webkit-text-fill-color: transparent; margin: 0; }
+        .error-title { font-size: 24px; font-weight: 700; margin: 16px 0 8px; }
+        .error-sub { color: #888; font-size: 15px; margin-bottom: 32px; }
+        .btn-home { display: inline-block; background: linear-gradient(135deg, #4361ee, #7c3aed); color: #fff; padding: 12px 28px; border-radius: 10px; text-decoration: none; font-weight: 600; font-size: 15px; transition: opacity .2s; }
+        .btn-home:hover { opacity: .85; }
+    </style>
+</head>
+<body>
+    <div class="error-box">
+        <p class="error-code">404</p>
+        <h1 class="error-title">Page Not Found</h1>
+        <p class="error-sub">The page you're looking for doesn't exist or has been moved.</p>
+        <a href="{{ url_for('tasks.view_tasks') }}" class="btn-home">← Back to Dashboard</a>
+    </div>
+</body>
+</html>

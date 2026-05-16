@@ -24,7 +24,15 @@ def create_project(org_slug):
         if not name:
             flash('Project name is required.', 'danger')
             return redirect(url_for('projects.create_project', org_slug=org_slug))
-            
+
+        if len(name) > 100:
+            flash('Project name must be 100 characters or less.', 'danger')
+            return redirect(url_for('projects.create_project', org_slug=org_slug))
+
+        if len(description) > 2000:
+            flash('Project description must be 2000 characters or less.', 'danger')
+            return redirect(url_for('projects.create_project', org_slug=org_slug))
+
         new_project = Project(
             name=name,
             description=description,
@@ -99,15 +107,39 @@ def add_task(project_id):
     if not title:
         flash('Task title is required.', 'danger')
         return redirect(url_for('projects.dashboard', project_id=project.id))
-        
+
+    if len(title) > 100:
+        flash('Task title must be 100 characters or less.', 'danger')
+        return redirect(url_for('projects.dashboard', project_id=project.id))
+
+    if description and len(description) > 5000:
+        flash('Task description must be 5000 characters or less.', 'danger')
+        return redirect(url_for('projects.dashboard', project_id=project.id))
+
+    # Validate that the assigned user is actually a member of this org
+    validated_assigned_to = None
+    if assigned_to:
+        try:
+            assigned_id = int(assigned_to)
+        except (ValueError, TypeError):
+            flash('Invalid assignment.', 'danger')
+            return redirect(url_for('projects.dashboard', project_id=project.id))
+        is_org_member = OrgMember.query.filter_by(
+            org_id=org.id, user_id=assigned_id
+        ).first()
+        if not is_org_member:
+            flash('You can only assign tasks to members of this organization.', 'danger')
+            return redirect(url_for('projects.dashboard', project_id=project.id))
+        validated_assigned_to = assigned_id
+
     new_task = Task(
         title=title,
         description=description if description else None,
         priority=priority,
         project_id=project.id,
-        user_id=current_user.id, # The owner concept still defaults to creator if unassigned
+        user_id=current_user.id,
         created_by=current_user.id,
-        assigned_to=int(assigned_to) if assigned_to else None,
+        assigned_to=validated_assigned_to,
         status='Pending'
     )
     
