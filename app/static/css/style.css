@@ -2356,3 +2356,208 @@ nav a.notif-bell:hover {
     color: var(--accent-light);
     transform: translateX(-2px);
 }
+
+
+/* ==========================================================
+   MOBILE RESPONSIVE OVERHAUL
+   Fixes nav overflow, notification dropdown, profile link,
+   task actions, and touch targets for ≤480px screens.
+   ========================================================== */
+
+/* ── 768px: Tablet & small laptops ── */
+@media (max-width: 768px) {
+    /* Nav: tighter spacing */
+    nav a {
+        padding: 8px 10px;
+        font-size: 13px;
+    }
+
+    .btn-logout {
+        padding: 6px 10px;
+        font-size: 12px;
+    }
+
+    /* Notification dropdown: shrink to fit */
+    .notif-dropdown {
+        width: 300px;
+        right: -40px;
+    }
+}
+
+/* ── 480px: Mobile phones ── */
+@media (max-width: 480px) {
+    /* Header: keep row layout but compact */
+    header .container {
+        flex-direction: row;
+        flex-wrap: wrap;
+        justify-content: space-between;
+        padding: 10px 12px;
+        gap: 6px;
+    }
+
+    header h1 {
+        font-size: 16px;
+    }
+
+    header h1::before {
+        width: 22px;
+        height: 22px;
+        border-radius: 6px;
+    }
+
+    /* Nav: shrink to icon-only for main links */
+    nav {
+        gap: 2px;
+    }
+
+    nav a {
+        padding: 6px 8px;
+        font-size: 12px;
+    }
+
+    /* Hide text labels on narrow mobile, keep icons */
+    nav > a:not(.notif-bell):not(.profile-link):not(.btn-logout) {
+        font-size: 0;     /* collapse text */
+        gap: 0;
+        padding: 8px;
+    }
+
+    nav > a:not(.notif-bell):not(.profile-link):not(.btn-logout) i[data-lucide] {
+        width: 18px !important;
+        height: 18px !important;
+    }
+
+    /* Profile: hide name, show avatar only */
+    .profile-link {
+        padding: 4px;
+        font-size: 0;
+        gap: 0;
+        border-radius: 50%;
+        width: 34px;
+        height: 34px;
+        justify-content: center;
+    }
+
+    .profile-link img,
+    .profile-avatar-fallback {
+        width: 24px;
+        height: 24px;
+    }
+
+    /* Logout: icon-only */
+    .btn-logout {
+        font-size: 0;
+        padding: 6px;
+        gap: 0;
+    }
+
+    .btn-logout i[data-lucide] {
+        width: 16px !important;
+        height: 16px !important;
+    }
+
+    /* Notification dropdown: full width */
+    .notif-dropdown {
+        position: fixed;
+        top: 56px;
+        left: 8px;
+        right: 8px;
+        width: auto;
+        max-height: 70vh;
+        border-radius: var(--radius-sm);
+    }
+
+    .notif-list {
+        max-height: 50vh;
+    }
+
+    /* Notification button items — proper block styling */
+    .notif-item {
+        width: 100%;
+        background: none;
+        border: none;
+        border-bottom: 1px solid rgba(255,255,255,0.04);
+        cursor: pointer;
+        font-family: inherit;
+        text-align: left;
+    }
+
+    /* Bell button: proper tap target */
+    nav a.notif-bell {
+        width: 34px;
+        height: 34px;
+    }
+
+    /* Task actions always visible on mobile */
+    .task-card-actions {
+        opacity: 1;
+        transform: none;
+    }
+
+    /* Welcome banner */
+    .welcome-banner {
+        padding: 16px 14px;
+    }
+
+    .welcome-banner-inner {
+        flex-direction: column;
+        align-items: flex-start;
+        gap: 8px;
+    }
+
+    .welcome-greeting {
+        font-size: 17px;
+    }
+
+    /* Stats grid: single column on phone */
+    .stats-grid {
+        grid-template-columns: repeat(2, 1fr);
+        gap: 8px;
+    }
+
+    /* Task header */
+    .task-header h2 {
+        font-size: 18px;
+    }
+
+    /* Task box: less padding */
+    .task-box {
+        padding: 14px 10px;
+    }
+
+    /* Footer */
+    footer {
+        padding: 16px 12px;
+        font-size: 12px;
+        margin-top: 32px;
+    }
+
+    footer p {
+        display: flex;
+        flex-direction: column;
+        gap: 4px;
+        align-items: center;
+    }
+
+    /* Flash messages */
+    .flash {
+        font-size: 13px;
+        padding: 10px 14px;
+    }
+}
+
+/* ── 360px: Very small phones ── */
+@media (max-width: 360px) {
+    .container {
+        padding: 10px 8px;
+    }
+
+    .stats-grid {
+        grid-template-columns: 1fr;
+    }
+
+    .notif-dropdown {
+        left: 4px;
+        right: 4px;
+    }
+}
