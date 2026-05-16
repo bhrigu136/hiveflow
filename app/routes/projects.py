@@ -1,6 +1,6 @@
 from flask import Blueprint, render_template, request, redirect, url_for, flash
 from flask_login import login_required, current_user
-from app.models import Organization, OrgMember, Project, Task, User
+from app.models import Organization, OrgMember, Project, Task
 from app.extensions import db
 from app.utils import create_notification
 

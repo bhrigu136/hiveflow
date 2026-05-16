@@ -2,7 +2,7 @@ import re
 import secrets
 from flask import Blueprint, render_template, request, redirect, url_for, flash
 from flask_login import login_required, current_user
-from app.models import Organization, OrgMember, User
+from app.models import Organization, OrgMember
 from app.extensions import db, limiter
 from app.utils import create_notification
 

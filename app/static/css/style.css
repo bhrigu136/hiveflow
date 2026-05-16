@@ -609,12 +609,6 @@ select option {
     padding: 0 4px;
 }
 
-.task-count {
-    font-size: 13px;
-    font-weight: 600;
-    color: var(--text-muted);
-}
-
 .btn-clear-text {
     background: none;
     border: none;
@@ -2559,5 +2553,606 @@ nav a.notif-bell:hover {
     .notif-dropdown {
         left: 4px;
         right: 4px;
+    }
+}
+
+
+/* ==========================================================
+   GLOBAL UX POLISH
+   Crisper text, calmer focus rings, no iOS input zoom,
+   smoother scrolling, proper tap-target sizing.
+   ========================================================== */
+
+html {
+    -webkit-text-size-adjust: 100%;
+    text-size-adjust: 100%;
+}
+
+body {
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+    text-rendering: optimizeLegibility;
+    overscroll-behavior-y: contain;
+}
+
+/* Eliminate the iOS gray tap flash without losing :active feedback */
+a, button, input, select, textarea, [role="button"] {
+    -webkit-tap-highlight-color: transparent;
+}
+
+/* Date/time inputs render the picker indicator nearly invisible on dark themes;
+   tint it so users can see they can pick a date */
+input[type="date"]::-webkit-calendar-picker-indicator,
+input[type="time"]::-webkit-calendar-picker-indicator {
+    filter: invert(0.85) brightness(1.2);
+    cursor: pointer;
+    opacity: 0.7;
+    transition: opacity 0.2s ease;
+}
+input[type="date"]::-webkit-calendar-picker-indicator:hover,
+input[type="time"]::-webkit-calendar-picker-indicator:hover {
+    opacity: 1;
+}
+
+/* iOS Safari zooms inputs whose font-size < 16px on focus — prevent that */
+input, select, textarea {
+    font-size: 16px;
+}
+@media (min-width: 769px) {
+    /* Restore the design scale on tablet+ where zoom isn't an issue */
+    .filter-form-inner input,
+    .filter-form-inner select,
+    .kanban-comment-form input[type="text"],
+    .custom-range input[type="date"],
+    .omnibar-field select,
+    .omnibar-field input,
+    .form-group input,
+    select,
+    input[type="text"],
+    input[type="date"],
+    input[type="time"],
+    input[type="password"] {
+        font-size: 14px;
+    }
+    .omnibar-input-wrapper input {
+        font-size: 16px;
+    }
+}
+
+/* Long content on narrow screens shouldn't overflow horizontally */
+@media (max-width: 768px) {
+    .kanban-task-title,
+    .task-title,
+    .notif-message {
+        word-break: break-word;
+        overflow-wrap: anywhere;
+    }
+}
+
+/* Better focus rings — visible but not gaudy */
+:focus-visible {
+    outline: 2px solid var(--accent-light);
+    outline-offset: 2px;
+    border-radius: 6px;
+}
+button:focus:not(:focus-visible),
+a:focus:not(:focus-visible) {
+    outline: none;
+}
+
+
+/* ==========================================================
+   COMPREHENSIVE MOBILE POLISH
+   Covers inline-styled templates (orgs, projects, discussions)
+   that pre-date the design system without touching their markup.
+   ========================================================== */
+
+/* ── Day-nav: wrap gracefully on small screens ── */
+@media (max-width: 640px) {
+    .day-nav-group {
+        gap: 8px;
+        justify-content: space-between;
+        width: 100%;
+    }
+    .day-nav-actions {
+        gap: 6px;
+    }
+    .current-day-display {
+        flex: 1;
+        justify-content: center;
+        font-size: 14px;
+    }
+    .icon-btn {
+        width: 36px;
+        height: 36px;
+    }
+    .view-actions-group {
+        width: 100%;
+        justify-content: flex-end;
+    }
+}
+
+/* ── Kanban: tighter columns on mobile, larger touch targets ── */
+@media (max-width: 900px) {
+    .kanban-column {
+        min-height: auto;
+        padding: 14px;
+    }
+    .kanban-task-card {
+        padding: 14px;
+    }
+    .kanban-icon-btn {
+        min-width: 36px;
+        min-height: 36px;
+    }
+}
+
+/* ── Stats grid: snug spacing on small screens ── */
+@media (max-width: 480px) {
+    .stat-card {
+        padding: 14px;
+    }
+    .stat-value {
+        font-size: 22px;
+    }
+    .stat-icon {
+        width: 32px;
+        height: 32px;
+    }
+    .stat-label {
+        font-size: 10px;
+    }
+}
+
+/* ── Modal: better mobile sizing for the global .modal class ── */
+@media (max-width: 480px) {
+    .modal-overlay {
+        padding: 10px;
+        align-items: flex-end; /* slide-up feel on phones */
+    }
+    .modal {
+        max-height: 92vh;
+        overflow-y: auto;
+        border-radius: var(--radius) var(--radius) var(--radius-sm) var(--radius-sm);
+    }
+    .modal-header {
+        padding: 16px 18px;
+        position: sticky;
+        top: 0;
+        background: var(--surface-solid);
+        z-index: 1;
+    }
+    .modal-body {
+        padding: 18px;
+    }
+    .modal-footer {
+        padding: 14px 18px;
+    }
+    .modal-save-btn,
+    .modal-footer .btn-small {
+        width: 100%;
+    }
+}
+
+/* ── Inline-styled modals in orgs/projects/discussions templates
+   Target any fixed full-screen overlay div with the recurring inline-style
+   pattern used across those templates. We bump padding/border-radius down
+   on mobile so the modal content remains readable. ── */
+@media (max-width: 600px) {
+    /* Outer overlay div */
+    div[style*="position: fixed"][style*="z-index: 1000"] {
+        padding: 10px !important;
+        align-items: flex-end !important;
+    }
+    /* Inner modal card */
+    div[style*="position: fixed"][style*="z-index: 1000"] > div {
+        padding: 20px 18px !important;
+        max-width: 100% !important;
+        max-height: 90vh;
+        overflow-y: auto;
+        border-radius: 16px 16px 12px 12px !important;
+    }
+    /* Side-by-side grids inside those modals collapse to one column */
+    div[style*="position: fixed"][style*="z-index: 1000"] [style*="grid-template-columns: 1fr 1fr"] {
+        grid-template-columns: 1fr !important;
+    }
+    /* Footer action row stacks */
+    div[style*="position: fixed"][style*="z-index: 1000"] [style*="justify-content: flex-end"] {
+        flex-direction: column-reverse;
+        gap: 8px !important;
+    }
+    div[style*="position: fixed"][style*="z-index: 1000"] [style*="justify-content: flex-end"] > button,
+    div[style*="position: fixed"][style*="z-index: 1000"] [style*="justify-content: flex-end"] > .btn {
+        width: 100%;
+    }
+}
+
+/* ── Org dashboard hero (inline-styled) ── */
+@media (max-width: 768px) {
+    .org-header-premium {
+        padding: 24px 18px !important;
+        flex-direction: column !important;
+        gap: 18px !important;
+    }
+    .org-header-premium h2 {
+        font-size: 22px !important;
+    }
+    .org-header-premium > div:last-child {
+        width: 100%;
+        text-align: left !important;
+    }
+}
+@media (max-width: 480px) {
+    .org-header-premium {
+        padding: 18px 14px !important;
+        border-radius: 14px !important;
+    }
+    .org-header-premium > div:first-child {
+        flex-direction: column;
+        gap: 14px !important;
+        align-items: flex-start !important;
+    }
+    .org-header-premium .invite-code-pill {
+        font-size: 16px !important;
+        letter-spacing: 2px !important;
+        padding: 8px 12px !important;
+    }
+    .org-header-premium h2 {
+        font-size: 20px !important;
+    }
+}
+
+/* ── Org dashboard: force single column on mobile + project-grid stack ── */
+@media (max-width: 900px) {
+    .org-content {
+        grid-template-columns: 1fr !important;
+    }
+}
+@media (max-width: 600px) {
+    .projects-grid {
+        grid-template-columns: 1fr !important;
+    }
+    /* Any inline-styled grid using auto-fill minmax >= 280px collapses on phones */
+    [style*="grid-template-columns"][style*="minmax(280px"],
+    [style*="grid-template-columns"][style*="minmax(320px"] {
+        grid-template-columns: 1fr !important;
+    }
+    /* Generic 2-column inline grid collapses to 1 column */
+    [style*="grid-template-columns: 1fr 1fr"]:not(.profile-form-grid):not(.profile-stats) {
+        grid-template-columns: 1fr !important;
+    }
+}
+
+/* ── Org dashboard content grid (already has 900px breakpoint inline,
+       but tighten gap and member-list padding on small screens) ── */
+@media (max-width: 480px) {
+    .org-content {
+        gap: 20px !important;
+    }
+    .member-row {
+        padding: 12px 14px !important;
+    }
+    .member-row > div:first-child {
+        gap: 10px !important;
+    }
+}
+
+/* ── Org list: header row stacks; join-team-section compact ── */
+@media (max-width: 600px) {
+    .header-action-row {
+        flex-direction: column;
+        align-items: stretch !important;
+        gap: 12px !important;
+    }
+    .header-action-row h2 {
+        font-size: 22px !important;
+    }
+    .header-action-row .btn {
+        width: 100% !important;
+        justify-content: center;
+    }
+    .teams-container {
+        grid-template-columns: 1fr !important;
+        gap: 14px !important;
+    }
+    .join-team-section {
+        padding: 22px 18px !important;
+        border-radius: 14px !important;
+    }
+}
+
+/* ── Project hero actions stack on narrow screens ── */
+@media (max-width: 600px) {
+    .project-hero {
+        padding: 18px 16px !important;
+        flex-direction: column;
+        align-items: stretch !important;
+    }
+    .project-hero h2 {
+        font-size: 20px !important;
+    }
+    .project-hero-actions {
+        width: 100%;
+    }
+    .project-hero-actions .btn-secondary,
+    .project-hero-actions .btn-primary {
+        flex: 1;
+        justify-content: center;
+    }
+}
+
+/* ── Discussions list: header + cards
+   These templates use undefined --glass-bg / --text-color variables;
+   we provide fallbacks so they render correctly. ── */
+.project-header > div:last-child {
+    background: var(--surface-solid);
+}
+.discussions-list .project-card,
+.discussions-list > a {
+    background: var(--surface-solid);
+}
+.discussions-list > a:hover {
+    transform: translateY(-2px);
+    border-color: var(--accent) !important;
+    box-shadow: 0 8px 24px rgba(0, 0, 0, 0.25);
+}
+@media (max-width: 600px) {
+    .project-header > div:last-child {
+        flex-direction: column !important;
+        align-items: stretch !important;
+        gap: 14px;
+        padding: 18px !important;
+    }
+    .project-header > div:last-child > button {
+        width: 100% !important;
+        justify-content: center;
+    }
+    .discussions-list > a > div {
+        flex-direction: column;
+        gap: 12px;
+    }
+    .discussions-list > a > div > div:last-child {
+        text-align: left !important;
+        min-width: 0 !important;
+    }
+}
+
+/* ── Activity feed / forms — keep edges from the screen ── */
+@media (max-width: 480px) {
+    .container {
+        padding-left: 12px;
+        padding-right: 12px;
+    }
+}
+
+/* ── Auth pages: tighter on phones ── */
+@media (max-width: 480px) {
+    .auth-hero h1 {
+        font-size: 24px !important;
+    }
+    .auth-hero-icon {
+        width: 52px !important;
+        height: 52px !important;
+        margin-bottom: 14px !important;
+    }
+}
+
+/* ── Touch targets: ensure interactive controls have a minimum tap size
+       without ruining the visual rhythm of dense UI. ── */
+@media (max-width: 600px) and (pointer: coarse) {
+    .btn-small,
+    .icon-btn,
+    .action-btn,
+    .kanban-icon-btn,
+    nav a {
+        min-height: 40px;
+    }
+    .btn-small {
+        padding: 9px 14px;
+    }
+}
+
+/* ── Notification dropdown: fix message wrapping on small screens ── */
+@media (max-width: 480px) {
+    .notif-dropdown-header {
+        padding: 12px 14px;
+    }
+    .notif-item {
+        padding: 12px 14px;
+    }
+    .notif-message {
+        font-size: 13px;
+        line-height: 1.4;
+    }
+}
+
+/* ── Footer breathing room on phones ── */
+@media (max-width: 480px) {
+    footer p {
+        line-height: 1.6;
+    }
+    footer p a {
+        display: inline-block;
+        padding: 4px 0;
+    }
+}
+
+/* ── Hover effects only on hover-capable devices (no sticky :hover on touch) ── */
+@media (hover: none) {
+    .btn:hover,
+    .btn-primary:hover,
+    .btn-secondary:hover,
+    .btn-small:hover,
+    .stat-card:hover,
+    .kanban-task-card:hover,
+    .team-card:hover,
+    .premium-project-card:hover,
+    .discussions-list > a:hover {
+        transform: none;
+    }
+}
+
+/* ── Auth-card style used by project create page (heavy inline padding) ── */
+@media (max-width: 600px) {
+    .auth-card {
+        padding: 24px 18px !important;
+        border-radius: 14px !important;
+    }
+    .auth-card .auth-header {
+        margin-bottom: 22px !important;
+    }
+    .auth-card .auth-header > div:first-child {
+        width: 48px !important;
+        height: 48px !important;
+        margin-bottom: 14px !important;
+    }
+}
+
+/* ── Activity feed: tighter padding on phones ── */
+@media (max-width: 600px) {
+    .activity-feed {
+        padding: 18px !important;
+    }
+    .activity-feed h3 {
+        font-size: 16px;
+        margin-bottom: 14px !important;
+    }
+}
+
+/* ── Discussions list "back to project" header gets full-width button on phones ── */
+@media (max-width: 480px) {
+    .discussions-list > a {
+        padding: 14px !important;
+    }
+    .comments-section [style*="padding: 20px"] {
+        padding: 16px !important;
+    }
+    /* Discussion view: main post card padding */
+    [style*="padding: 30px"][style*="margin-bottom: 30px"] {
+        padding: 20px !important;
+    }
+}
+
+/* ── Improve scrollbar on mobile (avoid bulky scrollbars) ── */
+@media (max-width: 768px) {
+    ::-webkit-scrollbar {
+        width: 5px;
+        height: 5px;
+    }
+}
+
+/* ── Final touch: smoother card transitions and remove sticky :focus
+       outlines after mouse clicks (we still keep keyboard :focus-visible). ── */
+.team-card,
+.premium-project-card,
+.kanban-task-card,
+.stat-card,
+.task-card {
+    will-change: transform;
+}
+
+/* ==========================================================
+   PROFILE PAGE — responsive overhaul
+   The template is heavy on inline styles; class hooks (.profile-card,
+   .profile-section, .profile-pic-row, .profile-form-grid, .profile-save-btn)
+   were added so we can override the desktop sizing on small screens.
+   ========================================================== */
+.profile-page {
+    width: 100%;
+}
+
+@media (max-width: 768px) {
+    .profile-page {
+        margin-top: 20px !important;
+        margin-bottom: 32px !important;
+    }
+    .profile-card {
+        padding: 24px 18px !important;
+        border-radius: 16px !important;
+    }
+    .profile-section {
+        padding: 20px 16px !important;
+        border-radius: 16px !important;
+    }
+    .profile-pic-row {
+        flex-direction: column !important;
+        text-align: center;
+        gap: 16px !important;
+        padding: 18px 14px !important;
+    }
+    .profile-pic-row > div:last-child {
+        max-width: 320px;
+    }
+    .profile-form-grid {
+        grid-template-columns: 1fr !important;
+        gap: 14px !important;
+    }
+    .profile-save-row {
+        justify-content: stretch !important;
+    }
+    .profile-save-btn {
+        width: 100%;
+        padding: 14px 24px !important;
+        font-size: 15px !important;
+    }
+    .profile-card > div:first-child h2 {
+        font-size: 22px !important;
+    }
+    .profile-card > div:first-child h2 i {
+        width: 22px !important;
+        height: 22px !important;
+    }
+    .profile-card > div:first-child p {
+        font-size: 14px !important;
+    }
+    .profile-stats {
+        gap: 12px !important;
+        margin-bottom: 24px !important;
+    }
+    .profile-stats > div {
+        padding: 14px !important;
+    }
+    .profile-stats > div p {
+        font-size: 22px !important;
+    }
+    .profile-stats > div > div:first-child {
+        width: 38px !important;
+        height: 38px !important;
+        border-radius: 10px !important;
+    }
+}
+
+@media (max-width: 480px) {
+    .profile-card {
+        padding: 20px 14px !important;
+    }
+    .profile-section {
+        padding: 18px 14px !important;
+    }
+    .profile-stats {
+        grid-template-columns: repeat(2, 1fr) !important;
+    }
+    .profile-pic-row img,
+    .profile-pic-row #profile_placeholder {
+        width: 96px !important;
+        height: 96px !important;
+    }
+    .profile-pic-row label[for="profile_picture"] {
+        width: 34px !important;
+        height: 34px !important;
+    }
+    .profile-section h3 {
+        font-size: 16px !important;
+    }
+}
+
+
+/* ── Smooth scroll for in-page navigation ── */
+@media (prefers-reduced-motion: reduce) {
+    *, *::before, *::after {
+        animation-duration: 0.01ms !important;
+        animation-iteration-count: 1 !important;
+        transition-duration: 0.01ms !important;
+        scroll-behavior: auto !important;
     }
 }

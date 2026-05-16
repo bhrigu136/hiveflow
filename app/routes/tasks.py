@@ -277,11 +277,6 @@ def _authorize_task(task_id, action):
         _deny(f"user not a member of org {project.org_id}")
 
     is_admin = membership.role == 'Admin'
-    print(
-        f"[TASK AUTH] action={action} task_id={task_id} user_id={current_user.id} "
-        f"org_id={project.org_id} role={membership.role!r} is_admin={is_admin} "
-        f"assigned_to={task.assigned_to}"
-    )
 
     if action == 'status':
         # Admin can toggle anything; a regular member can toggle only tasks assigned to them.

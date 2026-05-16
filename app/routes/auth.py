@@ -7,7 +7,7 @@ from datetime import datetime, timedelta
 from urllib.parse import urlparse, urljoin
 
 from werkzeug.utils import secure_filename
-from flask import Blueprint, render_template, request, redirect, url_for, flash, current_app, abort
+from flask import Blueprint, render_template, request, redirect, url_for, flash, current_app
 from flask_login import login_user, logout_user, login_required, current_user
 from app.models import User
 from app.extensions import db, limiter
@@ -412,7 +412,7 @@ def forgot_password():
             if is_production:
                 # Never expose the code in production — log it server-side only
                 current_app.logger.error(
-                    f"[PASSWORD RESET] SMTP failed for {to_email}. "
+                    f"[PASSWORD RESET] SMTP failed for {email}. "
                     f"Code NOT sent. Manual intervention may be needed."
                 )
                 flash(

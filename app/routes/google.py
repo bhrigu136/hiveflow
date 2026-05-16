@@ -3,8 +3,6 @@ import traceback
 from flask import Blueprint, redirect, url_for, session, request, flash
 from flask_login import login_required, current_user
 from google_auth_oauthlib.flow import Flow
-from datetime import datetime
-
 
 from app.extensions import db
 from app.models import Task

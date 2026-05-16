@@ -55,7 +55,7 @@
             </a>
         </div>
         
-        <div style="display: grid; grid-template-columns: repeat(auto-fill, minmax(280px, 1fr)); gap: 20px;">
+        <div class="projects-grid" style="display: grid; grid-template-columns: repeat(auto-fill, minmax(280px, 1fr)); gap: 20px;">
             {% for project in org.projects %}
             <a href="{{ url_for('projects.dashboard', project_id=project.id) }}" style="display: block; text-decoration: none; background: var(--surface-solid); border: 1px solid var(--glass-border); border-radius: 16px; padding: 24px; transition: all 0.3s ease; position: relative; overflow: hidden;" class="premium-project-card">
                 <div style="display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 16px;">
@@ -160,15 +160,21 @@
 
 @media (max-width: 900px) {
     .org-header-premium {
-        flex-direction: column;
-        gap: 20px;
+        flex-direction: column !important;
+        gap: 20px !important;
     }
     .org-header-premium > div:last-child {
-        width: 100%;
-        text-align: left;
+        width: 100% !important;
+        text-align: left !important;
     }
     .org-content {
-        grid-template-columns: 1fr;
+        grid-template-columns: 1fr !important;
+    }
+}
+@media (max-width: 600px) {
+    .projects-grid {
+        grid-template-columns: 1fr !important;
+        gap: 14px !important;
     }
 }
 </style>
