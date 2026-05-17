@@ -83,13 +83,20 @@
 
                     <div class="auth-form-group">
                         <div class="auth-input-wrapper">
-                            <input type="password" id="password" name="password" placeholder=" " required minlength="8">
+                            <input type="password" id="password" name="password" placeholder=" " required minlength="8"
+                                   pattern="(?=.*[A-Z])(?=.*\d).{8,}"
+                                   title="At least 8 characters, including one uppercase letter and one number">
                             <label for="password" class="floating-label">Password</label>
                             <span class="auth-input-icon"><i data-lucide="lock" style="width:18px;height:18px;"></i></span>
                             <button type="button" class="auth-password-toggle" onclick="togglePassword('password', this)">
                                 <i data-lucide="eye" style="width:18px;height:18px;"></i>
                             </button>
                         </div>
+                        <ul id="password-rules" style="margin:8px 4px 0;padding:0;list-style:none;font-size:12px;color:var(--text-muted);display:flex;flex-wrap:wrap;gap:10px;">
+                            <li data-rule="length"><i data-lucide="circle" style="width:11px;height:11px;vertical-align:middle;margin-right:3px;"></i>8+ characters</li>
+                            <li data-rule="upper"><i data-lucide="circle" style="width:11px;height:11px;vertical-align:middle;margin-right:3px;"></i>1 uppercase</li>
+                            <li data-rule="digit"><i data-lucide="circle" style="width:11px;height:11px;vertical-align:middle;margin-right:3px;"></i>1 number</li>
+                        </ul>
                     </div>
 
                     <div class="auth-form-group">
@@ -135,6 +142,30 @@
             }
             lucide.createIcons();
         }
+
+        // Live password-rule indicator
+        (function () {
+            const pw = document.getElementById('password');
+            const rules = document.getElementById('password-rules');
+            if (!pw || !rules) return;
+            const checks = {
+                length: v => v.length >= 8,
+                upper:  v => /[A-Z]/.test(v),
+                digit:  v => /[0-9]/.test(v),
+            };
+            pw.addEventListener('input', () => {
+                const v = pw.value;
+                rules.querySelectorAll('li').forEach(li => {
+                    const ok = checks[li.dataset.rule](v);
+                    li.style.color = ok ? '#6ee7b7' : 'var(--text-muted)';
+                    const icon = li.querySelector('[data-lucide]');
+                    if (icon) {
+                        icon.setAttribute('data-lucide', ok ? 'check-circle-2' : 'circle');
+                    }
+                });
+                if (typeof lucide !== 'undefined') lucide.createIcons();
+            });
+        })();
     </script>
     <script>lucide.createIcons();</script>
 </body>
