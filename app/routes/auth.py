@@ -1,8 +1,6 @@
 import os
 import secrets
-import smtplib
-from email.mime.text import MIMEText
-from email.mime.multipart import MIMEMultipart
+import requests
 from datetime import datetime, timedelta
 from urllib.parse import urlparse, urljoin
 
@@ -11,6 +9,44 @@ from flask import Blueprint, render_template, request, redirect, url_for, flash,
 from flask_login import login_user, logout_user, login_required, current_user
 from app.models import User
 from app.extensions import db, limiter
+
+BREVO_API_URL = "https://api.brevo.com/v3/smtp/email"
+
+
+def _send_via_brevo(to_email: str, subject: str, html: str) -> str:
+    """Send a transactional email via Brevo's HTTP API.
+
+    Render blocks outbound SMTP, so we use HTTPS instead.
+    Returns 'sent', 'unconfigured', or 'failed'.
+    """
+    api_key = os.environ.get('BREVO_API_KEY')
+    sender = os.environ.get('MAIL_SENDER')
+    if not api_key or not sender:
+        return 'unconfigured'
+
+    try:
+        resp = requests.post(
+            BREVO_API_URL,
+            headers={
+                'api-key': api_key,
+                'content-type': 'application/json',
+                'accept': 'application/json',
+            },
+            json={
+                'sender': {'email': sender, 'name': 'HiveFlow'},
+                'to': [{'email': to_email}],
+                'subject': subject,
+                'htmlContent': html,
+            },
+            timeout=15,
+        )
+        if resp.status_code in (200, 201):
+            return 'sent'
+        print(f"[BREVO ERROR] {resp.status_code}: {resp.text[:300]}")
+        return 'failed'
+    except Exception as e:
+        print(f"[BREVO ERROR] {type(e).__name__}: {e}")
+        return 'failed'
 
 auth_bp = Blueprint('auth', __name__, url_prefix='/auth')
 
@@ -77,21 +113,10 @@ def validate_password(password: str) -> str | None:
 
 
 def send_verification_email(to_email: str, username: str, verify_url: str) -> str:
-    """Send an email-verification link.
+    """Send an email-verification link via Brevo.
 
     Returns 'sent', 'unconfigured', or 'failed'.
     """
-    smtp_email = os.environ.get('MAIL_USERNAME')
-    smtp_password = os.environ.get('MAIL_PASSWORD')
-    if not smtp_email or not smtp_password:
-        return 'unconfigured'
-    smtp_password = smtp_password.replace(' ', '')
-
-    msg = MIMEMultipart('alternative')
-    msg['Subject'] = 'HiveFlow — Verify Your Email'
-    msg['From'] = smtp_email
-    msg['To'] = to_email
-
     html = f"""
     <div style="font-family:'Segoe UI',Arial,sans-serif;max-width:480px;margin:0 auto;padding:32px;">
         <div style="text-align:center;margin-bottom:24px;">
@@ -111,18 +136,7 @@ def send_verification_email(to_email: str, username: str, verify_url: str) -> st
         </p>
     </div>
     """
-    msg.attach(MIMEText(html, 'html'))
-
-    try:
-        import ssl
-        ctx = ssl.create_default_context()
-        with smtplib.SMTP_SSL('smtp.gmail.com', 465, context=ctx, timeout=15) as server:
-            server.login(smtp_email, smtp_password)
-            server.sendmail(smtp_email, to_email, msg.as_string())
-        return 'sent'
-    except Exception as e:
-        print(f"[VERIFY MAIL ERROR] {type(e).__name__}: {e}")
-        return 'failed'
+    return _send_via_brevo(to_email, 'HiveFlow — Verify Your Email', html)
 
 
 def generate_otp() -> str:
@@ -143,25 +157,10 @@ def _is_safe_redirect(target: str) -> bool:
 
 
 def send_reset_email(to_email, code, username):
-    """Send password reset code via SMTP (Gmail).
+    """Send password reset code via Brevo.
 
-    Returns 'sent' on success, 'unconfigured' if no SMTP creds, 'failed' on error.
+    Returns 'sent' on success, 'unconfigured' if no API key, 'failed' on error.
     """
-    smtp_email = os.environ.get('MAIL_USERNAME')
-    smtp_password = os.environ.get('MAIL_PASSWORD')
-
-    if not smtp_email or not smtp_password:
-        return 'unconfigured'
-
-    # Gmail App Passwords are shown with spaces ("abcd efgh ijkl mnop") —
-    # strip them so a copy-pasted value still works.
-    smtp_password = smtp_password.replace(' ', '')
-
-    msg = MIMEMultipart('alternative')
-    msg['Subject'] = 'HiveFlow — Password Reset Code'
-    msg['From'] = smtp_email
-    msg['To'] = to_email
-
     html = f"""
     <div style="font-family: 'Segoe UI', Arial, sans-serif; max-width: 480px; margin: 0 auto; padding: 32px;">
         <div style="text-align: center; margin-bottom: 24px;">
@@ -181,21 +180,7 @@ def send_reset_email(to_email, code, username):
         </p>
     </div>
     """
-
-    msg.attach(MIMEText(html, 'html'))
-
-    try:
-        import ssl
-        ctx = ssl.create_default_context()
-        with smtplib.SMTP_SSL('smtp.gmail.com', 465, context=ctx, timeout=15) as server:
-            server.login(smtp_email, smtp_password)
-            server.sendmail(smtp_email, to_email, msg.as_string())
-        return 'sent'
-    except Exception as e:
-        import traceback
-        print(f"[MAIL ERROR] {type(e).__name__}: {e}")
-        traceback.print_exc()
-        return 'failed'
+    return _send_via_brevo(to_email, 'HiveFlow — Password Reset Code', html)
 
 
 # ─── Register ────────────────────────────────────────────
