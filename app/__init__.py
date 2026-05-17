@@ -60,10 +60,10 @@ def create_app():
     # Connection pool — important for PostgreSQL under concurrent load
     if not database_url.startswith('sqlite'):
         app.config['SQLALCHEMY_ENGINE_OPTIONS'] = {
-            'pool_size': 2,
+            'pool_size': 5,
             'pool_recycle': 300,   # recycle connections every 5 min
             'pool_pre_ping': True, # verify connection is alive before using
-            'max_overflow': 3,
+            'max_overflow': 10,
         }
 
     # Initialize extensions

@@ -1,1 +1,1 @@
-web: gunicorn run:app --workers 1 --threads 2 --timeout 120 --bind 0.0.0.0:$PORT --preload
+web: gunicorn run:app --workers 2 --threads 2 --timeout 60 --bind 0.0.0.0:$PORT

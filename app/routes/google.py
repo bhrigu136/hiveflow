@@ -17,15 +17,13 @@ SCOPES = ["https://www.googleapis.com/auth/calendar"]
 
 # Local dev runs on http://127.0.0.1, not https. oauthlib refuses to exchange
 # tokens over plain HTTP by default — allow it when not in production.
+# Also, Google often returns extra scopes (e.g. openid) that don't exactly match
+# the ones requested, which oauthlib treats as an error unless this is set.
 # Only allow plain-HTTP OAuth flow in an explicit development environment.
 # Defaulting to production-safe means a missing env var won't open the hole.
 if os.environ.get('FLASK_ENV') == 'development':
     os.environ.setdefault('OAUTHLIB_INSECURE_TRANSPORT', '1')
-
-# Google often returns extra scopes (e.g. openid) that don't exactly match
-# the ones requested, which oauthlib treats as an error unless this is set.
-# This is safe in all environments — it just relaxes scope matching.
-os.environ.setdefault('OAUTHLIB_RELAX_TOKEN_SCOPE', '1')
+    os.environ.setdefault('OAUTHLIB_RELAX_TOKEN_SCOPE', '1')
 
 # -------------------------------------------------
 # CONNECT GOOGLE CALENDAR
