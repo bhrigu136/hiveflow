@@ -94,3 +94,78 @@ rippleStyle.textContent = `
     }
 `;
 document.head.appendChild(rippleStyle);
+
+// In-app confirmation modal (replaces native confirm() calls)
+// Any <form> with a data-confirm="message" attribute will auto-trigger this.
+window.showConfirm = function (message, onConfirm, options) {
+    options = options || {};
+    const overlay = document.getElementById('globalConfirm');
+    if (!overlay) {
+        // Fallback if base.html didn't include the modal (e.g., logged-out pages)
+        if (window.confirm(message)) onConfirm();
+        return;
+    }
+    const titleEl = document.getElementById('confirmTitle');
+    const messageEl = document.getElementById('confirmMessage');
+    const okBtn = document.getElementById('confirmOk');
+    const cancelBtn = document.getElementById('confirmCancel');
+
+    titleEl.textContent = options.title || 'Are you sure?';
+    messageEl.textContent = message;
+    okBtn.textContent = options.okText || 'Yes, delete';
+    cancelBtn.textContent = options.cancelText || 'Cancel';
+
+    overlay.classList.add('open');
+    overlay.setAttribute('aria-hidden', 'false');
+    document.body.style.overflow = 'hidden';
+    setTimeout(() => okBtn.focus(), 50);
+
+    const cleanup = () => {
+        overlay.classList.remove('open');
+        overlay.setAttribute('aria-hidden', 'true');
+        document.body.style.overflow = '';
+        okBtn.removeEventListener('click', onOk);
+        cancelBtn.removeEventListener('click', onCancel);
+        overlay.removeEventListener('click', onOverlayClick);
+        document.removeEventListener('keydown', onKey);
+    };
+    const onOk = () => { cleanup(); onConfirm(); };
+    const onCancel = () => { cleanup(); };
+    const onOverlayClick = (e) => { if (e.target === overlay) onCancel(); };
+    const onKey = (e) => {
+        if (e.key === 'Escape') onCancel();
+        if (e.key === 'Enter') onOk();
+    };
+
+    okBtn.addEventListener('click', onOk);
+    cancelBtn.addEventListener('click', onCancel);
+    overlay.addEventListener('click', onOverlayClick);
+    document.addEventListener('keydown', onKey);
+};
+
+// Auto-intercept any form with data-confirm
+document.addEventListener('submit', function (e) {
+    const form = e.target;
+    if (!form.matches('form[data-confirm]')) return;
+    if (form.dataset.confirmed === 'true') return; // user already confirmed
+    e.preventDefault();
+    showConfirm(form.dataset.confirm, () => {
+        form.dataset.confirmed = 'true';
+        form.submit();
+    });
+});
+
+// In-app toast (replaces native alert() calls)
+window.showToast = function (message, type) {
+    type = type || 'success';
+    const toast = document.createElement('div');
+    toast.className = 'toast toast-' + type;
+    toast.setAttribute('role', 'status');
+    toast.textContent = message;
+    document.body.appendChild(toast);
+    requestAnimationFrame(() => toast.classList.add('toast-show'));
+    setTimeout(() => {
+        toast.classList.remove('toast-show');
+        setTimeout(() => toast.remove(), 300);
+    }, 2500);
+};

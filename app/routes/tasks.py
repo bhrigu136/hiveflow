@@ -6,6 +6,7 @@ from datetime import datetime, time, timedelta, date
 from sqlalchemy import or_
 from app.extensions import db
 from app.models import Task, Project, OrgMember
+from app.utils import create_notification
 
 from google.oauth2.credentials import Credentials
 from googleapiclient.discovery import build
@@ -335,6 +336,10 @@ def edit_task(task_id):
             return redirect(fallback_redirect)
 
 
+    # Snapshot prior state so we can detect what actually changed and notify accordingly
+    prev_assigned_to = task.assigned_to
+    prev_status = task.status
+
     # UPDATE TASK
 
     task.title = title
@@ -356,6 +361,34 @@ def edit_task(task_id):
                     task.assigned_to = int(assigned_to_raw)
                 except ValueError:
                     pass
+
+    # Notify the relevant people about the edit (project tasks only).
+    # Status changes get a tailored message; everything else is a generic "edited".
+    if task.project_id:
+        actor_name = current_user.name or current_user.username
+        link = url_for('projects.dashboard', project_id=task.project_id)
+        notified = {current_user.id}
+
+        # 1. If the assignee changed, ping the new assignee specifically
+        if task.assigned_to and task.assigned_to != prev_assigned_to and task.assigned_to not in notified:
+            create_notification(
+                task.assigned_to,
+                f"{actor_name} assigned you the task '{task.title}'",
+                link,
+            )
+            notified.add(task.assigned_to)
+
+        # 2. Notify existing audience (creator + current assignee) about the edit
+        if task.status != prev_status:
+            message_template = f"{actor_name} moved '{task.title}' to {task.status}"
+        else:
+            message_template = f"{actor_name} edited the task '{task.title}'"
+
+        if task.assigned_to and task.assigned_to not in notified:
+            create_notification(task.assigned_to, message_template, link)
+            notified.add(task.assigned_to)
+        if task.created_by and task.created_by not in notified:
+            create_notification(task.created_by, message_template, link)
 
     db.session.commit()
 
@@ -425,6 +458,26 @@ def toggle_status(task_id):
         task.status = 'Completed'
     else:
         task.status = 'Pending'
+
+    # Notify the task creator and assignee (excluding the person doing the toggle).
+    # Only fires for project tasks — personal tasks have no audience.
+    if task.project_id:
+        actor_name = current_user.name or current_user.username
+        link = url_for('projects.dashboard', project_id=task.project_id)
+        notified = {current_user.id}
+        if task.assigned_to and task.assigned_to not in notified:
+            create_notification(
+                task.assigned_to,
+                f"{actor_name} moved '{task.title}' to {task.status}",
+                link,
+            )
+            notified.add(task.assigned_to)
+        if task.created_by and task.created_by not in notified:
+            create_notification(
+                task.created_by,
+                f"{actor_name} moved your task '{task.title}' to {task.status}",
+                link,
+            )
 
     db.session.commit()
     next_url = request.form.get('next')

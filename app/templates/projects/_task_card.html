@@ -53,7 +53,7 @@
                     title="Edit task">
                 <i data-lucide="edit-3" style="width:16px;height:16px;"></i>
             </button>
-            <form action="{{ url_for('tasks.delete_task', task_id=task.id) }}" method="POST" style="margin:0;" onsubmit="return confirm('Delete this task?');">
+            <form action="{{ url_for('tasks.delete_task', task_id=task.id) }}" method="POST" style="margin:0;" data-confirm="Delete this task? This cannot be undone.">
                 <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
                 <input type="hidden" name="next" value="{{ request.url }}">
                 <button type="submit" class="kanban-icon-btn delete" title="Delete task">

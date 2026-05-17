@@ -30,7 +30,7 @@
     
     <div style="position: relative; z-index: 1; text-align: right; background: rgba(0,0,0,0.3); border: 1px solid rgba(255,255,255,0.1); padding: 16px 24px; border-radius: 16px; backdrop-filter: blur(10px);">
         <div style="font-size: 12px; color: rgba(255,255,255,0.5); margin-bottom: 8px; text-transform: uppercase; letter-spacing: 1px; font-weight: 600;">Invite Code</div>
-        <div class="invite-code-pill" style="display: flex; align-items: center; gap: 12px; background: rgba(255,255,255,0.05); border: 1px solid rgba(255,255,255,0.1); padding: 8px 16px; border-radius: 8px; font-family: monospace; font-size: 20px; font-weight: 600; letter-spacing: 3px; color: var(--accent-light); cursor: pointer; transition: all 0.2s ease;" title="Click to copy" onclick="navigator.clipboard.writeText('{{ org.invite_code }}'); alert('Invite code copied to clipboard!');">
+        <div class="invite-code-pill" style="display: flex; align-items: center; gap: 12px; background: rgba(255,255,255,0.05); border: 1px solid rgba(255,255,255,0.1); padding: 8px 16px; border-radius: 8px; font-family: monospace; font-size: 20px; font-weight: 600; letter-spacing: 3px; color: var(--accent-light); cursor: pointer; transition: all 0.2s ease;" title="Click to copy" onclick="navigator.clipboard.writeText('{{ org.invite_code }}').then(() => showToast('Invite code copied to clipboard')).catch(() => showToast('Could not copy. Code: {{ org.invite_code }}', 'error'));">
             <span>{{ org.invite_code }}</span>
             <div style="background: rgba(255,255,255,0.1); padding: 6px; border-radius: 6px; display: flex;">
                 <i data-lucide="copy" style="width: 16px; height: 16px; color: #fff;"></i>

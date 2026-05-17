@@ -108,7 +108,8 @@
                 <span class="google-dot"></span> Google Connected ▾
             </button>
             <div class="google-dropdown" id="google-dropdown">
-                <form action="{{ url_for('google.disconnect_google') }}" method="POST">
+                <form action="{{ url_for('google.disconnect_google') }}" method="POST"
+                      data-confirm="Disconnect Google Calendar? Existing task events will stay on your calendar, but new tasks won't sync until you reconnect.">
                     <input type="hidden" name="csrf_token" value="{{ csrf_token() }}"/>
                     <button type="submit" class="google-disconnect-btn">
                         <i data-lucide="unplug"
@@ -136,32 +137,33 @@
         
         <div class="omnibar-details" id="omnibar-details">
             <div class="omnibar-options">
-                <div class="omnibar-field" style="grid-column: 1 / -1; margin-bottom: 15px;">
+                <div class="omnibar-field omnibar-field-full">
                     <label>Description</label>
-                    <textarea name="description" rows="2" placeholder="Add details or notes..." style="width: 100%; padding: 10px; border-radius: 8px; border: 1px solid var(--glass-border); background: rgba(0,0,0,0.2); color: white; resize: vertical; box-sizing: border-box;"></textarea>
+                    <textarea name="description" rows="2" placeholder="Add details or notes..." class="omnibar-textarea"></textarea>
                 </div>
-                <div class="omnibar-field">
-                    <label>Priority</label>
-                    <select name="priority">
-                        <option value="Low">Low</option>
-                        <option value="Medium" selected>Medium</option>
-                        <option value="High">High</option>
-                    </select>
-                </div>
-                <div class="omnibar-field">
-                    <label>Date</label>
-                    <input type="date" name="deadline">
-                </div>
-                <div class="omnibar-field">
-                    <label>Time</label>
-                    <input type="time" name="time_slot">
+                <div class="omnibar-row">
+                    <div class="omnibar-field">
+                        <label>Priority</label>
+                        <select name="priority">
+                            <option value="Low">Low</option>
+                            <option value="Medium" selected>Medium</option>
+                            <option value="High">High</option>
+                        </select>
+                    </div>
+                    <div class="omnibar-field">
+                        <label>Date</label>
+                        <input type="date" name="deadline">
+                    </div>
+                    <div class="omnibar-field">
+                        <label>Time</label>
+                        <input type="time" name="time_slot">
+                    </div>
+                    <button type="submit" class="btn omnibar-submit">
+                        <i data-lucide="arrow-up" style="width:16px;height:16px;margin-right:4px;"></i>
+                        Add
+                    </button>
                 </div>
             </div>
-            
-            <button type="submit" class="btn omnibar-submit">
-                <i data-lucide="arrow-up" style="width:16px;height:16px;margin-right:4px;"></i>
-                Add
-            </button>
         </div>
     </form>
 
@@ -255,7 +257,8 @@
     {% if tasks %}
     <div class="action-bar-minimal">
         <span class="task-count">{{ tasks|length }} tasks</span>
-        <form method="POST" action="{{ url_for('tasks.clear_tasks') }}" style="display:inline;">
+        <form method="POST" action="{{ url_for('tasks.clear_tasks') }}" style="display:inline;"
+              data-confirm="Clear ALL your personal tasks? This deletes every personal task at once and cannot be undone.">
             <input type="hidden" name="csrf_token" value="{{ csrf_token() }}"/>
             <button type="submit" class="btn-clear-text" title="Clear all tasks">
                 <i data-lucide="trash-2" style="width:14px;height:14px;margin-right:4px;"></i> Clear All
@@ -336,7 +339,8 @@
                     </button>
                 </form>
 
-                <form action="{{ url_for('tasks.delete_task', task_id=task.id) }}" method="POST" style="margin:0;">
+                <form action="{{ url_for('tasks.delete_task', task_id=task.id) }}" method="POST" style="margin:0;"
+                      data-confirm="Delete this task? This cannot be undone.">
                     <input type="hidden" name="csrf_token" value="{{ csrf_token() }}"/>
                     <input type="hidden" name="next" value="{{ request.url }}"/>
                     <button class="action-btn delete-btn" type="submit" title="Delete Task">
@@ -527,7 +531,7 @@
         const end = document.getElementById('export-end').value;
 
         if (!start && !end) {
-            alert("Please select at least a start or end date.");
+            showToast('Please select at least a start or end date', 'error');
             return;
         }
 
@@ -605,6 +609,10 @@
             form.submit();
         }
         else if (submitBtn && submitBtn.classList.contains('delete-btn')) {
+            // If the form is guarded by data-confirm, let the global confirm handler
+            // manage the flow — otherwise we'd queue a delayed form.submit() that
+            // fires even if the user cancels in the modal.
+            if (form.dataset.confirm && form.dataset.confirmed !== 'true') return;
             e.preventDefault();
             const card = form.closest('.task-card');
             if (card) {

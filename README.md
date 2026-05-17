@@ -29,8 +29,7 @@ It started simple. I just wanted a clean place to write down what I had to do th
 - **Projects with a Kanban board.** Three columns: Pending, In Progress, Completed. Each column has its own colour accent and a friendly empty state when there's nothing in it.
 - **Assigning work.** Pick a member, assign a task. They can move it through the columns. Admins handle edits and deletes.
 - **Talking about things.** Discussion threads at the project level, plus comments attached to individual tasks.
-- **Notifications.** Bell icon in the nav with an unread count. Clicking it shows recent notifications; you can mark them read one at a time or all at once.
-- **Activity log.** Each org has a feed of who did what, which is helpful when you come back after a few days and want to know what changed.
+- **Notifications.** Bell icon in the nav with an unread count. Clicking it shows recent notifications; you can mark them read one at a time or all at once. Anyone joining your team, assigning you a task, or replying to your discussion fires one off automatically.
 
 ---
 
@@ -59,9 +58,10 @@ Flask-ToDo_App/
 ├── app/
 │   ├── __init__.py             # App factory. Wires the extensions and blueprints.
 │   ├── extensions.py           # SQLAlchemy, LoginManager, CSRF, Migrate.
-│   ├── models.py               # User, Task, Organization, OrgMember, Project,
-│   │                           # Discussion, Comment, Notification, ActivityLog.
-│   ├── utils.py                # log_activity() and create_notification().
+│   ├── models.py               # User, Task, Project, Organization, OrgMember,
+│   │                           # Discussion, DiscussionComment, TaskComment,
+│   │                           # Notification.
+│   ├── utils.py                # create_notification() helper.
 │   ├── routes/
 │   │   ├── auth.py             # Login, register, forgot/reset password, profile.
 │   │   ├── tasks.py            # Personal tasks. Add/edit/delete/toggle/clear/export.
@@ -78,7 +78,7 @@ Flask-ToDo_App/
 │   │   ├── orgs/               # list, create, dashboard.
 │   │   ├── projects/           # create, dashboard (Kanban), _task_card partial.
 │   │   ├── discussions/        # list, view.
-│   │   └── components/         # _activity_feed.html.
+│   │   └── errors/             # 404 and 500 pages.
 │   └── static/
 │       ├── css/style.css       # The main stylesheet.
 │       ├── css/auth.css        # The split-screen login/register layout.

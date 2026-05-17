@@ -94,12 +94,30 @@ def join_org():
     # Join org
     member = OrgMember(org_id=org.id, user_id=current_user.id, role="Member")
     db.session.add(member)
-    
 
-    
-    if org.created_by != current_user.id:
-        create_notification(org.created_by, f"{current_user.name or current_user.username} joined your organization '{org.name}'", url_for('orgs.dashboard', slug=org.slug))
-        
+    # Notify every existing team member that someone new joined.
+    # Existing members are queried BEFORE adding the new one above (the new row
+    # isn't flushed yet, so this query returns the original member list).
+    actor_name = current_user.name or current_user.username
+    link = url_for('orgs.dashboard', slug=org.slug)
+    existing_members = OrgMember.query.filter_by(org_id=org.id).all()
+    for m in existing_members:
+        if m.user_id == current_user.id:
+            continue
+        if m.user_id == org.created_by:
+            # Personalised message for the team creator
+            create_notification(
+                m.user_id,
+                f"{actor_name} joined your team '{org.name}'",
+                link,
+            )
+        else:
+            create_notification(
+                m.user_id,
+                f"{actor_name} joined the team '{org.name}'",
+                link,
+            )
+
     db.session.commit()
     
     flash(f'Successfully joined {org.name}!', 'success')

@@ -388,19 +388,21 @@ select option {
 }
 
 .omnibar-details {
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
     padding: 0 20px;
     max-height: 0;
     opacity: 0;
     visibility: hidden;
-    transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+    overflow: hidden;
+    transition: max-height 0.3s cubic-bezier(0.4, 0, 0.2, 1),
+                opacity 0.3s ease,
+                visibility 0.3s ease,
+                padding 0.3s ease,
+                border-color 0.3s ease;
     border-top: 1px solid transparent;
 }
 
 .omnibar-form.expanded .omnibar-details {
-    max-height: 120px; /* enough to show options */
+    max-height: 320px;
     opacity: 1;
     visibility: visible;
     border-top-color: var(--glass-border);
@@ -409,20 +411,40 @@ select option {
 
 .omnibar-options {
     display: flex;
-    gap: 16px;
+    flex-direction: column;
+    gap: 14px;
+    width: 100%;
+}
+
+.omnibar-row {
+    display: flex;
+    align-items: flex-end;
+    gap: 14px;
+    flex-wrap: wrap;
 }
 
 .omnibar-field {
     display: flex;
-    align-items: center;
-    gap: 8px;
+    flex-direction: column;
+    gap: 6px;
+    min-width: 0;
+}
+
+.omnibar-field-full {
+    width: 100%;
+}
+
+.omnibar-row .omnibar-field {
+    flex: 1;
+    min-width: 130px;
 }
 
 .omnibar-field label {
-    font-size: 12px;
+    font-size: 11px;
     color: var(--text-muted);
     font-weight: 600;
     text-transform: uppercase;
+    letter-spacing: 0.4px;
 }
 
 .omnibar-field select,
@@ -432,39 +454,62 @@ select option {
     border: 1px solid var(--glass-border);
     border-radius: var(--radius-xs);
     color: var(--text);
-    padding: 8px 12px;
+    padding: 9px 12px;
     font-size: 13px;
     outline: none;
+    width: 100%;
     transition: var(--transition);
 }
 
 .omnibar-field select:focus,
-.omnibar-field input:focus {
+.omnibar-field input:focus,
+.omnibar-textarea:focus {
     border-color: var(--accent);
     box-shadow: 0 0 0 2px var(--accent-glow);
 }
 
+.omnibar-textarea {
+    width: 100%;
+    padding: 10px 12px;
+    border-radius: var(--radius-xs);
+    border: 1px solid var(--glass-border);
+    background: var(--surface);
+    color: var(--text);
+    font-family: inherit;
+    font-size: 14px;
+    line-height: 1.45;
+    resize: vertical;
+    min-height: 60px;
+    max-height: 160px;
+    box-sizing: border-box;
+    outline: none;
+    transition: var(--transition);
+}
+
 .omnibar-submit {
+    flex: 0 0 auto;
     padding: 10px 20px;
     border-radius: var(--radius-xs);
     font-size: 14px;
     width: auto;
+    height: 38px;
+    align-self: flex-end;
 }
 
-@media (max-width: 768px) {
-    .omnibar-details {
+@media (max-width: 600px) {
+    .omnibar-form.expanded .omnibar-details {
+        max-height: 460px;
+    }
+    .omnibar-row {
         flex-direction: column;
         align-items: stretch;
-        gap: 16px;
     }
-    
-    .omnibar-options {
-        flex-direction: column;
-        gap: 12px;
+    .omnibar-row .omnibar-field {
+        min-width: 0;
     }
-    
-    .omnibar-form.expanded .omnibar-details {
-        max-height: 350px;
+    .omnibar-submit {
+        width: 100%;
+        align-self: stretch;
     }
 }
 
@@ -1597,12 +1642,29 @@ nav a.notif-bell:hover {
 }
 
 .notif-item {
+    /* Reset button defaults — these are <button> elements inside <form>s */
     display: block;
-    padding: 12px 18px;
+    width: 100%;
+    padding: 12px 18px 12px 26px;
+    border: none;
     border-bottom: 1px solid rgba(255,255,255,0.04);
+    background: transparent;
+    color: inherit;
+    font: inherit;
+    text-align: left;
     text-decoration: none;
+    cursor: pointer;
     transition: background 0.2s ease;
     position: relative;
+}
+
+.notif-item:last-child {
+    border-bottom: none;
+}
+
+.notif-item:focus {
+    outline: none;
+    background: var(--surface-hover);
 }
 
 .notif-item.unread {
@@ -3143,6 +3205,179 @@ a:focus:not(:focus-visible) {
     }
     .profile-section h3 {
         font-size: 16px !important;
+    }
+}
+
+
+/* ==========================================================
+   CONFIRM MODAL — in-app replacement for native confirm()
+   Any <form data-confirm="message"> triggers it automatically.
+   ========================================================== */
+.confirm-overlay {
+    position: fixed;
+    inset: 0;
+    z-index: 9998;
+    background: rgba(0, 0, 0, 0.65);
+    backdrop-filter: blur(8px);
+    -webkit-backdrop-filter: blur(8px);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 20px;
+    opacity: 0;
+    visibility: hidden;
+    transition: opacity 0.25s ease, visibility 0.25s ease;
+}
+.confirm-overlay.open {
+    opacity: 1;
+    visibility: visible;
+}
+
+.confirm-modal {
+    width: 100%;
+    max-width: 420px;
+    background: var(--surface-solid);
+    border: 1px solid var(--glass-border);
+    border-radius: var(--radius);
+    box-shadow: 0 24px 80px rgba(0, 0, 0, 0.55), 0 0 60px rgba(248, 113, 113, 0.18);
+    padding: 28px 26px 22px;
+    text-align: center;
+    backdrop-filter: blur(24px);
+    -webkit-backdrop-filter: blur(24px);
+    transform: translateY(20px) scale(0.96);
+    transition: transform 0.25s cubic-bezier(.22, 1, .36, 1);
+}
+.confirm-overlay.open .confirm-modal {
+    transform: translateY(0) scale(1);
+}
+
+.confirm-icon {
+    width: 56px;
+    height: 56px;
+    margin: 0 auto 16px;
+    border-radius: 50%;
+    background: rgba(248, 113, 113, 0.12);
+    color: var(--danger);
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    border: 1px solid rgba(248, 113, 113, 0.28);
+    box-shadow: 0 0 24px rgba(248, 113, 113, 0.18);
+}
+
+.confirm-modal h3 {
+    margin: 0 0 8px;
+    font-size: 18px;
+    font-weight: 700;
+    color: var(--text);
+}
+
+.confirm-modal p {
+    margin: 0 0 22px;
+    font-size: 14px;
+    line-height: 1.5;
+    color: var(--text-secondary);
+}
+
+.confirm-actions {
+    display: flex;
+    gap: 10px;
+    justify-content: center;
+}
+
+.confirm-actions .btn-small {
+    flex: 1;
+    max-width: 140px;
+    padding: 11px 18px;
+    font-size: 14px;
+}
+
+.btn-confirm-danger {
+    flex: 1;
+    max-width: 160px;
+    padding: 11px 18px;
+    font-size: 14px;
+    font-weight: 600;
+    font-family: inherit;
+    border-radius: var(--radius-xs);
+    border: 1px solid rgba(248, 113, 113, 0.4);
+    background: linear-gradient(135deg, var(--danger), #ef4444);
+    color: #fff;
+    cursor: pointer;
+    transition: var(--transition);
+    box-shadow: 0 4px 14px rgba(248, 113, 113, 0.3);
+}
+
+.btn-confirm-danger:hover {
+    transform: translateY(-1px);
+    box-shadow: 0 8px 22px rgba(248, 113, 113, 0.4);
+    filter: brightness(1.05);
+}
+
+@media (max-width: 480px) {
+    .confirm-modal {
+        padding: 22px 18px 18px;
+    }
+    .confirm-actions {
+        flex-direction: column-reverse;
+    }
+    .confirm-actions .btn-small,
+    .btn-confirm-danger {
+        max-width: 100%;
+        width: 100%;
+    }
+}
+
+
+/* ==========================================================
+   TOAST — in-app replacement for native alert()
+   ========================================================== */
+.toast {
+    position: fixed;
+    bottom: 32px;
+    left: 50%;
+    transform: translateX(-50%) translateY(20px);
+    background: var(--surface-solid);
+    color: var(--text);
+    padding: 12px 22px;
+    border-radius: var(--radius-sm);
+    border: 1px solid var(--glass-border);
+    box-shadow: var(--shadow);
+    font-size: 14px;
+    font-weight: 500;
+    line-height: 1.4;
+    z-index: 9999;
+    opacity: 0;
+    pointer-events: none;
+    backdrop-filter: blur(20px);
+    -webkit-backdrop-filter: blur(20px);
+    max-width: min(420px, calc(100vw - 32px));
+    transition: opacity 0.25s ease, transform 0.25s ease;
+}
+.toast.toast-show {
+    opacity: 1;
+    transform: translateX(-50%) translateY(0);
+}
+.toast-success {
+    border-color: rgba(52, 211, 153, 0.35);
+    color: #6ee7b7;
+    box-shadow: 0 8px 32px rgba(52, 211, 153, 0.18);
+}
+.toast-error {
+    border-color: rgba(248, 113, 113, 0.35);
+    color: #fca5a5;
+    box-shadow: 0 8px 32px rgba(248, 113, 113, 0.18);
+}
+.toast-info {
+    border-color: rgba(96, 165, 250, 0.35);
+    color: #93c5fd;
+    box-shadow: 0 8px 32px rgba(96, 165, 250, 0.18);
+}
+@media (max-width: 480px) {
+    .toast {
+        bottom: 16px;
+        font-size: 13px;
+        padding: 10px 18px;
     }
 }
 
