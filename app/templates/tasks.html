@@ -94,7 +94,7 @@
     </div>
 </div>
 
-<div class="task-box" style="background: var(--surface-solid); border: 1px solid var(--glass-border); border-radius: 20px; padding: 35px; box-shadow: 0 15px 35px rgba(0,0,0,0.25); backdrop-filter: blur(20px);">
+<div class="task-box">
 
     <!--  HEADER  -->
     <div class="task-header">
@@ -127,7 +127,7 @@
     </div>
 
     <!--  ADD TASK OMNIBAR  -->
-    <form action="{{ url_for('tasks.add_task') }}" method="POST" class="omnibar-form" id="omnibar-form" style="border: 2px solid var(--glass-border); border-radius: 16px; transition: all 0.3s ease; background: rgba(0,0,0,0.2);" onfocusin="this.style.borderColor='var(--accent)'; this.style.boxShadow='0 0 0 4px var(--accent-glow)';" onfocusout="this.style.borderColor='var(--glass-border)'; this.style.boxShadow='none';" onsubmit="if(this.dataset.submitting) return false; this.dataset.submitting = true; const btn = this.querySelector('button[type=submit]'); btn.style.opacity = '0.7'; btn.innerHTML = '<i data-lucide=\'loader\' class=\'spin\' style=\'width:16px;height:16px;margin-right:4px;\'></i>Adding...'; if(typeof lucide !== 'undefined') lucide.createIcons(); return true;">
+    <form action="{{ url_for('tasks.add_task') }}" method="POST" class="omnibar-form" id="omnibar-form" onsubmit="if(this.dataset.submitting) return false; this.dataset.submitting = true; const btn = this.querySelector('button[type=submit]'); btn.style.opacity = '0.7'; btn.innerHTML = '<i data-lucide=\'loader\' class=\'spin\' style=\'width:16px;height:16px;margin-right:4px;\'></i>Adding...'; if(typeof lucide !== 'undefined') lucide.createIcons(); return true;">
         <input type="hidden" name="csrf_token" value="{{ csrf_token() }}"/>
         
         <div class="omnibar-input-wrapper">
@@ -247,7 +247,7 @@
                 <input type="hidden" name="date" value="{{ date_filter if not show_all else 'all' }}">
                 <button type="submit" class="btn-small">Apply</button>
                 {% if search or status_filter != 'all' or priority_filter != 'all' %}
-                <a href="{{ url_for('tasks.view_tasks') }}" class="btn-small" style="background:rgba(248,113,113,0.1);color:var(--danger);border-color:rgba(248,113,113,0.3);text-decoration:none;">Reset</a>
+                <a href="{{ url_for('tasks.view_tasks') }}" class="btn-small" style="background:var(--danger-soft);color:var(--danger);border-color:var(--danger);text-decoration:none;">Reset</a>
                 {% endif %}
             </form>
         </div>
@@ -302,7 +302,7 @@
                 </div>
                 <div class="task-card-meta">
                     {% if show_all and task.deadline %}
-                    <span class="task-time" style="margin-right: 12px; padding: 4px 8px; background: rgba(255,255,255,0.05); border-radius: 6px;">
+                    <span class="task-time" style="margin-right: 12px; padding: 4px 8px; background: var(--surface-elev); border-radius: 6px;">
                         <i data-lucide="calendar" style="width:12px;height:12px;vertical-align:middle;margin-right:4px;"></i>{{ task.deadline.strftime('%b %d, %Y') }}
                     </span>
                     {% endif %}
@@ -397,7 +397,7 @@
 
                 <div class="form-group">
                     <label for="edit-description">Description</label>
-                    <textarea id="edit-description" name="description" rows="3" placeholder="Add details or notes..." style="width: 100%; padding: 10px; border-radius: 8px; border: 1px solid var(--glass-border); background: rgba(0,0,0,0.2); color: white; resize: vertical; box-sizing: border-box;"></textarea>
+                    <textarea id="edit-description" name="description" rows="3" placeholder="Add details or notes..." style="width: 100%; padding: 10px; border-radius: 8px; border: 1px solid var(--glass-border); background: var(--surface); color: var(--text); resize: vertical; box-sizing: border-box;"></textarea>
                 </div>
 
                 <div class="modal-row">

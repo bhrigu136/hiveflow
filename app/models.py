@@ -30,6 +30,9 @@ class User(UserMixin, db.Model):
     google_refresh_token = db.Column(db.Text, nullable=True)
     google_token_expiry = db.Column(db.DateTime, nullable=True)
 
+    # Theme preference
+    theme_preference = db.Column(db.String(20), default='light', nullable=False)
+
     tasks = db.relationship('Task', backref='user', lazy=True, foreign_keys='Task.user_id')
 
     def set_password(self, password: str):

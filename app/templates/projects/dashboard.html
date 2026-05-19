@@ -2,25 +2,53 @@
 {% block title %}{{ project.name }} — HiveFlow{% endblock %}
 
 {% block content %}
-<a href="{{ url_for('orgs.dashboard', slug=org.slug) }}" class="back-link">
-    <i data-lucide="arrow-left" style="width:14px;height:14px;"></i> Back to {{ org.name }}
-</a>
+<div id="boardUpdateBanner" class="update-banner" style="display:none;">
+    <span class="update-banner-msg">
+        <i data-lucide="refresh-cw" style="width:14px;height:14px;"></i>
+        The board changed — refreshing in <span id="boardUpdateCountdown">3</span>s
+    </span>
+    <button type="button" id="boardUpdateNow" class="update-banner-btn">Refresh now</button>
+</div>
 
-<div class="project-hero">
-    <div>
-        <h2>
-            <i data-lucide="layout"></i> {{ project.name }}
-        </h2>
-        <p>{{ project.description if project.description else "No description provided." }}</p>
+<div class="page-header">
+    <div class="breadcrumb">
+        <a href="{{ url_for('orgs.list_orgs') }}">Teams</a>
+        <span class="breadcrumb-sep">/</span>
+        <a href="{{ url_for('orgs.dashboard', slug=org.slug) }}">{{ org.name }}</a>
+        <span class="breadcrumb-sep">/</span>
+        <span>{{ project.name }}</span>
     </div>
 
-    <div class="project-hero-actions">
-        <a href="{{ url_for('discussions.list_discussions', project_id=project.id) }}" class="btn-secondary">
-            <i data-lucide="message-square" style="width:16px;height:16px;"></i> Discussions
-        </a>
-        <button onclick="document.getElementById('newTaskModal').style.display='flex'" class="btn-primary">
-            <i data-lucide="plus" style="width:16px;height:16px;"></i> Add Task
-        </button>
+    <div class="page-header-row">
+        <div>
+            <h1 class="page-title">{{ project.name }}</h1>
+            {% if project.description %}
+            <p class="page-subtitle">{{ project.description }}</p>
+            {% endif %}
+        </div>
+
+        <div class="page-header-actions">
+            {% if org_members %}
+            <div class="avatar-stack" title="Team members">
+                {% for m in org_members[:4] %}
+                {% if m.user.profile_picture and m.user.profile_picture != 'default.png' %}
+                <img src="{{ url_for('static', filename='uploads/profiles/' + m.user.profile_picture) }}" alt="{{ m.user.name or m.user.username }}" title="{{ m.user.name or m.user.username }}">
+                {% else %}
+                <span title="{{ m.user.name or m.user.username }}">{{ (m.user.name or m.user.username or 'U')[0]|upper }}</span>
+                {% endif %}
+                {% endfor %}
+                {% if org_members|length > 4 %}
+                <span class="avatar-more">+{{ org_members|length - 4 }}</span>
+                {% endif %}
+            </div>
+            {% endif %}
+            <a href="{{ url_for('discussions.list_discussions', project_id=project.id) }}" class="btn-secondary">
+                <i data-lucide="message-square" style="width:16px;height:16px;"></i> Discussions
+            </a>
+            <button onclick="document.getElementById('newTaskModal').style.display='flex'" class="btn-primary">
+                <i data-lucide="plus" style="width:16px;height:16px;"></i> Add Task
+            </button>
+        </div>
     </div>
 </div>
 
@@ -92,8 +120,8 @@
 </div>
 
 <!-- New Task Modal -->
-<div id="newTaskModal" style="display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.5); z-index: 1000; align-items: center; justify-content: center; backdrop-filter: blur(4px);">
-    <div style="background: var(--surface-solid); border: 1px solid var(--glass-border); border-radius: 16px; padding: 30px; width: 100%; max-width: 500px; box-shadow: 0 10px 30px rgba(0,0,0,0.3);">
+<div id="newTaskModal" style="display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: var(--overlay); z-index: 1000; align-items: center; justify-content: center; backdrop-filter: blur(4px);">
+    <div style="background: var(--surface-solid); border: 1px solid var(--glass-border); border-radius: 16px; padding: 30px; width: 100%; max-width: 500px; box-shadow: var(--shadow-md);">
         <h3 style="margin-top: 0; margin-bottom: 20px; display: flex; justify-content: space-between; align-items: center;">
             Add New Task
             <button onclick="document.getElementById('newTaskModal').style.display='none'" style="background: none; border: none; color: var(--text-muted); cursor: pointer;"><i data-lucide="x"></i></button>
@@ -104,30 +132,30 @@
             
             <div style="margin-bottom: 15px;">
                 <label style="display: block; margin-bottom: 5px; font-size: 14px;">Task Title</label>
-                <input type="text" name="title" required placeholder="What needs to be done?" style="width: 100%; padding: 10px; border-radius: 8px; border: 1px solid var(--glass-border); background: rgba(0,0,0,0.2); color: white; box-sizing: border-box;">
+                <input type="text" name="title" required placeholder="What needs to be done?" style="width: 100%; padding: 10px; border-radius: 8px; border: 1px solid var(--glass-border); background: var(--surface); color: var(--text); box-sizing: border-box;">
             </div>
 
             <div style="margin-bottom: 15px;">
                 <label style="display: block; margin-bottom: 5px; font-size: 14px;">Description</label>
-                <textarea name="description" rows="3" placeholder="Add details or notes..." style="width: 100%; padding: 10px; border-radius: 8px; border: 1px solid var(--glass-border); background: rgba(0,0,0,0.2); color: white; resize: vertical; box-sizing: border-box;"></textarea>
+                <textarea name="description" rows="3" placeholder="Add details or notes..." style="width: 100%; padding: 10px; border-radius: 8px; border: 1px solid var(--glass-border); background: var(--surface); color: var(--text); resize: vertical; box-sizing: border-box;"></textarea>
             </div>
             
             <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 15px; margin-bottom: 20px;">
                 <div>
                     <label style="display: block; margin-bottom: 5px; font-size: 14px;">Priority</label>
-                    <select name="priority" style="width: 100%; padding: 10px; border-radius: 8px; border: 1px solid var(--glass-border); background: rgba(0,0,0,0.2); color: white; box-sizing: border-box; appearance: none;">
-                        <option value="Low" style="color: black;">Low</option>
-                        <option value="Medium" selected style="color: black;">Medium</option>
-                        <option value="High" style="color: black;">High</option>
+                    <select name="priority" style="width: 100%; padding: 10px; border-radius: 8px; border: 1px solid var(--glass-border); background: var(--surface); color: var(--text); box-sizing: border-box; appearance: none;">
+                        <option value="Low" style="color: var(--text); background: var(--surface-solid);">Low</option>
+                        <option value="Medium" selected style="color: var(--text); background: var(--surface-solid);">Medium</option>
+                        <option value="High" style="color: var(--text); background: var(--surface-solid);">High</option>
                     </select>
                 </div>
                 
                 <div>
                     <label style="display: block; margin-bottom: 5px; font-size: 14px;">Assign To</label>
-                    <select name="assigned_to" style="width: 100%; padding: 10px; border-radius: 8px; border: 1px solid var(--glass-border); background: rgba(0,0,0,0.2); color: white; box-sizing: border-box; appearance: none;">
-                        <option value="" style="color: black;">Unassigned</option>
+                    <select name="assigned_to" style="width: 100%; padding: 10px; border-radius: 8px; border: 1px solid var(--glass-border); background: var(--surface); color: var(--text); box-sizing: border-box; appearance: none;">
+                        <option value="" style="color: var(--text); background: var(--surface-solid);">Unassigned</option>
                         {% for member in org_members %}
-                        <option value="{{ member.user.id }}" style="color: black;">{{ member.user.name if member.user.name else member.user.username }}</option>
+                        <option value="{{ member.user.id }}" style="color: var(--text); background: var(--surface-solid);">{{ member.user.name if member.user.name else member.user.username }}</option>
                         {% endfor %}
                     </select>
                 </div>
@@ -141,10 +169,110 @@
     </div>
 </div>
 
+<script>
+(function() {
+    // Poll the project state every 6s; if the fingerprint diverges from
+    // the one captured at page load, soft-refresh so everyone sees task
+    // moves, assignments, status changes, new comments, etc.
+    var projectId = {{ project.id }};
+    var initialFingerprint = null;
+    var banner = document.getElementById('boardUpdateBanner');
+    var countdownEl = document.getElementById('boardUpdateCountdown');
+    var refreshNowBtn = document.getElementById('boardUpdateNow');
+    var refreshTimer = null;
+    var pollFailures = 0;
+
+    function softReload() {
+        // Preserve scroll position roughly by saving to sessionStorage
+        try {
+            sessionStorage.setItem('hf_scroll_' + projectId, String(window.scrollY));
+        } catch (e) {}
+        window.location.reload();
+    }
+
+    // Restore scroll position from a previous soft-reload
+    try {
+        var prev = sessionStorage.getItem('hf_scroll_' + projectId);
+        if (prev) {
+            sessionStorage.removeItem('hf_scroll_' + projectId);
+            window.requestAnimationFrame(function() {
+                window.scrollTo(0, parseInt(prev, 10) || 0);
+            });
+        }
+    } catch (e) {}
+
+    function startCountdown() {
+        if (refreshTimer) return;
+        banner.style.display = 'flex';
+        var seconds = 3;
+        countdownEl.textContent = seconds;
+        refreshTimer = setInterval(function() {
+            seconds--;
+            countdownEl.textContent = seconds;
+            if (seconds <= 0) {
+                clearInterval(refreshTimer);
+                softReload();
+            }
+        }, 1000);
+    }
+
+    if (refreshNowBtn) {
+        refreshNowBtn.addEventListener('click', softReload);
+    }
+
+    function poll() {
+        // Don't poll while the user is in the middle of editing a task.
+        var editOpen = document.getElementById('editTaskModal');
+        var addOpen = document.getElementById('newTaskModal');
+        if ((editOpen && editOpen.style.display === 'flex') ||
+            (addOpen && addOpen.style.display === 'flex')) {
+            return;
+        }
+        fetch('/api/projects/' + projectId + '/state', {
+            credentials: 'same-origin',
+            headers: { 'Accept': 'application/json' }
+        })
+        .then(function(r) {
+            if (!r.ok) throw new Error('HTTP ' + r.status);
+            return r.json();
+        })
+        .then(function(data) {
+            pollFailures = 0;
+            if (initialFingerprint === null) {
+                initialFingerprint = data.fingerprint;
+                return;
+            }
+            if (data.fingerprint !== initialFingerprint) {
+                startCountdown();
+            }
+        })
+        .catch(function() {
+            pollFailures++;
+            // Silent failure — try again next tick.
+        });
+    }
+
+    // Prime initial fingerprint immediately, then poll on a cadence.
+    poll();
+    var visibleInterval = 6000;
+    var hiddenInterval = 20000;
+    var timer = setInterval(poll, visibleInterval);
+    document.addEventListener('visibilitychange', function() {
+        clearInterval(timer);
+        if (document.hidden) {
+            timer = setInterval(poll, hiddenInterval);
+        } else {
+            poll();
+            timer = setInterval(poll, visibleInterval);
+        }
+    });
+})();
+</script>
+
 {% if is_admin %}
 <!-- Edit Task Modal (admin only) -->
-<div id="editTaskModal" style="display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.5); z-index: 1000; align-items: center; justify-content: center; backdrop-filter: blur(4px);">
-    <div style="background: var(--surface-solid); border: 1px solid var(--glass-border); border-radius: 16px; padding: 30px; width: 100%; max-width: 500px; box-shadow: 0 10px 30px rgba(0,0,0,0.3);">
+<div id="editTaskModal" style="display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: var(--overlay); z-index: 1000; align-items: center; justify-content: center; backdrop-filter: blur(4px);">
+    <div style="background: var(--surface-solid); border: 1px solid var(--glass-border); border-radius: 16px; padding: 30px; width: 100%; max-width: 500px; box-shadow: var(--shadow-md);">
         <h3 style="margin-top: 0; margin-bottom: 20px; display: flex; justify-content: space-between; align-items: center;">
             Edit Task
             <button type="button" onclick="document.getElementById('editTaskModal').style.display='none'" style="background: none; border: none; color: var(--text-muted); cursor: pointer;"><i data-lucide="x"></i></button>
@@ -156,40 +284,40 @@
 
             <div style="margin-bottom: 15px;">
                 <label style="display: block; margin-bottom: 5px; font-size: 14px;">Task Title</label>
-                <input type="text" name="title" id="editTaskTitle" required style="width: 100%; padding: 10px; border-radius: 8px; border: 1px solid var(--glass-border); background: rgba(0,0,0,0.2); color: white; box-sizing: border-box;">
+                <input type="text" name="title" id="editTaskTitle" required style="width: 100%; padding: 10px; border-radius: 8px; border: 1px solid var(--glass-border); background: var(--surface); color: var(--text); box-sizing: border-box;">
             </div>
 
             <div style="margin-bottom: 15px;">
                 <label style="display: block; margin-bottom: 5px; font-size: 14px;">Description</label>
-                <textarea name="description" id="editTaskDescription" rows="3" placeholder="Add details or notes..." style="width: 100%; padding: 10px; border-radius: 8px; border: 1px solid var(--glass-border); background: rgba(0,0,0,0.2); color: white; resize: vertical; box-sizing: border-box;"></textarea>
+                <textarea name="description" id="editTaskDescription" rows="3" placeholder="Add details or notes..." style="width: 100%; padding: 10px; border-radius: 8px; border: 1px solid var(--glass-border); background: var(--surface); color: var(--text); resize: vertical; box-sizing: border-box;"></textarea>
             </div>
 
             <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 15px; margin-bottom: 15px;">
                 <div>
                     <label style="display: block; margin-bottom: 5px; font-size: 14px;">Priority</label>
-                    <select name="priority" id="editTaskPriority" style="width: 100%; padding: 10px; border-radius: 8px; border: 1px solid var(--glass-border); background: rgba(0,0,0,0.2); color: white; box-sizing: border-box; appearance: none;">
-                        <option value="Low" style="color: black;">Low</option>
-                        <option value="Medium" style="color: black;">Medium</option>
-                        <option value="High" style="color: black;">High</option>
+                    <select name="priority" id="editTaskPriority" style="width: 100%; padding: 10px; border-radius: 8px; border: 1px solid var(--glass-border); background: var(--surface); color: var(--text); box-sizing: border-box; appearance: none;">
+                        <option value="Low" style="color: var(--text); background: var(--surface-solid);">Low</option>
+                        <option value="Medium" style="color: var(--text); background: var(--surface-solid);">Medium</option>
+                        <option value="High" style="color: var(--text); background: var(--surface-solid);">High</option>
                     </select>
                 </div>
 
                 <div>
                     <label style="display: block; margin-bottom: 5px; font-size: 14px;">Status</label>
-                    <select name="status" id="editTaskStatus" style="width: 100%; padding: 10px; border-radius: 8px; border: 1px solid var(--glass-border); background: rgba(0,0,0,0.2); color: white; box-sizing: border-box; appearance: none;">
-                        <option value="Pending" style="color: black;">Pending</option>
-                        <option value="Working" style="color: black;">In Progress</option>
-                        <option value="Completed" style="color: black;">Completed</option>
+                    <select name="status" id="editTaskStatus" style="width: 100%; padding: 10px; border-radius: 8px; border: 1px solid var(--glass-border); background: var(--surface); color: var(--text); box-sizing: border-box; appearance: none;">
+                        <option value="Pending" style="color: var(--text); background: var(--surface-solid);">Pending</option>
+                        <option value="Working" style="color: var(--text); background: var(--surface-solid);">In Progress</option>
+                        <option value="Completed" style="color: var(--text); background: var(--surface-solid);">Completed</option>
                     </select>
                 </div>
             </div>
 
             <div style="margin-bottom: 20px;">
                 <label style="display: block; margin-bottom: 5px; font-size: 14px;">Assign To</label>
-                <select name="assigned_to" id="editTaskAssigned" style="width: 100%; padding: 10px; border-radius: 8px; border: 1px solid var(--glass-border); background: rgba(0,0,0,0.2); color: white; box-sizing: border-box; appearance: none;">
-                    <option value="" style="color: black;">Unassigned</option>
+                <select name="assigned_to" id="editTaskAssigned" style="width: 100%; padding: 10px; border-radius: 8px; border: 1px solid var(--glass-border); background: var(--surface); color: var(--text); box-sizing: border-box; appearance: none;">
+                    <option value="" style="color: var(--text); background: var(--surface-solid);">Unassigned</option>
                     {% for member in org_members %}
-                    <option value="{{ member.user.id }}" style="color: black;">{{ member.user.name if member.user.name else member.user.username }}</option>
+                    <option value="{{ member.user.id }}" style="color: var(--text); background: var(--surface-solid);">{{ member.user.name if member.user.name else member.user.username }}</option>
                     {% endfor %}
                 </select>
             </div>

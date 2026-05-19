@@ -18,101 +18,152 @@
 
     <!-- Lucide Icons CDN -->
     <script src="https://unpkg.com/lucide@latest/dist/umd/lucide.js"></script>
+    
+    <!-- Theme Loader Script - Run before rendering to prevent flashing -->
+    <script>
+        (function() {
+            // Determine theme: use localStorage if available, otherwise use server preference (authenticated users)
+            let theme = localStorage.getItem('theme');
+
+            {% if current_user.is_authenticated %}
+            // If user is authenticated and no localStorage theme, use their preference
+            if (!theme) {
+                theme = '{{ current_user.theme_preference or "light" }}';
+                localStorage.setItem('theme', theme);
+            }
+            {% endif %}
+
+            // Default to light if no theme is set
+            theme = theme || 'light';
+            document.documentElement.setAttribute('data-theme', theme);
+        })();
+    </script>
 </head>
 
-<body>
+<body class="{% if current_user.is_authenticated %}has-sidebar{% endif %}">
 
-    <!-- ================= HEADER / NAVBAR ================= -->
-    <header>
-        <div class="container">
-            <h1>HiveFlow</h1>
+    {% if current_user.is_authenticated %}
+    <!-- ================= MOBILE TOPBAR (visible <960px) ================= -->
+    <header class="mobile-topbar">
+        <button type="button" class="mobile-menu-btn" onclick="document.body.classList.toggle('sidebar-open')" aria-label="Toggle menu">
+            <i data-lucide="menu" style="width:20px;height:20px;"></i>
+        </button>
+        <a href="{{ url_for('tasks.view_tasks') }}" class="mobile-brand">
+            <span class="brand-dot"></span>
+            HiveFlow
+        </a>
+        <span style="width:36px;"></span>
+    </header>
 
-            <nav>
-                <a href="{{ url_for('tasks.view_tasks') }}">
-                    <i data-lucide="check-square"
-                        style="width:16px;height:16px;vertical-align:middle;margin-right:4px;"></i>My Tasks
-                </a>
+    <!-- Sidebar overlay (mobile) -->
+    <div class="sidebar-overlay" onclick="document.body.classList.remove('sidebar-open')"></div>
 
-                {% if current_user.is_authenticated %}
-                <a href="{{ url_for('orgs.list_orgs') }}">
-                    <i data-lucide="users"></i>Teams
-                </a>
+    <!-- ================= SIDEBAR ================= -->
+    <aside class="sidebar">
+        <a href="{{ url_for('tasks.view_tasks') }}" class="sidebar-brand">
+            <span class="brand-dot"></span>
+            <span class="brand-name">HiveFlow</span>
+        </a>
 
-                <!-- Notification Bell -->
-                {% set unread_count = current_user.notifications.filter_by(is_read=False).count() %}
-                <div class="notif-wrapper">
-                    <a href="#" class="notif-bell" onclick="toggleNotifications(event);" aria-label="Notifications">
-                        <i data-lucide="bell" style="width:18px;height:18px;"></i>
+        <nav class="sidebar-nav">
+            <a href="{{ url_for('tasks.view_tasks') }}"
+               class="sidebar-link {% if request.endpoint == 'tasks.view_tasks' %}active{% endif %}">
+                <i data-lucide="check-square"></i>
+                <span>My Tasks</span>
+            </a>
+            <a href="{{ url_for('orgs.list_orgs') }}"
+               class="sidebar-link {% if request.endpoint and request.endpoint.startswith(('orgs.', 'projects.', 'discussions.')) %}active{% endif %}">
+                <i data-lucide="users"></i>
+                <span>Teams</span>
+            </a>
+
+            <!-- Notification Bell -->
+            {% set unread_count = current_user.notifications.filter_by(is_read=False).count() %}
+            <div class="notif-wrapper sidebar-link" style="cursor:pointer;" onclick="toggleNotifications(event);">
+                <i data-lucide="bell"></i>
+                <span>Notifications</span>
+                {% if unread_count > 0 %}
+                <span class="sidebar-badge">{{ unread_count if unread_count < 10 else '9+' }}</span>
+                {% endif %}
+
+                <!-- Notification Dropdown -->
+                <div id="notificationsDropdown" class="notif-dropdown" onclick="event.stopPropagation();">
+                    <div class="notif-dropdown-header">
+                        <h4>
+                            <i data-lucide="bell" style="width:14px;height:14px;"></i>
+                            Notifications
+                        </h4>
                         {% if unread_count > 0 %}
-                        <span class="notif-badge">{{ unread_count if unread_count < 10 else '9+' }}</span>
+                        <form action="{{ url_for('notifications.mark_all_read') }}" method="POST" style="margin:0;">
+                            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                            <button type="submit" class="notif-mark-all">Mark all read</button>
+                        </form>
                         {% endif %}
-                    </a>
+                    </div>
 
-                    <!-- Notification Dropdown -->
-                    <div id="notificationsDropdown" class="notif-dropdown">
-                        <div class="notif-dropdown-header">
-                            <h4>
-                                <i data-lucide="bell" style="width:14px;height:14px;"></i>
-                                Notifications
-                            </h4>
-                            {% if unread_count > 0 %}
-                            <form action="{{ url_for('notifications.mark_all_read') }}" method="POST" style="margin:0;">
-                                <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
-                                <button type="submit" class="notif-mark-all">Mark all read</button>
-                            </form>
-                            {% endif %}
+                    <div class="notif-list">
+                        {% set recent_notifs = current_user.get_recent_notifications(10) %}
+                        {% for notif in recent_notifs %}
+                        <form action="{{ url_for('notifications.mark_read', notification_id=notif.id) }}" method="POST" style="margin:0;">
+                            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                            <button type="submit" class="notif-item {{ 'unread' if not notif.is_read else '' }}">
+                                <div class="notif-message">{{ notif.message }}</div>
+                                <div class="notif-time">{{ notif.created_at.strftime('%b %d, %I:%M %p') }}</div>
+                            </button>
+                        </form>
+                        {% else %}
+                        <div class="notif-empty">
+                            <i data-lucide="bell-off" style="width:24px;height:24px;"></i>
+                            No notifications yet.
                         </div>
-
-                        <div class="notif-list">
-                            {% set recent_notifs = current_user.get_recent_notifications(10) %}
-                            {% for notif in recent_notifs %}
-                            <form action="{{ url_for('notifications.mark_read', notification_id=notif.id) }}" method="POST" style="margin:0;">
-                                <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
-                                <button type="submit" class="notif-item {{ 'unread' if not notif.is_read else '' }}">
-                                    <div class="notif-message">{{ notif.message }}</div>
-                                    <div class="notif-time">{{ notif.created_at.strftime('%b %d, %I:%M %p') }}</div>
-                                </button>
-                            </form>
-                            {% else %}
-                            <div class="notif-empty">
-                                <i data-lucide="bell-off" style="width:24px;height:24px;"></i>
-                                No notifications yet.
-                            </div>
-                            {% endfor %}
-                        </div>
+                        {% endfor %}
                     </div>
                 </div>
+            </div>
+        </nav>
 
-                <a href="{{ url_for('auth.profile') }}" class="profile-link">
-                    {% if current_user.profile_picture and current_user.profile_picture != 'default.png' %}
-                        <img src="{{ url_for('static', filename='uploads/profiles/' + current_user.profile_picture) }}" alt="Profile">
-                    {% else %}
-                        <span class="profile-avatar-fallback">
-                            {{ (current_user.name or current_user.username or 'U')[0]|upper }}
-                        </span>
-                    {% endif %}
-                    {{ (current_user.name or current_user.username or 'Profile').split(' ')[0] }}
-                </a>
-
-                <a href="{{ url_for('auth.logout') }}" class="btn-logout">
-                    <i data-lucide="log-out" style="width:14px;height:14px;"></i>Logout
-                </a>
+        <div class="sidebar-footer">
+            <a href="{{ url_for('auth.profile') }}"
+               class="sidebar-profile {% if request.endpoint == 'auth.profile' %}active{% endif %}">
+                {% if current_user.profile_picture and current_user.profile_picture != 'default.png' %}
+                    <img src="{{ url_for('static', filename='uploads/profiles/' + current_user.profile_picture) }}" alt="Profile">
                 {% else %}
+                    <span class="profile-avatar-fallback">
+                        {{ (current_user.name or current_user.username or 'U')[0]|upper }}
+                    </span>
+                {% endif %}
+                <div class="sidebar-profile-info">
+                    <div class="sidebar-profile-name">{{ (current_user.name or current_user.username or 'Profile').split(' ')[0] }}</div>
+                    <div class="sidebar-profile-mail">{{ current_user.email or 'View profile' }}</div>
+                </div>
+            </a>
+            <a href="{{ url_for('auth.logout') }}" class="sidebar-logout" title="Sign out">
+                <i data-lucide="log-out"></i>
+            </a>
+        </div>
+    </aside>
+    {% else %}
+    <!-- ================= GUEST TOPBAR (login/register only) ================= -->
+    <header class="guest-topbar">
+        <div class="container">
+            <a href="{{ url_for('tasks.view_tasks') }}" class="mobile-brand">
+                <span class="brand-dot"></span>
+                HiveFlow
+            </a>
+            <nav>
                 <a href="{{ url_for('auth.login') }}">
-                    <i data-lucide="log-in"
-                        style="width:14px;height:14px;vertical-align:middle;margin-right:4px;"></i>Login
+                    <i data-lucide="log-in" style="width:14px;height:14px;"></i> Login
                 </a>
                 <a href="{{ url_for('auth.register') }}">
-                    <i data-lucide="user-plus"
-                        style="width:14px;height:14px;vertical-align:middle;margin-right:4px;"></i>Register
+                    <i data-lucide="user-plus" style="width:14px;height:14px;"></i> Register
                 </a>
-                {% endif %}
             </nav>
         </div>
     </header>
+    {% endif %}
 
     <!-- ================= MAIN CONTENT ================= -->
-    <main>
+    <main class="{% if current_user.is_authenticated %}app-main{% endif %}">
         <div class="container">
 
             <!-- Flash Messages -->
@@ -128,18 +179,18 @@
             {% block content %}{% endblock %}
 
         </div>
-    </main>
 
-    <!-- ================= FOOTER ================= -->
-    <footer>
-        <div class="container">
-            <p>
-                &copy; {{ current_year }} HiveFlow &bull;
-                <a href="{{ url_for('auth.privacy') }}" style="color:inherit;text-decoration:underline;">Privacy Policy</a> &bull;
-                <a href="{{ url_for('auth.terms') }}" style="color:inherit;text-decoration:underline;">Terms of Service</a>
-            </p>
-        </div>
-    </footer>
+        <!-- ================= FOOTER ================= -->
+        <footer>
+            <div class="container">
+                <p>
+                    &copy; {{ current_year }} HiveFlow &bull;
+                    <a href="{{ url_for('auth.privacy') }}" style="color:inherit;text-decoration:underline;">Privacy Policy</a> &bull;
+                    <a href="{{ url_for('auth.terms') }}" style="color:inherit;text-decoration:underline;">Terms of Service</a>
+                </p>
+            </div>
+        </footer>
+    </main>
 
     <!-- ================= GLOBAL CONFIRM MODAL ================= -->
     <div id="globalConfirm" class="confirm-overlay" aria-hidden="true">
@@ -170,9 +221,9 @@
 
     document.addEventListener('click', function(e) {
         const notifDropdown = document.getElementById('notificationsDropdown');
-        const notifIcon = e.target.closest('a[onclick*="toggleNotifications"]');
+        const notifTrigger = e.target.closest('[onclick*="toggleNotifications"]');
 
-        if (notifDropdown && notifDropdown.classList.contains('open') && !notifDropdown.contains(e.target) && !notifIcon) {
+        if (notifDropdown && notifDropdown.classList.contains('open') && !notifDropdown.contains(e.target) && !notifTrigger) {
             notifDropdown.classList.remove('open');
         }
     });

@@ -1,4 +1,4 @@
-from flask import Blueprint, render_template, request, redirect, url_for, flash
+from flask import Blueprint, render_template, request, redirect, url_for, flash, jsonify
 from flask_login import login_required, current_user
 from app.models import Project, Discussion, DiscussionComment, Task, TaskComment, OrgMember
 from app.extensions import db
@@ -83,16 +83,24 @@ def view_discussion(discussion_id):
 @login_required
 def add_discussion_comment(discussion_id):
     discussion = Discussion.query.get_or_404(discussion_id)
+    is_ajax = request.headers.get('X-Requested-With') == 'XMLHttpRequest'
+
     if not check_project_access(discussion.project):
+        if is_ajax:
+            return jsonify({'error': 'access denied'}), 403
         flash("Access denied.", 'danger')
         return redirect(url_for('orgs.list_orgs'))
-        
+
     content = request.form.get('content', '').strip()
     if not content:
+        if is_ajax:
+            return jsonify({'error': 'Comment cannot be empty.'}), 400
         flash("Comment cannot be empty.", 'danger')
         return redirect(url_for('discussions.view_discussion', discussion_id=discussion.id))
 
     if len(content) > 5000:
+        if is_ajax:
+            return jsonify({'error': 'Comment must be 5,000 characters or less.'}), 400
         flash("Comment must be 5,000 characters or less.", 'danger')
         return redirect(url_for('discussions.view_discussion', discussion_id=discussion.id))
 
@@ -102,17 +110,17 @@ def add_discussion_comment(discussion_id):
         created_by=current_user.id
     )
     db.session.add(comment)
-    
 
-    
     # Notify all other org members
     org_members = OrgMember.query.filter_by(org_id=discussion.project.org_id).all()
     for member in org_members:
         if member.user_id != current_user.id:
             create_notification(member.user_id, f"{current_user.name or current_user.username} commented on discussion '{discussion.title}'", url_for('discussions.view_discussion', discussion_id=discussion.id))
-            
+
     db.session.commit()
-    
+
+    if is_ajax:
+        return jsonify({'ok': True, 'comment': _comment_to_dict(comment)})
     return redirect(url_for('discussions.view_discussion', discussion_id=discussion.id))
 
 # ── Task Comments ──────────────────────────────────────────────────
@@ -161,3 +169,104 @@ def add_task_comment(task_id):
     # Redirect back to wherever we came from
     next_url = request.form.get('next')
     return redirect(next_url or request.referrer or url_for('tasks.view_tasks'))
+
+
+# ── Live-update polling endpoints (JSON) ──────────────────────────────
+
+def _comment_to_dict(c):
+    creator_name = c.creator.name if c.creator and c.creator.name else (c.creator.username if c.creator else 'Unknown')
+    return {
+        'id': c.id,
+        'content': c.content,
+        'creator_name': creator_name,
+        'creator_initial': creator_name[0].upper() if creator_name else '?',
+        'created_by': c.created_by,
+        'created_at_iso': c.created_at.strftime('%Y-%m-%dT%H:%M:%SZ') if c.created_at else '',
+        'created_at_short': c.created_at.strftime('%b %d, %I:%M %p') if c.created_at else '',
+    }
+
+
+@discussions_bp.route('/api/discussions/<int:discussion_id>/comments')
+@login_required
+def api_discussion_comments(discussion_id):
+    """Return discussion comments newer than ?since_id=N (default 0).
+
+    Used by the discussion view page to poll for new chat messages so members
+    don't have to refresh.
+    """
+    discussion = Discussion.query.get_or_404(discussion_id)
+    if not check_project_access(discussion.project):
+        return jsonify({'error': 'access denied'}), 403
+
+    try:
+        since_id = int(request.args.get('since_id', 0))
+    except (TypeError, ValueError):
+        since_id = 0
+
+    new_comments = (
+        DiscussionComment.query
+        .filter_by(discussion_id=discussion.id)
+        .filter(DiscussionComment.id > since_id)
+        .order_by(DiscussionComment.created_at.asc())
+        .all()
+    )
+
+    last_id = new_comments[-1].id if new_comments else since_id
+    return jsonify({
+        'last_id': last_id,
+        'comments': [_comment_to_dict(c) for c in new_comments],
+        'current_user_id': current_user.id,
+    })
+
+
+@discussions_bp.route('/api/projects/<int:project_id>/state')
+@login_required
+def api_project_state(project_id):
+    """Return a fingerprint of the project's task board + new discussions.
+
+    The dashboard polls this; if the fingerprint differs from the one captured
+    at page load, the page soft-refreshes so everyone sees task moves, new
+    assignments, and new discussions without manual reload.
+    """
+    project = Project.query.get_or_404(project_id)
+    if not check_project_access(project):
+        return jsonify({'error': 'access denied'}), 403
+
+    tasks = Task.query.filter_by(project_id=project.id).all()
+    # Build a deterministic fingerprint covering everything visible on the board.
+    parts = []
+    for t in sorted(tasks, key=lambda x: x.id):
+        parts.append(
+            f"{t.id}:{t.status}:{t.priority}:{t.assigned_to or 0}:"
+            f"{t.title}:{t.comments.count()}"
+        )
+    discussion_count = Discussion.query.filter_by(project_id=project.id).count()
+    parts.append(f"d:{discussion_count}")
+    fingerprint = str(hash('|'.join(parts)))
+
+    return jsonify({
+        'fingerprint': fingerprint,
+        'task_count': len(tasks),
+        'discussion_count': discussion_count,
+    })
+
+
+@discussions_bp.route('/api/projects/<int:project_id>/discussions/state')
+@login_required
+def api_discussions_state(project_id):
+    """Return the latest discussion ID for the project; the list page polls
+    this to detect new discussions without a refresh."""
+    project = Project.query.get_or_404(project_id)
+    if not check_project_access(project):
+        return jsonify({'error': 'access denied'}), 403
+
+    latest = (
+        Discussion.query
+        .filter_by(project_id=project.id)
+        .order_by(Discussion.id.desc())
+        .first()
+    )
+    return jsonify({
+        'latest_id': latest.id if latest else 0,
+        'count': Discussion.query.filter_by(project_id=project.id).count(),
+    })

@@ -8,32 +8,32 @@
     </a>
 </div>
 
-<div class="org-header-premium" style="position: relative; overflow: hidden; background: linear-gradient(135deg, rgba(15,17,26,0.8), rgba(30,27,75,0.9)); border: 1px solid var(--glass-border); border-radius: 20px; padding: 40px; margin-bottom: 32px; display: flex; justify-content: space-between; align-items: flex-start; box-shadow: 0 20px 40px rgba(0,0,0,0.3); backdrop-filter: blur(20px); animation: slideUpFade 0.5s both;">
+<div class="org-header-premium" style="position: relative; overflow: hidden; background: linear-gradient(135deg, var(--surface-elev), var(--surface-solid)); border: 1px solid var(--glass-border); border-radius: 20px; padding: 40px; margin-bottom: 32px; display: flex; justify-content: space-between; align-items: flex-start; box-shadow: var(--shadow-lg); backdrop-filter: blur(20px); animation: slideUpFade 0.5s both;">
     <!-- Decorative background elements -->
     <div style="position: absolute; top: -50px; right: -50px; width: 200px; height: 200px; background: var(--accent); filter: blur(80px); opacity: 0.2; border-radius: 50%; pointer-events: none;"></div>
-    <div style="position: absolute; bottom: -50px; left: 10%; width: 150px; height: 150px; background: #06b6d4; filter: blur(60px); opacity: 0.15; border-radius: 50%; pointer-events: none;"></div>
+    <div style="position: absolute; bottom: -50px; left: 10%; width: 150px; height: 150px; background: var(--sky); filter: blur(60px); opacity: 0.15; border-radius: 50%; pointer-events: none;"></div>
 
     <div style="position: relative; z-index: 1; display: flex; gap: 24px; align-items: center;">
-        <div style="width: 72px; height: 72px; border-radius: 20px; background: linear-gradient(135deg, var(--accent-light), var(--accent)); display: flex; align-items: center; justify-content: center; color: white; font-size: 32px; font-weight: 800; box-shadow: 0 8px 24px var(--accent-glow);">
+        <div style="width: 72px; height: 72px; border-radius: 20px; background: linear-gradient(135deg, var(--accent-light), var(--accent)); display: flex; align-items: center; justify-content: center; color: var(--on-accent); font-size: 32px; font-weight: 800; box-shadow: var(--shadow-md);">
             {{ org.name[0].upper() }}
         </div>
         <div>
-            <h2 style="margin: 0 0 8px 0; font-size: 32px; font-weight: 800; color: #fff; display: flex; align-items: center; gap: 12px;">
+            <h2 style="margin: 0 0 8px 0; font-size: 32px; font-weight: 800; color: var(--text); display: flex; align-items: center; gap: 12px;">
                 {{ org.name }}
                 {% if membership.role == 'Admin' %}
-                <span style="font-size: 12px; background: rgba(99, 102, 241, 0.15); color: var(--accent-light); padding: 4px 10px; border-radius: 100px; border: 1px solid rgba(99, 102, 241, 0.3); font-weight: 600; text-transform: uppercase; letter-spacing: 0.5px; box-shadow: 0 0 10px rgba(99, 102, 241, 0.2);">Admin</span>
+                <span style="font-size: 12px; background: var(--accent-soft); color: var(--accent-light); padding: 4px 10px; border-radius: 100px; border: 1px solid var(--accent-ring); font-weight: 600; text-transform: uppercase; letter-spacing: 0.5px; box-shadow: var(--shadow-glow-soft);">Admin</span>
                 {% endif %}
             </h2>
-            <p style="color: rgba(255,255,255,0.7); margin: 0; font-size: 16px; max-width: 500px; line-height: 1.5;">{{ org.description if org.description else "No description provided." }}</p>
+            <p style="color: var(--text-secondary); margin: 0; font-size: 16px; max-width: 500px; line-height: 1.5;">{{ org.description if org.description else "No description provided." }}</p>
         </div>
     </div>
     
-    <div style="position: relative; z-index: 1; text-align: right; background: rgba(0,0,0,0.3); border: 1px solid rgba(255,255,255,0.1); padding: 16px 24px; border-radius: 16px; backdrop-filter: blur(10px);">
-        <div style="font-size: 12px; color: rgba(255,255,255,0.5); margin-bottom: 8px; text-transform: uppercase; letter-spacing: 1px; font-weight: 600;">Invite Code</div>
-        <div class="invite-code-pill" style="display: flex; align-items: center; gap: 12px; background: rgba(255,255,255,0.05); border: 1px solid rgba(255,255,255,0.1); padding: 8px 16px; border-radius: 8px; font-family: monospace; font-size: 20px; font-weight: 600; letter-spacing: 3px; color: var(--accent-light); cursor: pointer; transition: all 0.2s ease;" title="Click to copy" onclick="navigator.clipboard.writeText('{{ org.invite_code }}').then(() => showToast('Invite code copied to clipboard')).catch(() => showToast('Could not copy. Code: {{ org.invite_code }}', 'error'));">
+    <div style="position: relative; z-index: 1; text-align: right; background: var(--surface-elev); border: 1px solid var(--glass-border); padding: 16px 24px; border-radius: 16px; backdrop-filter: blur(10px);">
+        <div style="font-size: 12px; color: var(--text-secondary); margin-bottom: 8px; text-transform: uppercase; letter-spacing: 1px; font-weight: 600;">Invite Code</div>
+        <div class="invite-code-pill" style="display: flex; align-items: center; gap: 12px; background: var(--surface); border: 1px solid var(--glass-border); padding: 8px 16px; border-radius: 8px; font-family: monospace; font-size: 20px; font-weight: 600; letter-spacing: 3px; color: var(--accent-light); cursor: pointer; transition: all 0.2s ease;" title="Click to copy" onclick="navigator.clipboard.writeText('{{ org.invite_code }}').then(() => showToast('Invite code copied to clipboard')).catch(() => showToast('Could not copy. Code: {{ org.invite_code }}', 'error'));">
             <span>{{ org.invite_code }}</span>
-            <div style="background: rgba(255,255,255,0.1); padding: 6px; border-radius: 6px; display: flex;">
-                <i data-lucide="copy" style="width: 16px; height: 16px; color: #fff;"></i>
+            <div style="background: var(--surface-elev); padding: 6px; border-radius: 6px; display: flex;">
+                <i data-lucide="copy" style="width: 16px; height: 16px; color: var(--accent-light);"></i>
             </div>
         </div>
     </div>
@@ -45,12 +45,12 @@
     <div class="projects-section">
         <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 24px;">
             <h3 style="margin: 0; font-size: 20px; font-weight: 700; display: flex; align-items: center; gap: 10px;">
-                <div style="background: rgba(255,255,255,0.05); padding: 8px; border-radius: 8px; border: 1px solid var(--glass-border);">
+                <div style="background: var(--surface); padding: 8px; border-radius: 8px; border: 1px solid var(--glass-border);">
                     <i data-lucide="layout" style="width: 20px; height: 20px; color: var(--accent-light);"></i>
                 </div>
                 Projects
             </h3>
-            <a href="{{ url_for('projects.create_project', org_slug=org.slug) }}" class="btn primary" style="width: auto; flex: 0 0 auto; padding: 10px 16px; font-size: 14px; font-weight: 600; white-space: nowrap; display: inline-flex; align-items: center; gap: 6px; text-decoration: none; border-radius: 8px; background: rgba(255,255,255,0.1); border: 1px solid rgba(255,255,255,0.2); color: #fff; transition: all 0.2s ease;" onmouseover="this.style.background='rgba(255,255,255,0.15)'" onmouseout="this.style.background='rgba(255,255,255,0.1)'">
+            <a href="{{ url_for('projects.create_project', org_slug=org.slug) }}" class="btn primary" style="width: auto; flex: 0 0 auto; padding: 10px 16px; font-size: 14px; font-weight: 600; white-space: nowrap; display: inline-flex; align-items: center; gap: 6px; text-decoration: none; border-radius: 8px; background: var(--accent); border: 1px solid var(--accent); color: var(--on-accent); transition: all 0.2s ease;" onmouseover="this.style.filter='brightness(1.08)'" onmouseout="this.style.filter='none'">
                 <i data-lucide="plus" style="width: 16px; height: 16px;"></i> New Project
             </a>
         </div>
@@ -60,7 +60,7 @@
             <a href="{{ url_for('projects.dashboard', project_id=project.id) }}" style="display: block; text-decoration: none; background: var(--surface-solid); border: 1px solid var(--glass-border); border-radius: 16px; padding: 24px; transition: all 0.3s ease; position: relative; overflow: hidden;" class="premium-project-card">
                 <div style="display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 16px;">
                     <h4 style="margin: 0; font-size: 18px; font-weight: 700; color: var(--text);">{{ project.name }}</h4>
-                    <div style="background: rgba(99,102,241,0.1); border: 1px solid rgba(99,102,241,0.2); padding: 4px 10px; border-radius: 20px; font-size: 12px; color: var(--accent-light); font-weight: 600;">
+                    <div style="background: var(--accent-soft); border: 1px solid var(--accent-ring); padding: 4px 10px; border-radius: 20px; font-size: 12px; color: var(--accent-light); font-weight: 600;">
                         {{ project.tasks.count() }} tasks
                     </div>
                 </div>
@@ -68,13 +68,13 @@
                     {{ project.description if project.description else "No description available for this project." }}
                 </p>
                 <!-- Decorative pseudo-progress bar -->
-                <div style="width: 100%; height: 6px; background: rgba(255,255,255,0.05); border-radius: 3px; overflow: hidden;">
+                <div style="width: 100%; height: 6px; background: var(--surface-elev); border-radius: 3px; overflow: hidden;">
                     <div style="width: {{ range(10, 90) | random }}%; height: 100%; background: linear-gradient(90deg, var(--accent), var(--accent-light)); border-radius: 3px;"></div>
                 </div>
             </a>
             {% else %}
             <div style="grid-column: 1 / -1; background: var(--surface-solid); border: 1px dashed var(--glass-border); border-radius: 16px; padding: 60px 20px; text-align: center; display: flex; flex-direction: column; align-items: center;">
-                <div style="width: 64px; height: 64px; border-radius: 16px; background: rgba(255,255,255,0.03); border: 1px solid rgba(255,255,255,0.05); display: flex; align-items: center; justify-content: center; margin-bottom: 20px;">
+                <div style="width: 64px; height: 64px; border-radius: 16px; background: var(--surface-elev); border: 1px solid var(--glass-border); display: flex; align-items: center; justify-content: center; margin-bottom: 20px;">
                     <i data-lucide="layout" style="width: 32px; height: 32px; color: var(--accent-light);"></i>
                 </div>
                 <h4 style="margin: 0 0 10px 0; font-size: 20px; font-weight: 600; color: var(--text);">No projects yet</h4>
@@ -88,32 +88,32 @@
     <div class="members-section">
         <h3 style="margin: 0 0 24px 0; font-size: 20px; font-weight: 700; display: flex; align-items: center; justify-content: space-between;">
             <div style="display: flex; align-items: center; gap: 10px;">
-                <div style="background: rgba(255,255,255,0.05); padding: 8px; border-radius: 8px; border: 1px solid var(--glass-border);">
+                <div style="background: var(--surface); padding: 8px; border-radius: 8px; border: 1px solid var(--glass-border);">
                     <i data-lucide="users" style="width: 20px; height: 20px; color: #10b981;"></i>
                 </div>
                 Members
             </div>
-            <span style="font-size: 14px; font-weight: 600; color: var(--text-secondary); background: rgba(255,255,255,0.05); padding: 4px 12px; border-radius: 20px;">{{ members|length }}</span>
+            <span style="font-size: 14px; font-weight: 600; color: var(--text-secondary); background: var(--surface); padding: 4px 12px; border-radius: 20px;">{{ members|length }}</span>
         </h3>
         
         <div style="background: var(--surface-solid); border: 1px solid var(--glass-border); border-radius: 16px; overflow: hidden; box-shadow: var(--shadow);">
             {% for member in members %}
             <div style="padding: 16px 20px; border-bottom: 1px solid var(--glass-border); display: flex; justify-content: space-between; align-items: center; transition: background 0.2s ease;" class="member-row">
                 <div style="display: flex; align-items: center; gap: 16px;">
-                    <div style="width: 40px; height: 40px; border-radius: 50%; background: linear-gradient(135deg, rgba(255,255,255,0.1), rgba(255,255,255,0.05)); display: flex; align-items: center; justify-content: center; font-weight: 700; font-size: 16px; color: var(--text); border: 1px solid rgba(255,255,255,0.1); box-shadow: 0 4px 10px rgba(0,0,0,0.1);">
+                    <div style="width: 40px; height: 40px; border-radius: 50%; background: var(--surface-elev); display: flex; align-items: center; justify-content: center; font-weight: 700; font-size: 16px; color: var(--text); border: 1px solid var(--glass-border); box-shadow: var(--shadow-sm);">
                         {{ member.user.name[0].upper() if member.user.name else member.user.username[0].upper() }}
                     </div>
                     <div>
                         <div style="font-weight: 600; font-size: 15px; color: var(--text); display: flex; align-items: center; gap: 8px;">
                             {{ member.user.name if member.user.name else member.user.username }}
                             {% if member.user.id == current_user.id %}
-                            <span style="font-size: 10px; font-weight: 700; color: #10b981; background: rgba(16,185,129,0.1); padding: 2px 6px; border-radius: 4px; text-transform: uppercase;">You</span>
+                            <span style="font-size: 10px; font-weight: 700; color: var(--success); background: var(--success-soft); padding: 2px 6px; border-radius: 4px; text-transform: uppercase;">You</span>
                             {% endif %}
                         </div>
                         <div style="font-size: 13px; color: var(--text-muted); margin-top: 2px;">@{{ member.user.username }}</div>
                     </div>
                 </div>
-                <div style="font-size: 12px; font-weight: 600; background: {% if member.role == 'Admin' %}rgba(99,102,241,0.1){% else %}rgba(255,255,255,0.05){% endif %}; padding: 6px 12px; border-radius: 20px; color: {% if member.role == 'Admin' %}var(--accent-light){% else %}var(--text-secondary){% endif %}; border: 1px solid {% if member.role == 'Admin' %}rgba(99,102,241,0.2){% else %}rgba(255,255,255,0.05){% endif %};">
+                <div style="font-size: 12px; font-weight: 600; background: {% if member.role == 'Admin' %}var(--accent-soft){% else %}var(--surface);{% endif %} padding: 6px 12px; border-radius: 20px; color: {% if member.role == 'Admin' %}var(--accent-light){% else %}var(--text-secondary){% endif %}; border: 1px solid {% if member.role == 'Admin' %}var(--accent-ring){% else %}var(--glass-border){% endif %};">
                     {{ member.role }}
                 </div>
             </div>
@@ -139,20 +139,20 @@
 }
 
 .invite-code-pill:hover {
-    background: rgba(255,255,255,0.1) !important;
-    border-color: rgba(255,255,255,0.2) !important;
+    background: var(--surface-elev) !important;
+    border-color: var(--glass-border) !important;
     transform: translateY(-2px);
-    box-shadow: 0 4px 15px rgba(0,0,0,0.2);
+    box-shadow: var(--shadow-sm);
 }
 
 .premium-project-card:hover {
     transform: translateY(-4px);
-    box-shadow: 0 12px 30px rgba(0,0,0,0.3);
+    box-shadow: var(--shadow-md);
     border-color: var(--accent);
 }
 
 .member-row:hover {
-    background: rgba(255,255,255,0.02);
+    background: var(--surface);
 }
 .member-row:last-child {
     border-bottom: none !important;

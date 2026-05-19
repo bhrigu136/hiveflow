@@ -52,20 +52,26 @@ body.auth-page nav {
 
 .auth-hero-icon.blue {
     background: linear-gradient(135deg, var(--accent), #6366f1);
-    color: #fff;
-    box-shadow: 0 8px 32px var(--accent-glow), 0 0 60px rgba(99, 102, 241, 0.2);
+    color: var(--on-accent);
+    box-shadow:
+        0 1px 0 rgba(255, 255, 255, 0.14) inset,
+        0 8px 32px var(--accent-glow);
 }
 
 .auth-hero-icon.orange {
     background: linear-gradient(135deg, #f97316, #ef4444);
-    color: #fff;
-    box-shadow: 0 8px 32px rgba(249, 115, 22, 0.3), 0 0 60px rgba(239, 68, 68, 0.15);
+    color: var(--on-accent);
+    box-shadow:
+        0 1px 0 rgba(255, 255, 255, 0.14) inset,
+        0 8px 32px rgba(249, 115, 22, 0.4);
 }
 
 .auth-hero-icon.green {
     background: linear-gradient(135deg, #22c55e, #10b981);
-    color: #fff;
-    box-shadow: 0 8px 32px rgba(34, 197, 94, 0.3);
+    color: var(--on-accent);
+    box-shadow:
+        0 1px 0 rgba(255, 255, 255, 0.14) inset,
+        0 8px 32px rgba(34, 197, 94, 0.4);
 }
 
 /* Pulsing ring behind the icon */
@@ -74,7 +80,7 @@ body.auth-page nav {
     position: absolute;
     inset: -6px;
     border-radius: 22px;
-    border: 2px solid rgba(255, 255, 255, 0.1);
+    border: 1px solid rgba(255, 255, 255, 0.08);
     animation: iconPulse 2s ease-in-out infinite;
 }
 
@@ -85,10 +91,10 @@ body.auth-page nav {
 
 .auth-hero h1 {
     font-size: 30px;
-    font-weight: 800;
-    color: var(--text);
+    font-weight: 700;
     margin-bottom: 6px;
-    background: linear-gradient(135deg, #fff 30%, var(--accent-light));
+    letter-spacing: -0.5px;
+    background: linear-gradient(135deg, var(--text) 30%, var(--accent-light));
     -webkit-background-clip: text;
     -webkit-text-fill-color: transparent;
     background-clip: text;
@@ -106,14 +112,13 @@ body.auth-page nav {
 .auth-card {
     max-width: 460px;
     margin: 0 auto 28px;
-    background: var(--surface-solid);
-    backdrop-filter: blur(24px);
-    -webkit-backdrop-filter: blur(24px);
+    background: var(--surface-elev);
     border-radius: var(--radius);
     padding: 36px 32px;
-    border: 1px solid var(--glass-border);
+    border: 1px solid var(--border-strong);
     box-shadow:
-        var(--shadow),
+        0 1px 0 rgba(255, 255, 255, 0.05) inset,
+        0 24px 48px rgba(0, 0, 0, 0.45),
         0 0 60px var(--accent-glow);
     animation: authCardIn 0.5s cubic-bezier(.22, 1, .36, 1);
 }
@@ -182,15 +187,15 @@ body.auth-page nav {
     border-radius: var(--radius-sm);
     font-size: 15px;
     color: var(--text);
-    background: rgba(255,255,255,0.02);
-    transition: all 0.3s ease;
+    background: var(--surface);
+    transition: all 0.2s ease;
 }
 
 .auth-input-wrapper input:focus {
     outline: none;
-    background: rgba(255,255,255,0.05);
+    background: var(--surface);
     border-color: var(--accent);
-    box-shadow: 0 0 0 3px rgba(99, 102, 241, 0.1);
+    box-shadow: 0 0 0 3px var(--accent-glow);
 }
 
 .auth-input-wrapper label.floating-label {
@@ -261,43 +266,41 @@ body.auth-page nav {
 }
 
 .auth-btn.blue {
-    background: linear-gradient(135deg, var(--accent), #6366f1);
-    color: #fff;
-    box-shadow: 0 4px 20px var(--accent-glow);
+    background: var(--accent);
+    color: var(--on-accent);
+    border: 1px solid rgba(255, 255, 255, 0.08);
+    box-shadow:
+        0 1px 0 rgba(255, 255, 255, 0.12) inset,
+        0 4px 18px var(--accent-glow),
+        0 1px 2px rgba(0, 0, 0, 0.4);
 }
 
 .auth-btn.blue:hover {
-    box-shadow: 0 8px 32px var(--accent-glow);
-    transform: translateY(-2px);
-    filter: brightness(1.1);
+    background: var(--accent-hover);
+    transform: translateY(-1px);
+    box-shadow:
+        0 1px 0 rgba(255, 255, 255, 0.14) inset,
+        0 8px 28px var(--accent-glow),
+        0 2px 4px rgba(0, 0, 0, 0.5);
 }
 
 .auth-btn.orange {
     background: linear-gradient(135deg, #f97316, #ef4444);
-    color: #fff;
-    box-shadow: 0 4px 20px rgba(249, 115, 22, 0.3);
+    color: var(--on-accent);
+    border: 1px solid rgba(255, 255, 255, 0.08);
+    box-shadow:
+        0 1px 0 rgba(255, 255, 255, 0.12) inset,
+        0 4px 18px rgba(249, 115, 22, 0.35),
+        0 1px 2px rgba(0, 0, 0, 0.4);
 }
 
 .auth-btn.orange:hover {
-    box-shadow: 0 8px 32px rgba(249, 115, 22, 0.4);
-    transform: translateY(-2px);
-    filter: brightness(1.1);
-}
-
-/* Shimmer effect on button */
-.auth-btn::before {
-    content: '';
-    position: absolute;
-    top: 0;
-    left: -100%;
-    width: 100%;
-    height: 100%;
-    background: linear-gradient(90deg, transparent, rgba(255,255,255,0.12), transparent);
-    transition: left 0.5s ease;
-}
-
-.auth-btn:hover::before {
-    left: 100%;
+    transform: translateY(-1px);
+    box-shadow:
+        0 1px 0 rgba(255, 255, 255, 0.14) inset,
+        0 8px 28px rgba(249, 115, 22, 0.45),
+        0 2px 4px rgba(0, 0, 0, 0.5);
+    filter: brightness(1.05);
 }
 
 
@@ -322,7 +325,7 @@ body.auth-page nav {
 }
 
 .auth-links a:hover {
-    color: #fff;
+    color: var(--text);
     text-shadow: 0 0 12px var(--accent-glow);
 }
 
@@ -376,8 +379,8 @@ body.auth-page nav {
 
 /* Filled OTP box */
 .otp-input:not(:placeholder-shown) {
-    border-color: var(--accent-light);
-    background: rgba(124, 58, 237, 0.1);
+    border-color: var(--accent);
+    background: var(--accent-soft);
 }
 
 
@@ -387,10 +390,9 @@ body.auth-page .flash {
     max-width: 460px;
     margin: 0 auto 16px;
     border-radius: var(--radius-sm);
-    padding: 12px 18px;
+    padding: 10px 14px;
     font-size: 14px;
     font-weight: 500;
-    backdrop-filter: blur(12px);
     border: 1px solid;
     animation: flashSlideIn 0.3s ease;
 }
@@ -401,27 +403,27 @@ body.auth-page .flash {
 }
 
 body.auth-page .flash.success {
-    background: rgba(34, 197, 94, 0.12);
+    background: var(--success-soft);
     color: var(--success);
-    border-color: rgba(34, 197, 94, 0.2);
+    border-color: var(--success);
 }
 
 body.auth-page .flash.danger {
-    background: rgba(248, 113, 113, 0.12);
+    background: var(--danger-soft);
     color: var(--danger);
-    border-color: rgba(248, 113, 113, 0.2);
+    border-color: var(--danger);
 }
 
 body.auth-page .flash.info {
-    background: rgba(96, 165, 250, 0.12);
+    background: var(--info-soft);
     color: var(--info);
-    border-color: rgba(96, 165, 250, 0.2);
+    border-color: var(--info);
 }
 
 body.auth-page .flash.warning {
-    background: rgba(251, 191, 36, 0.12);
+    background: var(--warning-soft);
     color: var(--warning);
-    border-color: rgba(251, 191, 36, 0.2);
+    border-color: var(--warning);
 }
 
 
@@ -429,7 +431,7 @@ body.auth-page .flash.warning {
 .auth-layout-split {
     display: flex;
     min-height: 100vh;
-    background: #0f111a;
+    background: var(--bg);
 }
 
 .auth-showcase {
@@ -440,8 +442,10 @@ body.auth-page .flash.warning {
     flex-direction: column;
     justify-content: center;
     padding: 60px;
-    background: radial-gradient(circle at 0% 0%, #2e1065 0%, #0f111a 100%);
-    border-right: 1px solid rgba(255,255,255,0.05);
+    background:
+        radial-gradient(ellipse at 0% 0%, rgba(139, 92, 246, 0.18) 0%, transparent 55%),
+        var(--surface-sunken);
+    border-right: 1px solid var(--border);
 }
 
 .auth-showcase-content {
@@ -461,20 +465,22 @@ body.auth-page .flash.warning {
     align-items: center;
     gap: 12px;
     font-size: 24px;
-    font-weight: 800;
-    color: #fff;
+    font-weight: 700;
+    color: var(--text);
     margin-bottom: 60px;
     letter-spacing: -0.5px;
 }
 
 .auth-showcase h1 {
     font-size: 48px;
-    line-height: 1.1;
-    font-weight: 800;
+    line-height: 1.05;
+    font-weight: 700;
     margin-bottom: 24px;
-    background: linear-gradient(135deg, #fff 30%, var(--accent-light));
+    letter-spacing: -1px;
+    background: linear-gradient(135deg, var(--text) 25%, var(--accent-light));
     -webkit-background-clip: text;
     -webkit-text-fill-color: transparent;
+    background-clip: text;
 }
 
 .auth-showcase p {
@@ -494,20 +500,19 @@ body.auth-page .flash.warning {
     display: flex;
     align-items: center;
     gap: 8px;
-    padding: 10px 16px;
-    background: rgba(255,255,255,0.03);
-    border: 1px solid rgba(255,255,255,0.1);
+    padding: 6px 14px;
+    background: var(--surface);
+    border: 1px solid var(--border);
     border-radius: 100px;
-    font-size: 14px;
+    font-size: 13px;
     font-weight: 500;
     color: var(--text);
-    backdrop-filter: blur(10px);
 }
 
 .feature-pill i {
     width: 16px;
     height: 16px;
-    color: var(--accent-light);
+    color: var(--accent);
 }
 
 /* Abstract Art */
@@ -520,44 +525,34 @@ body.auth-page .flash.warning {
     z-index: 1;
 }
 
+/* Static atmospheric orbs — no animation, just brand ambiance */
 .orb {
     position: absolute;
     border-radius: 50%;
-    filter: blur(60px);
+    filter: blur(80px);
+    pointer-events: none;
 }
 
 .orb-1 {
-    width: 350px;
-    height: 350px;
-    background: #0ea5e9;
-    top: 5%;
-    left: 10%;
-    animation: floatShape 15s ease-in-out infinite;
-    opacity: 0.8;
+    width: 380px;
+    height: 380px;
+    background: rgba(139, 92, 246, 0.25);
+    top: 0;
+    left: 0;
+    opacity: 0.7;
 }
 
 .orb-2 {
-    width: 450px;
-    height: 450px;
-    background: #d946ef;
-    bottom: 5%;
-    right: 5%;
-    animation: floatShape 18s ease-in-out infinite reverse;
-    opacity: 0.8;
+    width: 420px;
+    height: 420px;
+    background: rgba(56, 189, 248, 0.18);
+    bottom: -5%;
+    right: -10%;
+    opacity: 0.6;
 }
 
 .glass-pane {
-    position: absolute;
-    inset: 50px;
-    background: rgba(255,255,255,0.03);
-    backdrop-filter: blur(25px);
-    border-radius: 40px;
-    border: 1px solid rgba(255,255,255,0.08);
-    border-top: 1px solid rgba(255,255,255,0.2);
-    border-left: 1px solid rgba(255,255,255,0.2);
-    transform: rotate(-10deg);
-    box-shadow: 0 30px 60px rgba(0,0,0,0.5);
-    animation: floatGlass 12s ease-in-out infinite alternate;
+    display: none;
 }
 
 @keyframes floatShape {
@@ -579,7 +574,7 @@ body.auth-page .flash.warning {
     align-items: center;
     padding: 40px;
     position: relative;
-    background: var(--bg-dark);
+    background: var(--bg);
 }
 
 .auth-form-side .auth-card {
@@ -589,8 +584,6 @@ body.auth-page .flash.warning {
     border: none;
     box-shadow: none;
     padding: 0;
-    backdrop-filter: none;
-    -webkit-backdrop-filter: none;
     margin: 0;
 }
 
@@ -602,12 +595,11 @@ body.auth-page .flash.warning {
         display: none;
     }
     .auth-form-side .auth-card {
-        padding: 40px 24px;
-        background: var(--surface-solid);
-        border: 1px solid var(--glass-border);
+        padding: 32px 24px;
+        background: var(--surface);
+        border: 1px solid var(--border);
         border-radius: var(--radius);
         box-shadow: var(--shadow);
-        backdrop-filter: blur(24px);
     }
 }
 

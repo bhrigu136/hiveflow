@@ -14,7 +14,7 @@
     <h2 style="margin-top: 0; margin-bottom: 15px; font-size: 24px; color: var(--text);">{{ discussion.title }}</h2>
     
     <div style="display: flex; align-items: center; gap: 10px; margin-bottom: 20px; padding-bottom: 20px; border-bottom: 1px solid var(--glass-border);">
-        <div style="width: 32px; height: 32px; border-radius: 50%; background: var(--accent); display: flex; align-items: center; justify-content: center; font-weight: bold; color: white;">
+        <div style="width: 32px; height: 32px; border-radius: 50%; background: var(--accent); display: flex; align-items: center; justify-content: center; font-weight: bold; color: var(--on-accent);">
             {{ discussion.creator.name[0].upper() if discussion.creator.name else discussion.creator.username[0].upper() }}
         </div>
         <div>
@@ -26,14 +26,22 @@
     <div style="line-height: 1.6; color: var(--text); font-size: 15px; white-space: pre-wrap;">{{ discussion.content }}</div>
 </div>
 
-<div class="comments-section">
+<div class="comments-section"
+     data-discussion-id="{{ discussion.id }}"
+     data-last-comment-id="{{ comments[-1].id if comments else 0 }}"
+     data-current-user-id="{{ current_user.id }}">
     <h3 style="margin-bottom: 20px; font-size: 18px; display: flex; align-items: center; gap: 8px;">
-        <i data-lucide="message-circle" style="color: var(--text-muted);"></i> Comments ({{ comments|length }})
+        <i data-lucide="message-circle" style="color: var(--text-muted);"></i>
+        <span>Comments (<span id="commentCount">{{ comments|length }}</span>)</span>
+        <span id="liveIndicator" style="margin-left: auto; font-size: 11px; color: var(--text-muted); display: inline-flex; align-items: center; gap: 4px;">
+            <span style="width: 6px; height: 6px; border-radius: 50%; background: #4ade80; display: inline-block; animation: livePulse 2s ease-in-out infinite;"></span>
+            Live
+        </span>
     </h3>
-    
-    <div style="display: flex; flex-direction: column; gap: 15px; margin-bottom: 30px;">
+
+    <div id="commentsList" style="display: flex; flex-direction: column; gap: 15px; margin-bottom: 30px;">
         {% for comment in comments %}
-        <div style="background: rgba(255,255,255,0.02); border: 1px solid var(--glass-border); border-radius: 12px; padding: 20px;">
+        <div class="comment-bubble" data-comment-id="{{ comment.id }}" style="background: var(--surface-elev); border: 1px solid var(--glass-border); border-radius: 12px; padding: 20px;">
             <div style="display: flex; align-items: center; gap: 10px; margin-bottom: 15px;">
                 <div style="width: 28px; height: 28px; border-radius: 50%; background: var(--surface); display: flex; align-items: center; justify-content: center; font-weight: bold; color: var(--text-muted); border: 1px solid var(--glass-border);">
                     {{ comment.creator.name[0].upper() if comment.creator.name else comment.creator.username[0].upper() }}
@@ -47,12 +55,12 @@
         </div>
         {% endfor %}
     </div>
-    
+
     <div style="background: var(--surface-solid); border: 1px solid var(--glass-border); border-radius: 12px; padding: 20px;">
-        <form method="POST" action="{{ url_for('discussions.add_discussion_comment', discussion_id=discussion.id) }}">
+        <form id="commentForm" method="POST" action="{{ url_for('discussions.add_discussion_comment', discussion_id=discussion.id) }}">
             <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
             <div style="margin-bottom: 15px;">
-                <textarea name="content" required rows="3" placeholder="Add a comment..." style="width: 100%; padding: 12px; border-radius: 8px; border: 1px solid var(--glass-border); background: rgba(0,0,0,0.2); color: white; box-sizing: border-box; resize: vertical; font-family: inherit;"></textarea>
+                <textarea name="content" required rows="3" placeholder="Add a comment..." style="width: 100%; padding: 12px; border-radius: 8px; border: 1px solid var(--glass-border); background: var(--surface); color: var(--text); box-sizing: border-box; resize: vertical; font-family: inherit;"></textarea>
             </div>
             <div style="text-align: right;">
                 <button type="submit" class="btn primary">Post Comment</button>
@@ -60,4 +68,151 @@
         </form>
     </div>
 </div>
+
+<style>
+@keyframes livePulse {
+    0%, 100% { opacity: 0.4; }
+    50% { opacity: 1; }
+}
+@keyframes commentAppear {
+    from { opacity: 0; transform: translateY(8px); }
+    to   { opacity: 1; transform: translateY(0); }
+}
+.comment-bubble.new { animation: commentAppear 0.3s ease-out; }
+</style>
+
+<script>
+(function() {
+    var section = document.querySelector('.comments-section');
+    if (!section) return;
+
+    var discussionId = section.dataset.discussionId;
+    var currentUserId = parseInt(section.dataset.currentUserId, 10);
+    var lastId = parseInt(section.dataset.lastCommentId, 10) || 0;
+    var list = document.getElementById('commentsList');
+    var countEl = document.getElementById('commentCount');
+    var form = document.getElementById('commentForm');
+    var textarea = form ? form.querySelector('textarea[name="content"]') : null;
+    var submitBtn = form ? form.querySelector('button[type="submit"]') : null;
+    var liveIndicator = document.getElementById('liveIndicator');
+
+    function escapeHTML(s) {
+        return String(s).replace(/[&<>"']/g, function(c) {
+            return ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' })[c];
+        });
+    }
+
+    function renderComment(c) {
+        var div = document.createElement('div');
+        div.className = 'comment-bubble new';
+        div.dataset.commentId = c.id;
+        div.style.cssText = 'background: var(--surface-elev); border: 1px solid var(--glass-border); border-radius: 12px; padding: 20px;';
+        div.innerHTML = ''
+            + '<div style="display:flex;align-items:center;gap:10px;margin-bottom:15px;">'
+            +   '<div style="width:28px;height:28px;border-radius:50%;background:var(--surface);display:flex;align-items:center;justify-content:center;font-weight:bold;color:var(--text-muted);border:1px solid var(--glass-border);">'
+            +     escapeHTML(c.creator_initial)
+            +   '</div>'
+            +   '<div>'
+            +     '<div style="font-weight:500;font-size:13px;">' + escapeHTML(c.creator_name) + '</div>'
+            +     '<div style="font-size:11px;color:var(--text-muted);">'
+            +       '<time datetime="' + escapeHTML(c.created_at_iso) + '">' + escapeHTML(c.created_at_short) + '</time>'
+            +     '</div>'
+            +   '</div>'
+            + '</div>'
+            + '<div style="line-height:1.5;color:var(--text);font-size:14px;white-space:pre-wrap;">' + escapeHTML(c.content) + '</div>';
+        return div;
+    }
+
+    function appendNew(comments) {
+        if (!comments.length) return;
+        var nearBottom = (window.innerHeight + window.scrollY) >= (document.body.offsetHeight - 200);
+        comments.forEach(function(c) {
+            // Avoid double-inserting if a poll races with our optimistic POST
+            if (list.querySelector('[data-comment-id="' + c.id + '"]')) return;
+            list.appendChild(renderComment(c));
+        });
+        if (countEl) countEl.textContent = list.querySelectorAll('.comment-bubble').length;
+        if (nearBottom) window.scrollTo({ top: document.body.scrollHeight, behavior: 'smooth' });
+    }
+
+    var pollFailures = 0;
+    function poll() {
+        fetch('/api/discussions/' + discussionId + '/comments?since_id=' + lastId, {
+            credentials: 'same-origin',
+            headers: { 'Accept': 'application/json' }
+        })
+        .then(function(r) {
+            if (!r.ok) throw new Error('HTTP ' + r.status);
+            return r.json();
+        })
+        .then(function(data) {
+            pollFailures = 0;
+            if (data.last_id && data.last_id > lastId) lastId = data.last_id;
+            appendNew(data.comments || []);
+        })
+        .catch(function() {
+            pollFailures++;
+            if (pollFailures >= 5 && liveIndicator) {
+                liveIndicator.innerHTML = '<span style="width:6px;height:6px;border-radius:50%;background:#f87171;display:inline-block;"></span> Offline';
+            }
+        });
+    }
+
+    // Submit comment via AJAX so the poster doesn't have to wait for a poll
+    if (form) {
+        form.addEventListener('submit', function(e) {
+            e.preventDefault();
+            if (form.dataset.submitting) return;
+            var content = (textarea.value || '').trim();
+            if (!content) return;
+            form.dataset.submitting = '1';
+            if (submitBtn) {
+                submitBtn.disabled = true;
+                submitBtn.style.opacity = '0.6';
+                submitBtn.textContent = 'Posting...';
+            }
+            var fd = new FormData(form);
+            fetch(form.action, {
+                method: 'POST',
+                body: fd,
+                credentials: 'same-origin',
+                headers: { 'X-Requested-With': 'XMLHttpRequest' }
+            })
+            .then(function(r) {
+                if (!r.ok && r.status !== 302) throw new Error('HTTP ' + r.status);
+                textarea.value = '';
+                // Immediate poll to pick up our own comment + anyone else's
+                poll();
+            })
+            .catch(function() {
+                // Fallback to normal POST if AJAX fails (CSRF, network, etc.)
+                form.dataset.submitting = '';
+                form.submit();
+            })
+            .finally(function() {
+                form.dataset.submitting = '';
+                if (submitBtn) {
+                    submitBtn.disabled = false;
+                    submitBtn.style.opacity = '';
+                    submitBtn.textContent = 'Post Comment';
+                }
+            });
+        });
+    }
+
+    // Poll every 4s when tab is visible; back off to 15s when hidden
+    var visibleInterval = 4000;
+    var hiddenInterval = 15000;
+    var timer = setInterval(poll, visibleInterval);
+    document.addEventListener('visibilitychange', function() {
+        clearInterval(timer);
+        if (document.hidden) {
+            timer = setInterval(poll, hiddenInterval);
+        } else {
+            poll();
+            timer = setInterval(poll, visibleInterval);
+        }
+    });
+})();
+</script>
 {% endblock %}

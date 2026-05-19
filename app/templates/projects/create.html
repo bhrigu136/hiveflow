@@ -11,7 +11,7 @@
     <div class="auth-card" style="background: var(--surface-solid); border: 1px solid var(--glass-border); border-radius: 16px; padding: 40px;">
         <div class="auth-header" style="text-align: center; margin-bottom: 30px;">
             <div style="width: 56px; height: 56px; border-radius: 50%; background: linear-gradient(135deg, var(--accent), var(--sky)); display: flex; align-items: center; justify-content: center; margin: 0 auto 20px;">
-                <i data-lucide="layout" style="color: white; width: 28px; height: 28px;"></i>
+                <i data-lucide="layout" style="color: var(--on-accent); width: 28px; height: 28px;"></i>
             </div>
             <h2 style="margin: 0; font-size: 24px;">Create a Project</h2>
             <p style="color: var(--text-muted); margin-top: 8px;">In organization: <strong>{{ org.name }}</strong></p>
@@ -35,7 +35,7 @@
                 <textarea id="description" name="description" rows="3" placeholder="What is the goal of this project?" style="width: 100%; padding: 12px; border-radius: 8px; border: 1px solid var(--glass-border); background: var(--surface); color: var(--text); box-sizing: border-box; resize: vertical; font-family: inherit;"></textarea>
             </div>
 
-            <button type="submit" class="auth-btn" style="width: 100%; padding: 12px; background: linear-gradient(to right, var(--accent), var(--sky)); color: white; border: none; border-radius: 8px; font-weight: 600; cursor: pointer; display: flex; align-items: center; justify-content: center; gap: 8px;">
+            <button type="submit" class="auth-btn" style="width: 100%; padding: 12px; background: linear-gradient(to right, var(--accent), var(--sky)); color: var(--on-accent); border: none; border-radius: 8px; font-weight: 600; cursor: pointer; display: flex; align-items: center; justify-content: center; gap: 8px;">
                 Create Project <i data-lucide="check" style="width: 16px; height: 16px;"></i>
             </button>
             <div style="text-align: center; margin-top: 15px;">

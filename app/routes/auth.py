@@ -506,9 +506,14 @@ def profile():
 def profile_update():
     name = request.form.get('name', '').strip()
     email = request.form.get('email', '').strip().lower()
+    theme = request.form.get('theme', 'dark').strip()
     current_password = request.form.get('current_password', '')
     new_password = request.form.get('new_password', '')
     confirm_password = request.form.get('confirm_password', '')
+
+    # Update theme preference
+    if theme in ['dark', 'light']:
+        current_user.theme_preference = theme
 
     # Update basic info
     if name:

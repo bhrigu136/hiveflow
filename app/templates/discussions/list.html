@@ -2,6 +2,14 @@
 {% block title %}Discussions — {{ project.name }}{% endblock %}
 
 {% block content %}
+<div id="discussionsUpdateBanner" class="update-banner" style="display:none;">
+    <span class="update-banner-msg">
+        <i data-lucide="message-square-plus" style="width:14px;height:14px;"></i>
+        New discussion posted — refreshing in <span id="discussionsCountdown">3</span>s
+    </span>
+    <button type="button" id="discussionsRefreshNow" class="update-banner-btn">Refresh now</button>
+</div>
+
 <div class="project-header" style="margin-bottom: 30px;">
     <div style="display: flex; align-items: center; gap: 10px; margin-bottom: 15px;">
         <a href="{{ url_for('projects.dashboard', project_id=project.id) }}" style="color: var(--text-muted); text-decoration: none; display: flex; align-items: center; font-size: 14px;">
@@ -37,7 +45,7 @@
                 <div style="font-size: 12px; color: var(--text-muted); margin-bottom: 5px;">
                     By {{ discussion.creator.name if discussion.creator.name else discussion.creator.username }}
                 </div>
-                <div style="font-size: 12px; display: inline-flex; align-items: center; gap: 4px; background: rgba(255,255,255,0.05); padding: 2px 8px; border-radius: 10px; border: 1px solid var(--glass-border); color: var(--text-muted);">
+                <div style="font-size: 12px; display: inline-flex; align-items: center; gap: 4px; background: var(--surface-elev); padding: 2px 8px; border-radius: 10px; border: 1px solid var(--glass-border); color: var(--text-muted);">
                     <i data-lucide="message-circle" style="width: 12px; height: 12px;"></i> {{ discussion.comments.count() }}
                 </div>
             </div>
@@ -55,8 +63,8 @@
 </div>
 
 <!-- New Discussion Modal -->
-<div id="newDiscussionModal" style="display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.5); z-index: 1000; align-items: center; justify-content: center; backdrop-filter: blur(4px);">
-    <div style="background: var(--bg-start); border: 1px solid var(--glass-border); border-radius: 16px; padding: 30px; width: 100%; max-width: 600px; box-shadow: 0 10px 30px rgba(0,0,0,0.3);">
+<div id="newDiscussionModal" style="display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: var(--overlay); z-index: 1000; align-items: center; justify-content: center; backdrop-filter: blur(4px);">
+    <div style="background: var(--bg-start); border: 1px solid var(--glass-border); border-radius: 16px; padding: 30px; width: 100%; max-width: 600px; box-shadow: var(--shadow-md);">
         <h3 style="margin-top: 0; margin-bottom: 20px; display: flex; justify-content: space-between; align-items: center;">
             Start a Discussion
             <button onclick="document.getElementById('newDiscussionModal').style.display='none'" style="background: none; border: none; color: var(--text-muted); cursor: pointer;"><i data-lucide="x"></i></button>
@@ -65,14 +73,14 @@
         <form method="POST" action="{{ url_for('discussions.create_discussion', project_id=project.id) }}">
             <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
             
-            <div style="margin-bottom: 15px;">
+                <div style="margin-bottom: 15px;">
                 <label style="display: block; margin-bottom: 5px; font-size: 14px;">Title</label>
-                <input type="text" name="title" required placeholder="What's on your mind?" style="width: 100%; padding: 10px; border-radius: 8px; border: 1px solid var(--glass-border); background: rgba(0,0,0,0.2); color: white; box-sizing: border-box;">
+                <input type="text" name="title" required placeholder="What's on your mind?" style="width: 100%; padding: 10px; border-radius: 8px; border: 1px solid var(--glass-border); background: var(--surface); color: var(--text); box-sizing: border-box;">
             </div>
             
-            <div style="margin-bottom: 20px;">
+                <div style="margin-bottom: 20px;">
                 <label style="display: block; margin-bottom: 5px; font-size: 14px;">Content</label>
-                <textarea name="content" required rows="5" placeholder="Share your thoughts..." style="width: 100%; padding: 10px; border-radius: 8px; border: 1px solid var(--glass-border); background: rgba(0,0,0,0.2); color: white; box-sizing: border-box; resize: vertical; font-family: inherit;"></textarea>
+                <textarea name="content" required rows="5" placeholder="Share your thoughts..." style="width: 100%; padding: 10px; border-radius: 8px; border: 1px solid var(--glass-border); background: var(--surface); color: var(--text); box-sizing: border-box; resize: vertical; font-family: inherit;"></textarea>
             </div>
             
             <div style="display: flex; justify-content: flex-end; gap: 10px;">
@@ -82,4 +90,65 @@
         </form>
     </div>
 </div>
+
+<script>
+(function() {
+    var projectId = {{ project.id }};
+    var initialLatest = {{ discussions[0].id if discussions else 0 }};
+    var initialCount = {{ discussions|length }};
+    var banner = document.getElementById('discussionsUpdateBanner');
+    var countdownEl = document.getElementById('discussionsCountdown');
+    var refreshNowBtn = document.getElementById('discussionsRefreshNow');
+    var refreshTimer = null;
+
+    function softReload() { window.location.reload(); }
+    if (refreshNowBtn) refreshNowBtn.addEventListener('click', softReload);
+
+    function startCountdown() {
+        if (refreshTimer) return;
+        banner.style.display = 'flex';
+        var seconds = 3;
+        countdownEl.textContent = seconds;
+        refreshTimer = setInterval(function() {
+            seconds--;
+            countdownEl.textContent = seconds;
+            if (seconds <= 0) {
+                clearInterval(refreshTimer);
+                softReload();
+            }
+        }, 1000);
+    }
+
+    function poll() {
+        // Don't poll while the new-discussion modal is open
+        var modal = document.getElementById('newDiscussionModal');
+        if (modal && modal.style.display === 'flex') return;
+
+        fetch('/api/projects/' + projectId + '/discussions/state', {
+            credentials: 'same-origin',
+            headers: { 'Accept': 'application/json' }
+        })
+        .then(function(r) { if (!r.ok) throw new Error('HTTP ' + r.status); return r.json(); })
+        .then(function(data) {
+            if (data.latest_id > initialLatest || data.count !== initialCount) {
+                startCountdown();
+            }
+        })
+        .catch(function() { /* silent */ });
+    }
+
+    var visibleInterval = 8000;
+    var hiddenInterval = 25000;
+    var timer = setInterval(poll, visibleInterval);
+    document.addEventListener('visibilitychange', function() {
+        clearInterval(timer);
+        if (document.hidden) {
+            timer = setInterval(poll, hiddenInterval);
+        } else {
+            poll();
+            timer = setInterval(poll, visibleInterval);
+        }
+    });
+})();
+</script>
 {% endblock %}
