@@ -573,8 +573,16 @@ def profile():
     due_today = sum(1 for t in my_tasks if t.deadline == today and t.status != 'Completed')
     
     # --- Activity Log and Streaks ---
+    # The heatmap tracks ALL tasks completed (both personal and team tasks)
+    overall_tasks = Task.query.filter(
+        db.or_(
+            db.and_(Task.user_id == current_user.id, Task.project_id.is_(None)),
+            Task.assigned_to == current_user.id
+        )
+    ).all()
+
     activity_counts = {}
-    for task in my_tasks:
+    for task in overall_tasks:
         if task.status == 'Completed':
             if task.deadline:
                 d_str = task.deadline.isoformat()

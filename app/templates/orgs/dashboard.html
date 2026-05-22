@@ -24,14 +24,22 @@
         </div>
     </div>
     
-    <div class="invite-pill">
-        <div class="invite-pill-label">Invite Code</div>
-        <div class="invite-code-pill" title="Click to copy" onclick="navigator.clipboard.writeText('{{ org.invite_code }}').then(() => showToast('Invite code copied to clipboard')).catch(() => showToast('Could not copy. Code: {{ org.invite_code }}', 'error'));">
-            <span>{{ org.invite_code }}</span>
-            <div class="invite-copy-btn">
-                <i data-lucide="copy"></i>
+    <div style="display: flex; flex-direction: column; align-items: flex-end; gap: 12px;">
+        <div class="invite-pill">
+            <div class="invite-pill-label">Invite Code</div>
+            <div class="invite-code-pill" title="Click to copy" onclick="navigator.clipboard.writeText('{{ org.invite_code }}').then(() => showToast('Invite code copied to clipboard')).catch(() => showToast('Could not copy. Code: {{ org.invite_code }}', 'error'));">
+                <span>{{ org.invite_code }}</span>
+                <div class="invite-copy-btn">
+                    <i data-lucide="copy"></i>
+                </div>
             </div>
         </div>
+        
+        {% if membership.role == 'Admin' %}
+        <a href="{{ url_for('orgs.analytics', slug=org.slug) }}" class="profile-save-btn" style="background: linear-gradient(135deg, var(--accent-main), var(--accent-dark)); padding: 8px 16px; border-radius: 20px; font-size: 0.9rem; text-decoration: none; display: inline-flex; align-items: center; gap: 6px;">
+            <i data-lucide="bar-chart-2" style="width: 16px; height: 16px;"></i> Team Analytics
+        </a>
+        {% endif %}
     </div>
 </div>
 

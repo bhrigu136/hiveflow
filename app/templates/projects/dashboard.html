@@ -73,6 +73,12 @@
             <a href="{{ url_for('discussions.list_discussions', project_id=project.id) }}" class="btn-secondary">
                 <i data-lucide="message-square" style="width:16px;height:16px;"></i> Discussions
             </a>
+            
+            {% if is_admin %}
+            <a href="{{ url_for('projects.analytics', project_id=project.id) }}" class="btn-secondary" style="background: rgba(139, 92, 246, 0.1); border-color: rgba(139, 92, 246, 0.3); color: var(--accent-light);">
+                <i data-lucide="pie-chart" style="width:16px;height:16px;"></i> Analytics
+            </a>
+            {% endif %}
             <button onclick="document.getElementById('newTaskModal').style.display='flex'" class="btn-primary">
                 <i data-lucide="plus" style="width:16px;height:16px;"></i> Add Task
             </button>

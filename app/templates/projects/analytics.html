@@ -1,0 +1,122 @@
+{% extends "base.html" %}
+{% block title %}Project Analytics - {{ project.name }} — HiveFlow{% endblock %}
+
+{% block content %}
+<div class="org-back-link-container animate-fade-down">
+    <a href="{{ url_for('projects.dashboard', project_id=project.id) }}" class="back-link">
+        <i data-lucide="arrow-left"></i> Back to {{ project.name }}
+    </a>
+</div>
+
+<div class="profile-header animate-slide-up" style="margin-bottom: 2rem;">
+    <h2 class="profile-title">
+        <i data-lucide="pie-chart" class="profile-title-icon"></i> Project Analytics
+    </h2>
+    <p class="profile-subtitle">Track individual team member contributions specifically for the <strong>{{ project.name }}</strong> project.</p>
+</div>
+
+<div class="members-premium-list animate-slide-up" style="display: flex; flex-direction: column; gap: 20px;">
+    {% for data in members_data %}
+    <div class="member-premium-row" style="flex-direction: column; align-items: stretch; padding: 24px; cursor: pointer; transition: all 0.2s ease;" onclick="const el = document.getElementById('recent-tasks-{{ loop.index }}'); if(el) { el.style.display = el.style.display === 'none' ? 'block' : 'none'; }">
+        
+        <!-- Top row: User Info & Core Stats -->
+        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px; width: 100%;">
+            <div class="member-row-left" style="gap: 16px;">
+                <div class="member-premium-avatar" style="width: 56px; height: 56px; font-size: 1.5rem;">
+                    {{ data.member.user.name[0].upper() if data.member.user.name else data.member.user.username[0].upper() }}
+                </div>
+                <div>
+                    <div class="member-name-row" style="font-size: 1.1rem;">
+                        {{ data.member.user.name if data.member.user.name else data.member.user.username }}
+                        {% if data.member.user.id == current_user.id %}
+                        <span class="badge-you">You</span>
+                        {% endif %}
+                    </div>
+                    <div class="member-username" style="font-size: 0.95rem;">@{{ data.member.user.username }} • {{ data.member.role }}</div>
+                </div>
+            </div>
+            
+            <div style="display: flex; gap: 24px; text-align: center;">
+                <div>
+                    <div style="font-size: 1.4rem; font-weight: 700; color: var(--text-main);">{{ data.completed }}</div>
+                    <div style="font-size: 0.8rem; color: var(--text-muted); text-transform: uppercase; letter-spacing: 0.5px;">Completed</div>
+                </div>
+                <div>
+                    <div style="font-size: 1.4rem; font-weight: 700; color: var(--text-main);">{{ data.working }}</div>
+                    <div style="font-size: 0.8rem; color: var(--text-muted); text-transform: uppercase; letter-spacing: 0.5px;">Working</div>
+                </div>
+                <div>
+                    <div style="font-size: 1.4rem; font-weight: 700; color: var(--text-main);">{{ data.pending }}</div>
+                    <div style="font-size: 0.8rem; color: var(--text-muted); text-transform: uppercase; letter-spacing: 0.5px;">Pending</div>
+                </div>
+                <div style="padding-left: 20px; border-left: 1px solid var(--border-color);">
+                    <div style="font-size: 1.4rem; font-weight: 700; color: var(--accent-light);">{{ data.total }}</div>
+                    <div style="font-size: 0.8rem; color: var(--text-muted); text-transform: uppercase; letter-spacing: 0.5px;">Total Assigned</div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Progress Bar -->
+        <div style="width: 100%; margin-bottom: 20px;">
+            <div style="display: flex; justify-content: space-between; margin-bottom: 8px; font-size: 0.85rem;">
+                <span style="color: var(--text-secondary);">Completion Rate</span>
+                <span style="color: var(--accent-light); font-weight: 600;">{{ data.completion_rate }}%</span>
+            </div>
+            <div class="project-progress-bar" style="height: 8px;">
+                <div class="project-progress-fill" style="width: {{ data.completion_rate }}%; background: linear-gradient(90deg, var(--accent-dark), var(--accent-light));"></div>
+            </div>
+        </div>
+
+        <!-- Recent Tasks List -->
+        {% if data.recent_tasks %}
+        <div id="recent-tasks-{{ loop.index }}" style="display: none; width: 100%;">
+            <div style="background: var(--bg-hover); border-radius: 12px; padding: 16px;">
+                <div style="font-size: 0.85rem; color: var(--text-muted); margin-bottom: 12px; text-transform: uppercase; letter-spacing: 0.5px; display: flex; align-items: center; gap: 6px;">
+                    <i data-lucide="check-circle" style="width: 14px; height: 14px;"></i> Recently Completed Tasks
+                </div>
+                <div style="display: flex; flex-direction: column; gap: 8px;">
+                    {% for task in data.recent_tasks %}
+                    <div style="display: flex; justify-content: space-between; align-items: center; background: var(--bg-card); padding: 10px 14px; border-radius: 8px; border: 1px solid var(--border-color);">
+                        <div style="font-size: 0.95rem; color: var(--text-main); font-weight: 500;">
+                            {{ task.title }}
+                        </div>
+                        <div style="font-size: 0.8rem; color: var(--text-muted);">
+                            {% if task.deadline %}
+                                Due: {{ task.deadline.strftime('%b %d, %Y') }}
+                            {% else %}
+                                No deadline
+                            {% endif %}
+                        </div>
+                    </div>
+                    {% endfor %}
+                </div>
+            </div>
+        </div>
+        {% endif %}
+        
+    </div>
+    {% else %}
+    <div class="empty-projects-state">
+        <div class="empty-projects-icon-box">
+            <i data-lucide="users"></i>
+        </div>
+        <h4 class="empty-projects-title">No members to track</h4>
+        <p class="empty-projects-desc">When members join and are assigned tasks in this project, their activity will appear here.</p>
+    </div>
+    {% endfor %}
+</div>
+
+<style>
+@media (max-width: 768px) {
+    .member-premium-row > div:first-child {
+        flex-direction: column;
+        align-items: flex-start !important;
+        gap: 20px;
+    }
+    .member-premium-row > div:first-child > div:last-child {
+        width: 100%;
+        justify-content: space-between;
+    }
+}
+</style>
+{% endblock %}

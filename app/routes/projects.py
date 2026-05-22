@@ -157,3 +157,46 @@ def add_task(project_id):
     
     flash('Task added successfully.', 'success')
     return redirect(url_for('projects.dashboard', project_id=project.id))
+
+@projects_bp.route('/<int:project_id>/analytics')
+@login_required
+def analytics(project_id):
+    project = Project.query.get_or_404(project_id)
+    org = project.organization
+    
+    # Check if user is a member AND an Admin
+    membership = OrgMember.query.filter_by(org_id=org.id, user_id=current_user.id).first()
+    if not membership or membership.role != 'Admin':
+        flash('You do not have permission to view project analytics.', 'danger')
+        return redirect(url_for('projects.dashboard', project_id=project.id))
+        
+    tasks = Task.query.filter_by(project_id=project.id).all()
+    
+    members_data = []
+    for member in org.members:
+        member_tasks = [t for t in tasks if t.assigned_to == member.user_id]
+        total_assigned = len(member_tasks)
+        completed = sum(1 for t in member_tasks if t.status == 'Completed')
+        pending = sum(1 for t in member_tasks if t.status == 'Pending')
+        working = sum(1 for t in member_tasks if t.status == 'Working')
+        
+        # Calculate completion rate safely
+        completion_rate = int((completed / total_assigned) * 100) if total_assigned > 0 else 0
+        
+        # Get up to 5 recently completed tasks
+        recent_tasks = sorted([t for t in member_tasks if t.status == 'Completed'], key=lambda t: t.created_at, reverse=True)[:5]
+        
+        members_data.append({
+            'member': member,
+            'total': total_assigned,
+            'completed': completed,
+            'pending': pending,
+            'working': working,
+            'completion_rate': completion_rate,
+            'recent_tasks': recent_tasks
+        })
+        
+    # Sort members by completed tasks descending
+    members_data.sort(key=lambda x: x['completed'], reverse=True)
+
+    return render_template('projects/analytics.html', project=project, org=org, members_data=members_data)
