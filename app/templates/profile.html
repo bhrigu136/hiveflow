@@ -2,184 +2,220 @@
 {% block title %}Your Profile — HiveFlow{% endblock %}
 
 {% block content %}
-<div class="profile-page" style="max-width: 800px; margin: 40px auto 60px;">
-    <div class="profile-card" style="background: var(--surface-solid); border: 1px solid var(--glass-border); border-radius: 20px; padding: 40px; box-shadow: var(--shadow-lg); backdrop-filter: blur(20px);">
+<div class="container animate-slide-up profile-container">
+    <div class="profile-premium-card">
         
-        <div style="border-bottom: 1px solid var(--glass-border); padding-bottom: 20px; margin-bottom: 30px;">
-            <h2 style="font-size: 28px; font-weight: 700; background: linear-gradient(135deg, var(--text), var(--accent-light)); -webkit-background-clip: text; -webkit-text-fill-color: transparent; margin: 0; display: flex; align-items: center; gap: 12px;">
-                <i data-lucide="user-cog" style="color: var(--accent-light); width: 28px; height: 28px;"></i> Account Dashboard
+        <div class="profile-header">
+            <h2 class="profile-title">
+                <i data-lucide="user-cog" class="profile-title-icon"></i> Account Dashboard
             </h2>
-            <p style="color: var(--text-muted); margin-top: 8px; font-size: 15px;">Manage your profile information, security settings, and view your activity stats.</p>
+            <p class="profile-subtitle">Manage your profile information, security settings, and view your activity stats.</p>
         </div>
         
-        <!-- Account Statistics -->
-            <div class="profile-stats" style="display: grid; grid-template-columns: repeat(auto-fit, minmax(130px, 1fr)); gap: 20px; margin-bottom: 30px;">
-            <div style="background: var(--surface); border: 1px solid var(--glass-border); border-radius: 16px; padding: 20px; display: flex; flex-direction: column; align-items: center; justify-content: center; text-align: center; gap: 12px; transition: transform 0.2s ease; cursor: default;" onmouseover="this.style.transform='translateY(-2px)';" onmouseout="this.style.transform='none';">
-                <div style="background: var(--info-soft); border: 1px solid var(--info); width: 48px; height: 48px; border-radius: 14px; display: flex; align-items: center; justify-content: center;">
-                    <i data-lucide="list-todo" style="color: var(--accent-light); width: 22px; height: 22px;"></i>
-                </div>
-                <div>
-                    <p style="margin: 0 0 4px 0; font-size: 28px; font-weight: 700; color: var(--text); line-height: 1;">{{ total_tasks }}</p>
-                    <h4 style="margin: 0; font-size: 11px; color: var(--text-muted); font-weight: 700; text-transform: uppercase; letter-spacing: 0.5px;">Total Tasks</h4>
-                </div>
-            </div>
-            
-            <div style="background: var(--surface); border: 1px solid var(--glass-border); border-radius: 16px; padding: 20px; display: flex; flex-direction: column; align-items: center; justify-content: center; text-align: center; gap: 12px; transition: transform 0.2s ease; cursor: default;" onmouseover="this.style.transform='translateY(-2px)';" onmouseout="this.style.transform='none';">
-                <div style="background: var(--success-soft); border: 1px solid var(--success); width: 48px; height: 48px; border-radius: 14px; display: flex; align-items: center; justify-content: center;">
-                    <i data-lucide="check-circle" style="color: #4caf50; width: 22px; height: 22px;"></i>
-                </div>
-                <div>
-                    <p style="margin: 0 0 4px 0; font-size: 28px; font-weight: 700; color: var(--text); line-height: 1;">{{ completed_tasks }}</p>
-                    <h4 style="margin: 0; font-size: 11px; color: var(--text-muted); font-weight: 700; text-transform: uppercase; letter-spacing: 0.5px;">Completed</h4>
-                </div>
-            </div>
-            
-            <div style="background: var(--surface); border: 1px solid var(--glass-border); border-radius: 16px; padding: 20px; display: flex; flex-direction: column; align-items: center; justify-content: center; text-align: center; gap: 12px; transition: transform 0.2s ease; cursor: default;" onmouseover="this.style.transform='translateY(-2px)';" onmouseout="this.style.transform='none';">
-                <div style="background: var(--danger-soft); border: 1px solid var(--danger); width: 48px; height: 48px; border-radius: 14px; display: flex; align-items: center; justify-content: center;">
-                    <i data-lucide="target" style="color: #e91e63; width: 22px; height: 22px;"></i>
-                </div>
-                <div>
-                    <p style="margin: 0 0 4px 0; font-size: 28px; font-weight: 700; color: var(--text); line-height: 1;">{{ due_today }}</p>
-                    <h4 style="margin: 0; font-size: 11px; color: var(--text-muted); font-weight: 700; text-transform: uppercase; letter-spacing: 0.5px;">Due Today</h4>
-                </div>
-            </div>
 
-            <div style="background: var(--surface); border: 1px solid var(--glass-border); border-radius: 16px; padding: 20px; display: flex; flex-direction: column; align-items: center; justify-content: center; text-align: center; gap: 12px; transition: transform 0.2s ease; cursor: default;" onmouseover="this.style.transform='translateY(-2px)';" onmouseout="this.style.transform='none';">
-                <div style="background: var(--warning-soft); border: 1px solid var(--warning); width: 48px; height: 48px; border-radius: 14px; display: flex; align-items: center; justify-content: center;">
-                    <i data-lucide="users" style="color: #ff9800; width: 22px; height: 22px;"></i>
+
+        <!-- Activity Contribution Heatmap -->
+        <div class="activity-heatmap-section">
+            <div id="heatmap_tooltip" class="heatmap-tooltip"></div>
+            <h3 class="premium-section-title" style="margin-bottom: 8px;">
+                <i data-lucide="calendar-days" style="color: var(--accent-light);"></i>
+                Activity History
+            </h3>
+            <p class="avatar-upload-subtitle" style="margin-bottom: 16px;">Track your daily task completion. Hover over any block to see activity details.</p>
+            
+            <div class="heatmap-wrapper">
+                <div class="heatmap-weekdays">
+                    <span>Sun</span>
+                    <span>Mon</span>
+                    <span>Tue</span>
+                    <span>Wed</span>
+                    <span>Thu</span>
+                    <span>Fri</span>
+                    <span>Sat</span>
                 </div>
-                <div>
-                    <p style="margin: 0 0 4px 0; font-size: 28px; font-weight: 700; color: var(--text); line-height: 1;">{{ orgs_joined }}</p>
-                    <h4 style="margin: 0; font-size: 11px; color: var(--text-muted); font-weight: 700; text-transform: uppercase; letter-spacing: 0.5px;">Teams</h4>
+                <div class="heatmap-main">
+                    <div class="heatmap-months-row" id="heatmap_months_row">
+                        <!-- Placed dynamically via JS -->
+                    </div>
+                    <div class="heatmap-grid" id="heatmap_grid">
+                        {% for day in flat_days %}
+                            <div class="heatmap-day" 
+                                 data-level="{{ day.level }}" 
+                                 data-count="{{ day.count }}" 
+                                 data-date="{{ day.date }}">
+                            </div>
+                        {% endfor %}
+                    </div>
+                </div>
+            </div>
+            
+            <div class="heatmap-legend">
+                <span>{{ flat_days|length }} days of tracing</span>
+                <div class="legend-scales">
+                    <span>Less</span>
+                    <div class="legend-square" data-level="0"></div>
+                    <div class="legend-square" data-level="1"></div>
+                    <div class="legend-square" data-level="2"></div>
+                    <div class="legend-square" data-level="3"></div>
+                    <div class="legend-square" data-level="4"></div>
+                    <span>More</span>
                 </div>
             </div>
         </div>
         
-        <form method="POST" action="{{ url_for('auth.profile_update') }}" enctype="multipart/form-data" style="display: flex; flex-direction: column; gap: 30px;">
+        <form method="POST" action="{{ url_for('auth.profile_update') }}" enctype="multipart/form-data" class="profile-form" style="margin-top: 32px;">
             <input type="hidden" name="csrf_token" value="{{ csrf_token() }}"/>
             
-                <div class="profile-section" style="background: var(--surface); border: 1px solid var(--glass-border); border-radius: 20px; padding: 30px;">
-                <h3 style="margin: 0 0 20px 0; font-size: 20px; color: var(--text); border-bottom: 1px solid var(--glass-border); padding-bottom: 15px;"><i data-lucide="user-circle" style="width: 20px; height: 20px; vertical-align: middle; margin-right: 8px; color: var(--accent-light);"></i> Personal Details</h3>
-
-                <!-- Profile Picture Section -->
-            <div class="profile-pic-row" style="display: flex; align-items: center; gap: 30px; background: var(--surface); padding: 25px; border-radius: 16px; border: 1px solid var(--glass-border);">
-                    <div style="position: relative; display: inline-block;">
-                    {% set has_pic = current_user.profile_picture and current_user.profile_picture != 'default.png' %}
-                    <img id="profile_preview" src="{{ url_for('static', filename='uploads/profiles/' + current_user.profile_picture) if has_pic else '#' }}" alt="Profile" style="width: 120px; height: 120px; border-radius: 50%; object-fit: cover; border: 4px solid var(--accent); box-shadow: var(--shadow-md); cursor: pointer; transition: transform 0.2s ease; {{ 'display: inline-block;' if has_pic else 'display: none;' }}" onmouseover="this.style.transform='scale(1.05)'" onmouseout="this.style.transform='scale(1)'" onclick="document.getElementById('image_modal_img').src=this.src; document.getElementById('image_modal').style.display='flex';">
-                    
-                    <div id="profile_placeholder" style="width: 120px; height: 120px; border-radius: 50%; background: var(--surface-elev); border: 2px dashed var(--glass-border); align-items: center; justify-content: center; box-shadow: none; {{ 'display: none;' if has_pic else 'display: flex;' }}">
-                        <i data-lucide="user" style="width: 50px; height: 50px; color: var(--text-muted);"></i>
-                    </div>
-                    
-                    <label for="profile_picture" style="position: absolute; bottom: 0; right: 0; background: linear-gradient(135deg, var(--accent), #6366f1); border-radius: 50%; width: 40px; height: 40px; display: flex; align-items: center; justify-content: center; cursor: pointer; border: 4px solid var(--surface-sunken); z-index: 10; box-shadow: 0 4px 15px var(--accent-glow); transition: transform 0.2s ease;" onmouseover="this.style.transform='scale(1.15)'" onmouseout="this.style.transform='scale(1)'" title="Upload new photo">
-                        <i data-lucide="camera" style="width: 18px; height: 18px; color: var(--on-accent);"></i>
-                    </label>
-                    <input type="file" id="profile_picture" name="profile_picture" style="display: none;" accept="image/*">
+            <!-- Personal Details Collapsible Section -->
+            <div class="profile-premium-section collapsible-section" id="section_personal">
+                <div class="premium-section-header" onclick="toggleSection(this)">
+                    <h3 class="premium-section-title" style="margin: 0;">
+                        <i data-lucide="user-circle" style="color: var(--accent-light);"></i>
+                        Personal Details
+                    </h3>
+                    <i data-lucide="chevron-down" class="section-toggle-icon"></i>
                 </div>
-                <input type="hidden" name="remove_picture" id="remove_picture" value="false">
                 
-                <div>
-                        <h3 style="margin: 0 0 5px 0; font-size: 18px; color: var(--text);">Profile Picture</h3>
-                    <p style="color: var(--text-muted); font-size: 13px; margin: 0 0 15px 0;">We recommend a square image, at least 200x200 pixels. Click image to view full size.</p>
-                    <button type="button" id="remove_picture_btn" style="background: var(--danger-soft); border: 1px solid var(--danger); color: var(--danger); padding: 8px 16px; border-radius: 8px; font-size: 13px; font-weight: 500; cursor: pointer; align-items: center; transition: all 0.2s; {{ 'display: inline-flex;' if has_pic else 'display: none;' }}" onmouseover="this.style.background='var(--danger)'; this.style.transform='translateY(-1px)';" onmouseout="this.style.background='var(--danger-soft)'; this.style.transform='none';">
-                        <i data-lucide="trash-2" style="width: 16px; height: 16px; margin-right: 8px;"></i> Remove Photo
-                    </button>
-                </div>
-            </div>
-
-            <div class="profile-form-grid" style="display: grid; grid-template-columns: 1fr 1fr; gap: 20px; margin-top: 20px;">
-                <!-- Full Name -->
-                <div>
-                    <label for="profile_name" style="display: block; margin-bottom: 8px; font-size: 13px; font-weight: 600; color: var(--text-secondary); text-transform: uppercase; letter-spacing: 0.5px;">Full Name</label>
-                    <div style="position: relative;">
-                        <span style="position: absolute; left: 16px; top: 50%; transform: translateY(-50%); color: var(--text-muted);"><i data-lucide="user" style="width:18px;height:18px;"></i></span>
-                        <input type="text" id="profile_name" name="name" value="{{ current_user.name if current_user.name else '' }}" placeholder="Enter your full name" style="width: 100%; padding: 14px 16px 14px 44px; border-radius: 12px; border: 1px solid var(--glass-border); background: var(--surface); color: var(--text); box-sizing: border-box; transition: all 0.3s ease; outline: none; font-size: 15px;" onfocus="this.style.borderColor='var(--accent)'; this.style.boxShadow='0 0 0 3px var(--accent-glow)';" onblur="this.style.borderColor='var(--glass-border)'; this.style.boxShadow='none';">
-                    </div>
-                </div>
-
-                <!-- Email -->
-                <div>
-                    <label for="profile_email" style="display: block; margin-bottom: 8px; font-size: 13px; font-weight: 600; color: var(--text-secondary); text-transform: uppercase; letter-spacing: 0.5px;">Email Address</label>
-                    <div style="position: relative;">
-                        <span style="position: absolute; left: 16px; top: 50%; transform: translateY(-50%); color: var(--text-muted);"><i data-lucide="mail" style="width:18px;height:18px;"></i></span>
-                        <input type="email" id="profile_email" name="email" value="{{ current_user.email if current_user.email else '' }}" placeholder="Enter your email address" required style="width: 100%; padding: 14px 16px 14px 44px; border-radius: 12px; border: 1px solid var(--glass-border); background: var(--surface); color: var(--text); box-sizing: border-box; transition: all 0.3s ease; outline: none; font-size: 15px;" onfocus="this.style.borderColor='var(--accent)'; this.style.boxShadow='0 0 0 3px var(--accent-glow)';" onblur="this.style.borderColor='var(--glass-border)'; this.style.boxShadow='none';">
-                    </div>
-                </div>
-            </div>
-            
-            <!-- Theme Preferences Section -->
-            <div class="profile-section" style="background: var(--surface); border: 1px solid var(--glass-border); border-radius: 20px; padding: 30px;">
-                <h3 style="margin: 0 0 20px 0; font-size: 20px; color: var(--text); border-bottom: 1px solid var(--glass-border); padding-bottom: 15px;"><i data-lucide="palette" style="width: 20px; height: 20px; vertical-align: middle; margin-right: 8px; color: var(--accent-light);"></i> Theme Preferences</h3>
-
-                <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 16px;">
-                    <!-- Dark Theme Option -->
-                    <label for="theme_dark" style="display: flex; align-items: center; background: var(--surface); border: 2px solid var(--accent-ring); border-radius: 14px; padding: 16px; cursor: pointer; transition: all 0.3s ease;" onmouseover="this.style.borderColor='var(--accent-ring)'; this.style.background='var(--surface-elev)';" onmouseout="this.style.borderColor='var(--accent-ring)'; this.style.background='var(--surface)';" id="dark_label">
-                        <input type="radio" id="theme_dark" name="theme" value="dark" style="margin-right: 12px; width: 18px; height: 18px; cursor: pointer;" {% if current_user.theme_preference == 'dark' %}checked{% endif %}>
-                        <div>
-                            <h4 style="margin: 0 0 4px 0; color: var(--text); font-size: 15px; font-weight: 600;">Dark Theme</h4>
-                            <p style="margin: 0; color: var(--text-muted); font-size: 13px;">Easy on the eyes, modern look</p>
+                <div class="premium-section-body">
+                    <!-- Profile Picture Section -->
+                    <div class="avatar-premium-row">
+                        <div class="avatar-upload-container">
+                            {% set has_pic = current_user.profile_picture and current_user.profile_picture != 'default.png' %}
+                            {% set is_url = has_pic and (current_user.profile_picture.startswith('http://') or current_user.profile_picture.startswith('https://')) %}
+                            <img id="profile_preview" src="{{ current_user.profile_picture if is_url else (url_for('static', filename='uploads/profiles/' + current_user.profile_picture) if has_pic else 'data:image/gif;base64,R0lGODlhAQABAIAAAAAAAP///yH5BAEAAAAALAAAAAABAAEAAAIBRAA7') }}" alt="Profile" class="avatar-premium-image" style="{{ 'display: inline-block;' if has_pic else 'display: none;' }}" onclick="document.getElementById('image_modal_img').src=this.src; document.getElementById('image_modal').style.display='flex';">
+                            
+                            <div id="profile_placeholder" class="avatar-premium-placeholder" style="{{ 'display: none;' if has_pic else 'display: flex;' }}">
+                                <i data-lucide="user"></i>
+                            </div>
+                            
+                            <label for="profile_picture" class="avatar-premium-upload-btn" title="Upload new photo">
+                                <i data-lucide="camera" style="color: var(--on-accent);"></i>
+                            </label>
+                            <input type="file" id="profile_picture" name="profile_picture" style="display: none;" accept="image/*">
                         </div>
-                    </label>
-
-                    <!-- Light Theme Option -->
-                    <label for="theme_light" style="display: flex; align-items: center; background: var(--surface); border: 2px solid var(--accent-ring); border-radius: 14px; padding: 16px; cursor: pointer; transition: all 0.3s ease;" onmouseover="this.style.borderColor='var(--accent-ring)'; this.style.background='var(--surface-elev)';" onmouseout="this.style.borderColor='var(--accent-ring)'; this.style.background='var(--surface)';" id="light_label">
-                        <input type="radio" id="theme_light" name="theme" value="light" style="margin-right: 12px; width: 18px; height: 18px; cursor: pointer;" {% if current_user.theme_preference == 'light' %}checked{% endif %}>
+                        <input type="hidden" name="remove_picture" id="remove_picture" value="false">
+                        
                         <div>
-                            <h4 style="margin: 0 0 4px 0; color: var(--text); font-size: 15px; font-weight: 600;">Light Theme</h4>
-                            <p style="margin: 0; color: var(--text-muted); font-size: 13px;">Bright and clean interface</p>
-                        </div>
-                    </label>
-                </div>
-            </div>
-            
-            <div class="profile-section" style="background: var(--surface-elev); border: 1px solid var(--glass-border); border-radius: 20px; padding: 30px;">
-                <h3 style="margin: 0 0 10px 0; font-size: 20px; color: var(--text); border-bottom: 1px solid var(--glass-border); padding-bottom: 15px;"><i data-lucide="shield-alert" style="width: 20px; height: 20px; vertical-align: middle; margin-right: 8px; color: var(--warning);"></i> Security Settings</h3>
-                <p style="color:var(--text-muted); font-size: 14px; margin: 15px 0 20px 0;">Leave these fields blank if you do not wish to change your password.</p>
-                
-                <div style="display: flex; flex-direction: column; gap: 20px;">
-                    <!-- Current Password -->
-                    <div>
-                        <div style="position: relative; max-width: 400px;">
-                            <span style="position: absolute; left: 16px; top: 50%; transform: translateY(-50%); color: var(--text-muted);"><i data-lucide="lock" style="width:18px;height:18px;"></i></span>
-                            <input type="password" id="profile_current_password" name="current_password" placeholder="Current password" style="width: 100%; padding: 14px 44px; border-radius: 12px; border: 1px solid var(--glass-border); background: var(--surface); color: var(--text); box-sizing: border-box; transition: all 0.3s ease; outline: none; font-size: 15px;" onfocus="this.style.borderColor='var(--accent)'; this.style.boxShadow='var(--shadow-glow)';" onblur="this.style.borderColor='var(--glass-border)'; this.style.boxShadow='none';">
-                            <button type="button" onclick="togglePasswordVisibility('profile_current_password', this)" style="position: absolute; right: 16px; top: 50%; transform: translateY(-50%); background: none; border: none; color: var(--text-muted); cursor: pointer; padding: 0;">
-                                <i data-lucide="eye" style="width:18px;height:18px;"></i>
+                            <h3 class="avatar-upload-title">Profile Picture</h3>
+                            <p class="avatar-upload-subtitle">We recommend a square image, at least 200x200 pixels. Click image to view full size.</p>
+                            <button type="button" id="remove_picture_btn" class="premium-action-btn-danger" style="{{ 'display: inline-flex;' if has_pic else 'display: none;' }}">
+                                <i data-lucide="trash-2"></i> Remove Photo
                             </button>
                         </div>
                     </div>
 
-                    <div class="profile-form-grid" style="display: grid; grid-template-columns: 1fr 1fr; gap: 20px;">
-                        <!-- New Password -->
+                    <div class="form-grid-2 form-grid-2-mt">
+                        <!-- Full Name -->
+                        <div class="form-group form-group-mb0">
+                            <label for="profile_name">Full Name</label>
+                            <div class="premium-form-input-wrapper">
+                                <span class="premium-form-icon"><i data-lucide="user"></i></span>
+                                <input type="text" id="profile_name" name="name" value="{{ current_user.name if current_user.name else '' }}" placeholder="Enter your full name" class="premium-form-input">
+                            </div>
+                        </div>
+
+                        <!-- Email -->
+                        <div class="form-group form-group-mb0">
+                            <label for="profile_email">Email Address</label>
+                            <div class="premium-form-input-wrapper">
+                                <span class="premium-form-icon"><i data-lucide="mail"></i></span>
+                                <input type="email" id="profile_email" name="email" value="{{ current_user.email if current_user.email else '' }}" placeholder="Enter your email address" required class="premium-form-input">
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- Theme Preferences Collapsible Section -->
+            <div class="profile-premium-section collapsible-section collapsed" id="section_theme">
+                <div class="premium-section-header" onclick="toggleSection(this)">
+                    <h3 class="premium-section-title" style="margin: 0;">
+                        <i data-lucide="palette" style="color: var(--accent-light);"></i>
+                        Theme Preferences
+                    </h3>
+                    <i data-lucide="chevron-down" class="section-toggle-icon"></i>
+                </div>
+
+                <div class="premium-section-body">
+                    <div class="theme-selector-grid">
+                        <!-- Dark Theme Option -->
+                        <label for="theme_dark" class="theme-selector-label" id="dark_label">
+                            <input type="radio" id="theme_dark" name="theme" value="dark" class="theme-radio-input" {% if current_user.theme_preference == 'dark' %}checked{% endif %}>
+                            <div>
+                                <h4 class="theme-label-title">Dark Theme</h4>
+                                <p class="theme-label-desc">Easy on the eyes, modern look</p>
+                            </div>
+                        </label>
+
+                        <!-- Light Theme Option -->
+                        <label for="theme_light" class="theme-selector-label" id="light_label">
+                            <input type="radio" id="theme_light" name="theme" value="light" class="theme-radio-input" {% if current_user.theme_preference == 'light' %}checked{% endif %}>
+                            <div>
+                                <h4 class="theme-label-title">Light Theme</h4>
+                                <p class="theme-label-desc">Bright and clean interface</p>
+                            </div>
+                        </label>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- Security Settings Collapsible Section -->
+            <div class="profile-premium-section profile-premium-section-elevated collapsible-section collapsed" id="section_security">
+                <div class="premium-section-header" onclick="toggleSection(this)">
+                    <h3 class="premium-section-title" style="margin: 0;">
+                        <i data-lucide="shield-alert" style="color: var(--warning);"></i>
+                        Security Settings
+                    </h3>
+                    <i data-lucide="chevron-down" class="section-toggle-icon"></i>
+                </div>
+                
+                <div class="premium-section-body">
+                    <p class="security-info-text">Leave these fields blank if you do not wish to change your password.</p>
+                    
+                    <div class="form-flex-column">
+                        <!-- Current Password -->
                         <div>
-                            <div style="position: relative;">
-                                <span style="position: absolute; left: 16px; top: 50%; transform: translateY(-50%); color: var(--text-muted);"><i data-lucide="shield" style="width:18px;height:18px;"></i></span>
-                                <input type="password" id="profile_new_password" name="new_password" placeholder="New password" minlength="6" style="width: 100%; padding: 14px 44px; border-radius: 12px; border: 1px solid var(--glass-border); background: var(--surface); color: var(--text); box-sizing: border-box; transition: all 0.3s ease; outline: none; font-size: 15px;" onfocus="this.style.borderColor='var(--accent)'; this.style.boxShadow='var(--shadow-glow)';" onblur="this.style.borderColor='var(--glass-border)'; this.style.boxShadow='none';">
-                                <button type="button" onclick="togglePasswordVisibility('profile_new_password', this)" style="position: absolute; right: 16px; top: 50%; transform: translateY(-50%); background: none; border: none; color: var(--text-muted); cursor: pointer; padding: 0;">
-                                    <i data-lucide="eye" style="width:18px;height:18px;"></i>
+                            <div class="premium-form-input-wrapper">
+                                <span class="premium-form-icon"><i data-lucide="lock"></i></span>
+                                <input type="password" id="profile_current_password" name="current_password" placeholder="Current password" class="premium-form-input premium-form-input-pass">
+                                <button type="button" class="password-toggle-btn" onclick="togglePasswordVisibility('profile_current_password', this)">
+                                    <i data-lucide="eye"></i>
                                 </button>
                             </div>
                         </div>
 
-                        <!-- Confirm Password -->
-                        <div>
-                            <div style="position: relative;">
-                                <span style="position: absolute; left: 16px; top: 50%; transform: translateY(-50%); color: var(--text-muted);"><i data-lucide="shield-check" style="width:18px;height:18px;"></i></span>
-                                <input type="password" id="profile_confirm_password" name="confirm_password" placeholder="Confirm new password" style="width: 100%; padding: 14px 44px; border-radius: 12px; border: 1px solid var(--glass-border); background: var(--surface); color: var(--text); box-sizing: border-box; transition: all 0.3s ease; outline: none; font-size: 15px;" onfocus="this.style.borderColor='var(--accent)'; this.style.boxShadow='var(--shadow-glow)';" onblur="this.style.borderColor='var(--glass-border)'; this.style.boxShadow='none';">
-                                <button type="button" onclick="togglePasswordVisibility('profile_confirm_password', this)" style="position: absolute; right: 16px; top: 50%; transform: translateY(-50%); background: none; border: none; color: var(--text-muted); cursor: pointer; padding: 0;">
-                                    <i data-lucide="eye" style="width:18px;height:18px;"></i>
-                                </button>
+                        <div class="form-grid-2">
+                            <!-- New Password -->
+                            <div>
+                                <div class="premium-form-input-wrapper">
+                                    <span class="premium-form-icon"><i data-lucide="shield"></i></span>
+                                    <input type="password" id="profile_new_password" name="new_password" placeholder="New password" minlength="6" class="premium-form-input premium-form-input-pass">
+                                    <button type="button" class="password-toggle-btn" onclick="togglePasswordVisibility('profile_new_password', this)">
+                                        <i data-lucide="eye"></i>
+                                    </button>
+                                </div>
+                            </div>
+
+                            <!-- Confirm Password -->
+                            <div>
+                                <div class="premium-form-input-wrapper">
+                                    <span class="premium-form-icon"><i data-lucide="shield-check"></i></span>
+                                    <input type="password" id="profile_confirm_password" name="confirm_password" placeholder="Confirm new password" class="premium-form-input premium-form-input-pass">
+                                    <button type="button" class="password-toggle-btn" onclick="togglePasswordVisibility('profile_confirm_password', this)">
+                                        <i data-lucide="eye"></i>
+                                    </button>
+                                </div>
                             </div>
                         </div>
                     </div>
                 </div>
             </div>
 
-            <div class="profile-save-row" style="margin-top: 10px; display: flex; justify-content: flex-end;">
-                <button type="submit" class="profile-save-btn" style="padding: 16px 32px; background: linear-gradient(135deg, var(--accent), #6366f1); color: var(--on-accent); border: none; border-radius: 12px; font-weight: 600; font-size: 16px; cursor: pointer; display: flex; align-items: center; justify-content: center; gap: 10px; box-shadow: 0 4px 15px var(--accent-glow); transition: all 0.3s ease;" onmouseover="this.style.transform='translateY(-2px)'; this.style.boxShadow='0 8px 25px var(--accent-glow)';" onmouseout="this.style.transform='none'; this.style.boxShadow='0 4px 15px var(--accent-glow)';">
+            <div class="profile-save-row">
+                <button type="submit" class="profile-save-btn">
                     Save Profile Changes
-                    <i data-lucide="save" style="width:18px;height:18px;"></i>
+                    <i data-lucide="save"></i>
                 </button>
-            </div>
             </div>
         </form>
         
@@ -187,15 +223,18 @@
 </div>
 
 <!-- Image Preview Modal -->
-<div id="image_modal" style="display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: var(--overlay); z-index: 9999; align-items: center; justify-content: center; backdrop-filter: blur(5px); cursor: pointer;" onclick="this.style.display='none'">
-                <div style="position: absolute; top: 20px; right: 20px; color: var(--text); background: var(--surface-elev); padding: 10px; border-radius: 50%; display: flex; align-items: center; justify-content: center; cursor: pointer;">
-        <i data-lucide="x" style="width: 24px; height: 24px;"></i>
+<div id="image_modal" class="image-modal" onclick="this.style.display='none'">
+    <div class="modal-close-btn">
+        <i data-lucide="x"></i>
     </div>
-    <img id="image_modal_img" src="" style="max-width: 90%; max-height: 90%; border-radius: 12px; box-shadow: var(--shadow-lg); border: 2px solid var(--glass-border);">
+    <img id="image_modal_img" src="" class="modal-image">
 </div>
 
 <script>
 document.addEventListener('DOMContentLoaded', function() {
+    // Render heatmap months
+    renderHeatmapMonths();
+
     const fileInput = document.getElementById('profile_picture');
     if (fileInput) {
         fileInput.addEventListener('change', function(event) {
@@ -238,7 +277,101 @@ document.addEventListener('DOMContentLoaded', function() {
             this.style.display = 'none';
         });
     }
+
+    // Custom premium floating tooltip for the contribution calendar
+    const heatmapDays = document.querySelectorAll('.heatmap-day');
+    const tooltip = document.getElementById('heatmap_tooltip');
+    const section = document.querySelector('.activity-heatmap-section');
+    const wrapper = document.querySelector('.heatmap-wrapper');
+    
+    if (heatmapDays && tooltip && section && wrapper) {
+        heatmapDays.forEach(day => {
+            day.addEventListener('mouseenter', function(e) {
+                const count = this.getAttribute('data-count');
+                const dateStr = this.getAttribute('data-date');
+                
+                // Format date nicely (e.g., "May 21, 2026")
+                const date = new Date(dateStr);
+                const formattedDate = date.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
+                
+                tooltip.innerHTML = `<strong>${count} task${count !== '1' ? 's' : ''} completed</strong> on <span style="opacity: 0.8">${formattedDate}</span>`;
+                
+                // Position relative to the section
+                const rect = this.getBoundingClientRect();
+                const sectionRect = section.getBoundingClientRect();
+                
+                const left = rect.left - sectionRect.left + (rect.width / 2);
+                const top = rect.top - sectionRect.top - 8;
+                
+                tooltip.style.left = left + 'px';
+                tooltip.style.top = top + 'px';
+                tooltip.classList.add('visible');
+            });
+            
+            day.addEventListener('mouseleave', function() {
+                tooltip.classList.remove('visible');
+            });
+        });
+
+        // Hide tooltip immediately on wrapper scroll to prevent orphan tooltips
+        wrapper.addEventListener('scroll', function() {
+            tooltip.classList.remove('visible');
+        });
+    }
+
+    // Animate stat progress bars from data-pct
+    const progressBars = document.querySelectorAll('.premium-stat-progress-fill');
+    progressBars.forEach(el => {
+        const pct = parseInt(el.getAttribute('data-pct') || '0', 10);
+        setTimeout(() => {
+            el.style.width = pct + '%';
+        }, 150);
+    });
 });
+
+function toggleSection(headerElement) {
+    const section = headerElement.closest('.collapsible-section');
+    if (section) {
+        section.classList.toggle('collapsed');
+    }
+}
+
+function renderHeatmapMonths() {
+    const grid = document.getElementById('heatmap_grid');
+    const container = document.getElementById('heatmap_months_row');
+    if (!grid || !container) return;
+    
+    container.innerHTML = '';
+    const days = grid.getElementsByClassName('heatmap-day');
+    const monthsAdded = new Set();
+    
+    // spacing offset (column width + column gap = 12px + 4px = 16px)
+    const colWidth = 16; 
+    
+    for (let i = 0; i < days.length; i++) {
+        const dayEl = days[i];
+        const dateStr = dayEl.getAttribute('data-date');
+        if (!dateStr) continue;
+        
+        const date = new Date(dateStr);
+        const dayOfMonth = date.getDate();
+        
+        // Show month label on the 1st of the month, or for the very first day of the grid
+        if (dayOfMonth === 1 || i === 0) {
+            const monthName = date.toLocaleDateString('en-US', { month: 'short' });
+            const colIndex = Math.floor(i / 7);
+            const labelKey = monthName + '_' + date.getFullYear();
+            
+            if (!monthsAdded.has(labelKey)) {
+                monthsAdded.add(labelKey);
+                const label = document.createElement('span');
+                label.innerText = monthName;
+                label.style.left = `${colIndex * colWidth}px`;
+                container.appendChild(label);
+            }
+        }
+    }
+}
 
 function togglePasswordVisibility(fieldId, btn) {
     const input = document.getElementById(fieldId);
@@ -264,17 +397,28 @@ function setupThemeSwitcher() {
     
     if (themeDark && themeLight) {
         const updateThemeUI = (theme) => {
-            // Visual indication: increase border width for the active theme
             if (darkLabel) {
-                darkLabel.style.borderWidth = theme === 'dark' ? '2px' : '1px';
+                if (theme === 'dark') {
+                    darkLabel.classList.add('active-theme');
+                } else {
+                    darkLabel.classList.remove('active-theme');
+                }
             }
             if (lightLabel) {
-                lightLabel.style.borderWidth = theme === 'light' ? '2px' : '1px';
+                if (theme === 'light') {
+                    lightLabel.classList.add('active-theme');
+                } else {
+                    lightLabel.classList.remove('active-theme');
+                }
             }
             
             document.documentElement.setAttribute('data-theme', theme);
             localStorage.setItem('theme', theme);
         };
+        
+        // Initial setup
+        const activeTheme = document.documentElement.getAttribute('data-theme') || 'dark';
+        updateThemeUI(activeTheme);
         
         themeDark.addEventListener('change', function() {
             if (this.checked) updateThemeUI('dark');

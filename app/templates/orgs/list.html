@@ -2,97 +2,65 @@
 {% block title %}Your Teams — HiveFlow{% endblock %}
 
 {% block content %}
-<div class="header-action-row" style="display: flex; justify-content: space-between; align-items: center; gap: 16px; margin-bottom: 32px; animation: fadeDown 0.5s ease;">
-    <h2 style="margin: 0; font-size: 28px; font-weight: 800; background: linear-gradient(135deg, var(--text) 30%, var(--accent-light)); -webkit-background-clip: text; -webkit-text-fill-color: transparent;">Your Teams</h2>
-    <a href="{{ url_for('orgs.create_org') }}" class="btn primary" style="width: auto; flex: 0 0 auto; padding: 12px 20px; font-size: 14px; font-weight: 600; display: inline-flex; align-items: center; gap: 8px; border-radius: 8px; background: linear-gradient(135deg, var(--accent), #6366f1); color: var(--on-accent); box-shadow: 0 4px 15px var(--accent-glow); transition: all 0.3s ease; text-decoration: none;">
-        <i data-lucide="plus" style="width: 18px; height: 18px;"></i> Create Team
+<div class="header-action-row animate-fade-down">
+    <h2 class="header-action-title">Your Teams</h2>
+    <a href="{{ url_for('orgs.create_org') }}" class="profile-save-btn btn-create-team">
+        <i data-lucide="plus"></i> Create Team
     </a>
 </div>
 
-<div class="teams-container" style="display: grid; grid-template-columns: repeat(auto-fill, minmax(320px, 1fr)); gap: 24px; margin-bottom: 48px; animation: slideUpFade 0.6s cubic-bezier(0.2, 0.8, 0.2, 1) both;">
+<div class="teams-grid animate-slide-up">
     {% for org in orgs %}
-    <a href="{{ url_for('orgs.dashboard', slug=org.slug) }}" class="team-card" style="display: flex; flex-direction: column; text-decoration: none; background: var(--surface-solid); border: 1px solid var(--glass-border); border-radius: 16px; padding: 24px; transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1); position: relative; overflow: hidden; backdrop-filter: blur(12px);">
+    <a href="{{ url_for('orgs.dashboard', slug=org.slug) }}" class="team-card">
         <!-- Top row: Avatar & Members count -->
-        <div style="display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 20px;">
-            <div style="width: 48px; height: 48px; border-radius: 12px; background: linear-gradient(135deg, var(--accent-light), var(--accent)); display: flex; align-items: center; justify-content: center; font-size: 20px; font-weight: 800; color: var(--on-accent); box-shadow: 0 4px 12px var(--accent-glow);">
+        <div class="team-card-header">
+            <div class="team-card-avatar">
                 {{ org.name[0].upper() }}
             </div>
-            <div style="background: var(--surface-elev); border: 1px solid var(--glass-border); padding: 4px 10px; border-radius: 20px; font-size: 12px; color: var(--text-muted); display: flex; align-items: center; gap: 4px; font-weight: 500;">
-                <i data-lucide="users" style="width: 12px; height: 12px;"></i>
+            <div class="team-card-members-badge">
+                <i data-lucide="users"></i>
                 {{ org.members.count() }} Members
             </div>
         </div>
 
         <!-- Title & Description -->
-        <h3 style="margin: 0 0 8px 0; color: var(--text); font-size: 18px; font-weight: 700;">{{ org.name }}</h3>
-        <p style="color: var(--text-secondary); font-size: 14px; margin: 0; line-height: 1.5; flex: 1; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden;">
+        <h3 class="team-card-title">{{ org.name }}</h3>
+        <p class="team-card-desc">
             {{ org.description if org.description else "No description provided. Click to manage your team." }}
         </p>
 
         <!-- Hover glow effect element -->
-        <div class="team-card-glow" style="position: absolute; inset: 0; background: radial-gradient(circle at center, var(--accent-soft) 0%, transparent 70%); opacity: 0; transition: opacity 0.3s ease; pointer-events: none;"></div>
+        <div class="team-card-glow"></div>
     </a>
     {% else %}
-    <div class="empty-state" style="grid-column: 1 / -1; text-align: center; padding: 60px 20px; background: var(--surface); border-radius: 16px; border: 1px dashed var(--glass-border); display: flex; flex-direction: column; align-items: center;">
-        <div style="width: 64px; height: 64px; border-radius: 16px; background: var(--surface-elev); border: 1px solid var(--glass-border); display: flex; align-items: center; justify-content: center; margin-bottom: 20px; color: var(--accent-light);">
-            <i data-lucide="users" style="width: 32px; height: 32px;"></i>
+    <div class="empty-state empty-state-grid-span">
+        <div class="empty-state-avatar-icon">
+            <i data-lucide="users"></i>
         </div>
-        <h3 style="color: var(--text); margin: 0 0 10px 0; font-size: 20px; font-weight: 600;">You haven't joined any teams yet</h3>
-        <p style="color: var(--text-secondary); margin: 0; max-width: 400px; line-height: 1.6;">Create a new team to start collaborating, or paste an invite code below to join an existing workspace.</p>
+        <h3 class="empty-state-title-custom">You haven't joined any teams yet</h3>
+        <p class="empty-state-desc-custom">Create a new team to start collaborating, or paste an invite code below to join an existing workspace.</p>
     </div>
     {% endfor %}
 </div>
 
-<div class="join-team-section" style="background: var(--surface-solid); border: 1px solid var(--glass-border); border-radius: 16px; padding: 32px; max-width: 540px; margin: 0 auto; box-shadow: var(--shadow-lg); animation: slideUpFade 0.7s cubic-bezier(0.2, 0.8, 0.2, 1) both;">
-    <div style="text-align: center; margin-bottom: 24px;">
-        <div style="display: inline-flex; align-items: center; justify-content: center; width: 48px; height: 48px; border-radius: 50%; background: var(--warning-soft); color: var(--warning); margin-bottom: 16px;">
-            <i data-lucide="link-2" style="width: 24px; height: 24px;"></i>
+<div class="join-team-card animate-slide-up">
+    <div class="join-team-header">
+        <div class="join-team-icon-wrapper">
+            <i data-lucide="link-2"></i>
         </div>
-        <h3 style="margin: 0 0 8px 0; color: var(--text); font-size: 18px; font-weight: 600;">Join an Existing Team</h3>
-        <p style="margin: 0; color: var(--text-secondary); font-size: 14px;">Got an invite code? Paste it below to join.</p>
+        <h3 class="join-team-title">Join an Existing Team</h3>
+        <p class="join-team-desc">Got an invite code? Paste it below to join.</p>
     </div>
     
-    <form action="{{ url_for('orgs.join_org') }}" method="POST" style="display: flex; flex-direction: column; gap: 16px;">
+    <form action="{{ url_for('orgs.join_org') }}" method="POST" class="join-team-form">
         <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
-        <div class="invite-input-wrapper" style="position: relative;">
-            <i data-lucide="key" style="position: absolute; left: 16px; top: 50%; transform: translateY(-50%); width: 18px; height: 18px; color: var(--text-muted);"></i>
-            <input type="text" name="invite_code" placeholder="e.g. X7K9-P2M4" required maxlength="20" autocomplete="off" autocapitalize="off" spellcheck="false" style="width: 100%; padding: 14px 16px 14px 44px; border-radius: 12px; border: 1px solid var(--glass-border); background: var(--surface); color: var(--text); font-family: monospace; font-size: 16px; letter-spacing: 2px; transition: all 0.3s ease;">
+        <div class="invite-input-wrapper">
+            <span class="invite-input-icon"><i data-lucide="key"></i></span>
+            <input type="text" name="invite_code" placeholder="e.g. X7K9-P2M4" required maxlength="20" autocomplete="off" autocapitalize="off" spellcheck="false" class="invite-input-field">
         </div>
-        <button type="submit" class="btn primary" style="width: 100%; padding: 14px; font-size: 15px; font-weight: 600; border-radius: 12px; background: linear-gradient(135deg, var(--warning), var(--danger)); color: var(--on-accent); box-shadow: var(--shadow-sm); border: none; cursor: pointer; transition: all 0.3s ease;">
+        <button type="submit" class="join-team-submit-btn">
             Join Team
         </button>
     </form>
 </div>
-
-<style>
-@keyframes fadeDown {
-    from { opacity: 0; transform: translateY(-10px); }
-    to { opacity: 1; transform: translateY(0); }
-}
-@keyframes slideUpFade {
-    from { opacity: 0; transform: translateY(20px); }
-    to { opacity: 1; transform: translateY(0); }
-}
-
-.team-card:hover {
-    transform: translateY(-4px);
-    box-shadow: var(--shadow-lg);
-    border-color: var(--accent);
-}
-.team-card:hover .team-card-glow {
-    opacity: 1;
-}
-
-.invite-input-wrapper input:focus {
-    outline: none;
-    border-color: var(--warning);
-    box-shadow: var(--accent-ring);
-    background: var(--surface-elev);
-}
-.join-team-section button:hover {
-    transform: translateY(-2px);
-    box-shadow: var(--shadow-md);
-    filter: brightness(1.06);
-}
-</style>
 {% endblock %}

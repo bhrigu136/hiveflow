@@ -126,7 +126,11 @@
             <a href="{{ url_for('auth.profile') }}"
                class="sidebar-profile {% if request.endpoint == 'auth.profile' %}active{% endif %}">
                 {% if current_user.profile_picture and current_user.profile_picture != 'default.png' %}
-                    <img src="{{ url_for('static', filename='uploads/profiles/' + current_user.profile_picture) }}" alt="Profile">
+                    {% if current_user.profile_picture.startswith('http://') or current_user.profile_picture.startswith('https://') %}
+                        <img src="{{ current_user.profile_picture }}" alt="Profile">
+                    {% else %}
+                        <img src="{{ url_for('static', filename='uploads/profiles/' + current_user.profile_picture) }}" alt="Profile">
+                    {% endif %}
                 {% else %}
                     <span class="profile-avatar-fallback">
                         {{ (current_user.name or current_user.username or 'U')[0]|upper }}

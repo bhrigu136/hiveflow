@@ -11,7 +11,7 @@
 {# ─── WELCOME BANNER (greeting + date) ─── #}
 {% set _user_name = current_user.name or current_user.username or 'there' %}
 {% set _open_count = pending_count + working_count %}
-<div class="welcome-banner">
+<div class="welcome-banner-premium animate-slide-up">
     <div class="welcome-banner-inner">
         <div>
             <h2 class="welcome-greeting" id="greeting-text" data-name="{{ _user_name }}">
@@ -31,103 +31,121 @@
                     Amazing — every task done. Treat yourself! 🎉
                 {% else %}
                     {% if show_all %}
-                        <strong style="color:var(--text);">{{ _open_count }}</strong>
+                        <strong>{{ _open_count }}</strong>
                         open task{{ '' if _open_count == 1 else 's' }} across all dates.
                     {% elif is_today %}
-                        You have <strong style="color:var(--text);">{{ _open_count }}</strong>
+                        You have <strong>{{ _open_count }}</strong>
                         task{{ '' if _open_count == 1 else 's' }} left to tackle today.
                     {% else %}
-                        <strong style="color:var(--text);">{{ _open_count }}</strong>
+                        <strong>{{ _open_count }}</strong>
                         open task{{ '' if _open_count == 1 else 's' }} for {{ day_label }}.
                     {% endif %}
                 {% endif %}
             </p>
         </div>
         <div class="welcome-date-pill">
-            <i data-lucide="calendar-days" style="width:14px;height:14px;"></i>
+            <i data-lucide="calendar-days"></i>
             <span id="welcome-date"></span>
         </div>
     </div>
 </div>
 
 {# ─── STATS DASHBOARD ─── #}
-<div class="stats-grid">
-    <div class="stat-card stat-total">
-        <div class="stat-card-row">
+<div class="premium-stats-grid animate-slide-up">
+    <div class="premium-stat-card">
+        <div class="premium-stat-card-row">
             <div>
-                <div class="stat-label">Total</div>
-                <div class="stat-value">{{ total_count }}</div>
+                <div class="premium-stat-value">{{ total_count }}</div>
+                <div class="premium-stat-label">Total</div>
             </div>
-            <div class="stat-icon"><i data-lucide="layers" style="width:18px;height:18px;"></i></div>
+            <div class="premium-stat-icon stat-icon-total">
+                <i data-lucide="layers"></i>
+            </div>
         </div>
-        <div class="stat-progress"><div class="stat-progress-fill" data-pct="{{ completion_pct }}"></div></div>
+        <div class="premium-stat-progress">
+            <div class="premium-stat-progress-fill fill-total" data-pct="{{ completion_pct }}"></div>
+        </div>
     </div>
-    <div class="stat-card stat-pending">
-        <div class="stat-card-row">
+    
+    <div class="premium-stat-card">
+        <div class="premium-stat-card-row">
             <div>
-                <div class="stat-label">Pending</div>
-                <div class="stat-value">{{ pending_count }}</div>
+                <div class="premium-stat-value">{{ pending_count }}</div>
+                <div class="premium-stat-label">Pending</div>
             </div>
-            <div class="stat-icon"><i data-lucide="circle" style="width:18px;height:18px;"></i></div>
+            <div class="premium-stat-icon stat-icon-pending">
+                <i data-lucide="circle"></i>
+            </div>
         </div>
-        <div class="stat-progress"><div class="stat-progress-fill" data-pct="{{ ((pending_count / total_count) * 100) | round | int if total_count else 0 }}"></div></div>
+        <div class="premium-stat-progress">
+            <div class="premium-stat-progress-fill fill-pending" data-pct="{{ ((pending_count / total_count) * 100) | round | int if total_count else 0 }}"></div>
+        </div>
     </div>
-    <div class="stat-card stat-working">
-        <div class="stat-card-row">
+    
+    <div class="premium-stat-card">
+        <div class="premium-stat-card-row">
             <div>
-                <div class="stat-label">In Progress</div>
-                <div class="stat-value">{{ working_count }}</div>
+                <div class="premium-stat-value">{{ working_count }}</div>
+                <div class="premium-stat-label">In Progress</div>
             </div>
-            <div class="stat-icon"><i data-lucide="zap" style="width:18px;height:18px;"></i></div>
+            <div class="premium-stat-icon stat-icon-working">
+                <i data-lucide="zap"></i>
+            </div>
         </div>
-        <div class="stat-progress"><div class="stat-progress-fill" data-pct="{{ ((working_count / total_count) * 100) | round | int if total_count else 0 }}"></div></div>
+        <div class="premium-stat-progress">
+            <div class="premium-stat-progress-fill fill-working" data-pct="{{ ((working_count / total_count) * 100) | round | int if total_count else 0 }}"></div>
+        </div>
     </div>
-    <div class="stat-card stat-done">
-        <div class="stat-card-row">
+    
+    <div class="premium-stat-card">
+        <div class="premium-stat-card-row">
             <div>
-                <div class="stat-label">Completed</div>
-                <div class="stat-value">{{ completed_count }}</div>
+                <div class="premium-stat-value">{{ completed_count }}</div>
+                <div class="premium-stat-label">Completed</div>
             </div>
-            <div class="stat-icon"><i data-lucide="check-circle-2" style="width:18px;height:18px;"></i></div>
+            <div class="premium-stat-icon stat-icon-done">
+                <i data-lucide="check-circle-2"></i>
+            </div>
         </div>
-        <div class="stat-progress"><div class="stat-progress-fill" data-pct="{{ completion_pct }}"></div></div>
+        <div class="premium-stat-progress">
+            <div class="premium-stat-progress-fill fill-done" data-pct="{{ completion_pct }}"></div>
+        </div>
     </div>
 </div>
 
-<div class="task-box">
+<div class="task-box animate-slide-up">
 
     <!--  HEADER  -->
     <div class="task-header">
-        <h2>Your Tasks- Plan your day</h2>
+        <h2 class="tasks-workspace-title">Workspace Tasks</h2>
 
         {# Google Calendar connection status #}
         {% if current_user.google_access_token %}
         <div class="google-status-wrapper" id="google-status-wrapper">
-            <button type="button" class="badge badge-done google-status-btn" onclick="toggleGoogleMenu()"
-                id="google-status-btn">
-                <span class="google-dot"></span> Google Connected ▾
+            <button type="button" class="btn-small" onclick="toggleGoogleMenu()" id="google-status-btn">
+                <span class="google-status-dot"></span>
+                Google Connected ▾
             </button>
             <div class="google-dropdown" id="google-dropdown">
                 <form action="{{ url_for('google.disconnect_google') }}" method="POST"
                       data-confirm="Disconnect Google Calendar? Existing task events will stay on your calendar, but new tasks won't sync until you reconnect.">
                     <input type="hidden" name="csrf_token" value="{{ csrf_token() }}"/>
-                    <button type="submit" class="google-disconnect-btn">
-                        <i data-lucide="unplug"
-                            style="width:14px;height:14px;vertical-align:middle;margin-right:4px;"></i>
+                    <button type="submit" class="btn-clear-text">
+                        <i data-lucide="unplug"></i>
                         Disconnect Google
                     </button>
                 </form>
             </div>
         </div>
         {% else %}
-        <a href="{{ url_for('google.connect_google') }}" class="btn-google-connect">
-            <span class="google-icon">G</span> Connect Google
+        <a href="{{ url_for('google.connect_google') }}" class="btn-small btn-small-link">
+            <span class="google-connect-prefix">G</span> Connect Google
         </a>
         {% endif %}
     </div>
 
     <!--  ADD TASK OMNIBAR  -->
-    <form action="{{ url_for('tasks.add_task') }}" method="POST" class="omnibar-form" id="omnibar-form" onsubmit="if(this.dataset.submitting) return false; this.dataset.submitting = true; const btn = this.querySelector('button[type=submit]'); btn.style.opacity = '0.7'; btn.innerHTML = '<i data-lucide=\'loader\' class=\'spin\' style=\'width:16px;height:16px;margin-right:4px;\'></i>Adding...'; if(typeof lucide !== 'undefined') lucide.createIcons(); return true;">
+    <form action="{{ url_for('tasks.add_task') }}" method="POST" class="omnibar-form" id="omnibar-form" onsubmit="if(this.dataset.submitting) return false; this.dataset.submitting = true; const btn = this.querySelector('button[type=submit]'); btn.style.opacity = '0.7'; btn.innerHTML = '<i data-lucide=\'loader\' class=\'spin loader-icon-spin\'></i>Adding...'; if(typeof lucide !== 'undefined') lucide.createIcons(); return true;">
         <input type="hidden" name="csrf_token" value="{{ csrf_token() }}"/>
         
         <div class="omnibar-input-wrapper">
@@ -159,7 +177,7 @@
                         <input type="time" name="time_slot">
                     </div>
                     <button type="submit" class="btn omnibar-submit">
-                        <i data-lucide="arrow-up" style="width:16px;height:16px;margin-right:4px;"></i>
+                        <i data-lucide="arrow-up" class="loader-icon-spin"></i>
                         Add
                     </button>
                 </div>
@@ -167,7 +185,7 @@
         </div>
     </form>
 
-    <div class="divider"></div>
+    <div class="divider-y"></div>
 
     <!--  VIEW CONTROLS  -->
     <div class="view-controls">
@@ -176,40 +194,40 @@
             <div class="day-nav-group">
                 {% if not show_all %}
                 <a href="{{ url_for('tasks.view_tasks', date=prev_date, **nav_args) }}" class="icon-btn" title="Previous Day">
-                    <i data-lucide="chevron-left" style="width:16px;height:16px;"></i>
+                    <i data-lucide="chevron-left"></i>
                 </a>
                 {% endif %}
                 
                 <div class="current-day-display">
-                    <i data-lucide="calendar" style="width:14px;height:14px;color:var(--accent-light);"></i>
+                    <i data-lucide="calendar"></i>
                     <span class="day-label">{{ day_label }}</span>
                 </div>
                 
                 {% if not show_all %}
                 <a href="{{ url_for('tasks.view_tasks', date=next_date, **nav_args) }}" class="icon-btn" title="Next Day">
-                    <i data-lucide="chevron-right" style="width:16px;height:16px;"></i>
+                    <i data-lucide="chevron-right"></i>
                 </a>
                 {% endif %}
                 
                 <div class="day-nav-actions">
-                    <form method="GET" action="{{ url_for('tasks.view_tasks') }}" style="margin:0;display:inline-block;">
+                    <form method="GET" action="{{ url_for('tasks.view_tasks') }}" class="inline-form">
                         {% for k, v in nav_args.items() %}
                         <input type="hidden" name="{{ k }}" value="{{ v }}">
                         {% endfor %}
                         <label class="icon-btn jump-date-btn" title="Jump to Date">
-                            <i data-lucide="calendar-days" style="width:14px;height:14px;"></i>
-                            <input type="date" name="date" value="{{ date_filter or '' }}" onchange="this.form.submit()">
+                            <i data-lucide="calendar-days"></i>
+                            <input type="date" name="date" value="{{ date_filter or '' }}" onchange="this.form.submit()" class="datepicker-overlay-input">
                         </label>
                     </form>
                     
                     {% if not is_today %}
-                    <a href="{{ url_for('tasks.view_tasks', **nav_args) }}" class="btn-small">Today</a>
+                    <a href="{{ url_for('tasks.view_tasks', **nav_args) }}" class="btn-small btn-small-link">Today</a>
                     {% endif %}
                     
                     {% if show_all %}
-                    <a href="{{ url_for('tasks.view_tasks', **nav_args) }}" class="btn-small">Exit All</a>
+                    <a href="{{ url_for('tasks.view_tasks', **nav_args) }}" class="btn-small btn-small-link">Exit All</a>
                     {% else %}
-                    <a href="{{ url_for('tasks.view_tasks', date='all', **nav_args) }}" class="btn-small">Show All</a>
+                    <a href="{{ url_for('tasks.view_tasks', date='all', **nav_args) }}" class="btn-small btn-small-link">Show All</a>
                     {% endif %}
                 </div>
             </div>
@@ -217,12 +235,12 @@
             <!-- Filters Toggle & Export -->
             <div class="view-actions-group">
                 <button type="button" class="btn-small" onclick="document.getElementById('filter-panel').classList.toggle('open')">
-                    <i data-lucide="filter" style="width:14px;height:14px;margin-right:4px;"></i> Filters
+                    <i data-lucide="filter"></i> Filters
                 </button>
                 
                 {% if tasks %}
                 <button type="button" class="btn-small btn-export" onclick="toggleExportPanel()">
-                    <i data-lucide="download" style="width:14px;height:14px;margin-right:4px;"></i> Export
+                    <i data-lucide="download"></i> Export
                 </button>
                 {% endif %}
             </div>
@@ -247,7 +265,7 @@
                 <input type="hidden" name="date" value="{{ date_filter if not show_all else 'all' }}">
                 <button type="submit" class="btn-small">Apply</button>
                 {% if search or status_filter != 'all' or priority_filter != 'all' %}
-                <a href="{{ url_for('tasks.view_tasks') }}" class="btn-small" style="background:var(--danger-soft);color:var(--danger);border-color:var(--danger);text-decoration:none;">Reset</a>
+                <a href="{{ url_for('tasks.view_tasks') }}" class="btn-small btn-small-danger">Reset</a>
                 {% endif %}
             </form>
         </div>
@@ -257,34 +275,32 @@
     {% if tasks %}
     <div class="action-bar-minimal">
         <span class="task-count">{{ tasks|length }} tasks</span>
-        <form method="POST" action="{{ url_for('tasks.clear_tasks') }}" style="display:inline;"
+        <form method="POST" action="{{ url_for('tasks.clear_tasks') }}" class="inline-form"
               data-confirm="Clear ALL your personal tasks? This deletes every personal task at once and cannot be undone.">
             <input type="hidden" name="csrf_token" value="{{ csrf_token() }}"/>
             <button type="submit" class="btn-clear-text" title="Clear all tasks">
-                <i data-lucide="trash-2" style="width:14px;height:14px;margin-right:4px;"></i> Clear All
+                <i data-lucide="trash-2"></i> Clear All
             </button>
         </form>
     </div>
 
     <!--  EXPORT CSV PANEL  -->
-    <div class="export-section" id="export-section" style="display:none;">
+    <div class="export-section" id="export-section">
         <div class="export-panel" id="export-panel">
             <p class="export-label">Select date range</p>
             <div class="export-options">
-                <a href="{{ url_for('tasks.export_csv', range='7') }}" class="export-chip">Last 7 Days</a>
-                <a href="{{ url_for('tasks.export_csv', range='15') }}" class="export-chip">Last 15 Days</a>
-                <a href="{{ url_for('tasks.export_csv', range='30') }}" class="export-chip">1 Month</a>
-                <a href="{{ url_for('tasks.export_csv', range='all') }}" class="export-chip">All Tasks</a>
-                <button type="button" class="export-chip export-chip-custom" onclick="toggleCustomRange()">Custom
-                    Range</button>
+                <a href="{{ url_for('tasks.export_csv', range='7') }}" class="btn-small btn-small-link">Last 7 Days</a>
+                <a href="{{ url_for('tasks.export_csv', range='15') }}" class="btn-small btn-small-link">Last 15 Days</a>
+                <a href="{{ url_for('tasks.export_csv', range='30') }}" class="btn-small btn-small-link">1 Month</a>
+                <a href="{{ url_for('tasks.export_csv', range='all') }}" class="btn-small btn-small-link">All Tasks</a>
+                <button type="button" class="btn-small" onclick="toggleCustomRange()">Custom Range</button>
             </div>
-            <div class="custom-range" id="custom-range" style="display:none;">
-                <input type="date" id="export-start">
-                <span style="color:var(--text-muted);font-size:13px;">to</span>
-                <input type="date" id="export-end">
-                <button type="button" class="btn-small btn-export" onclick="exportCustomCSV()">
-                    <i data-lucide="download"
-                        style="width:14px;height:14px;vertical-align:middle;margin-right:4px;"></i>Download
+            <div class="custom-range" id="custom-range">
+                <input type="date" id="export-start" class="export-date-input">
+                <span class="export-to-text">to</span>
+                <input type="date" id="export-end" class="export-date-input">
+                <button type="button" class="btn-small" onclick="exportCustomCSV()">
+                    <i data-lucide="download"></i>Download
                 </button>
             </div>
         </div>
@@ -296,18 +312,18 @@
     <div class="task-list">
         {% for task in tasks %}
         <div class="task-card prio-{{ task.priority|lower }} status-{{ task.status|lower }}">
-            <div class="task-card-main edit-task-btn" style="cursor: pointer;" data-id="{{ task.id }}" data-title="{{ task.title }}" data-description="{{ task.description or '' }}" data-priority="{{ task.priority }}" data-deadline="{{ task.deadline or '' }}" data-time="{{ task.time_slot or '' }}" title="View & Edit Details">
+            <div class="task-card-main edit-task-btn" data-id="{{ task.id }}" data-title="{{ task.title }}" data-description="{{ task.description or '' }}" data-priority="{{ task.priority }}" data-deadline="{{ task.deadline or '' }}" data-time="{{ task.time_slot or '' }}" title="View & Edit Details">
                 <div class="task-card-header">
                     <h4 class="task-title">{{ task.title }}</h4>
                 </div>
                 <div class="task-card-meta">
                     {% if show_all and task.deadline %}
-                    <span class="task-time" style="margin-right: 12px; padding: 4px 8px; background: var(--surface-elev); border-radius: 6px;">
-                        <i data-lucide="calendar" style="width:12px;height:12px;vertical-align:middle;margin-right:4px;"></i>{{ task.deadline.strftime('%b %d, %Y') }}
+                    <span class="task-deadline-badge">
+                        <i data-lucide="calendar"></i>{{ task.deadline.strftime('%b %d, %Y') }}
                     </span>
                     {% endif %}
                     {% if task.time_slot %}
-                    <span class="task-time"><i data-lucide="clock" style="width:12px;height:12px;vertical-align:middle;margin-right:4px;"></i>{{ task.time_slot.strftime('%I:%M %p') }}</span>
+                    <span class="task-time"><i data-lucide="clock"></i>{{ task.time_slot.strftime('%I:%M %p') }}</span>
                     {% endif %}
                     
                     <div class="task-card-badges">
@@ -331,20 +347,20 @@
             </div>
 
             <div class="task-card-actions">
-                <form action="{{ url_for('tasks.toggle_status', task_id=task.id) }}" method="POST" style="margin:0;">
+                <form action="{{ url_for('tasks.toggle_status', task_id=task.id) }}" method="POST" class="inline-form">
                     <input type="hidden" name="csrf_token" value="{{ csrf_token() }}"/>
                     <input type="hidden" name="next" value="{{ request.url }}"/>
                     <button class="action-btn advance-btn" type="submit" title="Advance Status">
-                        <i data-lucide="arrow-right" style="width:16px;height:16px;"></i>
+                        <i data-lucide="arrow-right"></i>
                     </button>
                 </form>
 
-                <form action="{{ url_for('tasks.delete_task', task_id=task.id) }}" method="POST" style="margin:0;"
+                <form action="{{ url_for('tasks.delete_task', task_id=task.id) }}" method="POST" class="inline-form"
                       data-confirm="Delete this task? This cannot be undone.">
                     <input type="hidden" name="csrf_token" value="{{ csrf_token() }}"/>
                     <input type="hidden" name="next" value="{{ request.url }}"/>
                     <button class="action-btn delete-btn" type="submit" title="Delete Task">
-                        <i data-lucide="trash-2" style="width:16px;height:16px;"></i>
+                        <i data-lucide="trash-2"></i>
                     </button>
                 </form>
             </div>
@@ -356,7 +372,7 @@
     <!--  EMPTY STATE  -->
     <div class="empty-state">
         <div class="empty-state-icon">
-            <i data-lucide="check-circle-2" style="width:48px;height:48px;color:var(--success);"></i>
+            <i data-lucide="check-circle-2"></i>
             <div class="empty-state-glow"></div>
         </div>
         <h3>You're all caught up!</h3>
@@ -376,11 +392,11 @@
         <!-- Modal header -->
         <div class="modal-header">
             <h3>
-                <i data-lucide="pencil-line" style="width:20px;height:20px;vertical-align:middle;margin-right:8px;"></i>
+                <i data-lucide="pencil-line" class="modal-header-icon"></i>
                 Edit Task
             </h3>
             <button type="button" class="modal-close" onclick="closeEditModal()">
-                <i data-lucide="x" style="width:20px;height:20px;"></i>
+                <i data-lucide="x"></i>
             </button>
         </div>
 
@@ -397,7 +413,7 @@
 
                 <div class="form-group">
                     <label for="edit-description">Description</label>
-                    <textarea id="edit-description" name="description" rows="3" placeholder="Add details or notes..." style="width: 100%; padding: 10px; border-radius: 8px; border: 1px solid var(--glass-border); background: var(--surface); color: var(--text); resize: vertical; box-sizing: border-box;"></textarea>
+                    <textarea id="edit-description" name="description" rows="3" placeholder="Add details or notes..." class="modal-textarea"></textarea>
                 </div>
 
                 <div class="modal-row">
@@ -429,7 +445,7 @@
                     Cancel
                 </button>
                 <button type="submit" class="btn modal-save-btn">
-                    <i data-lucide="check" style="width:16px;height:16px;"></i>
+                    <i data-lucide="check"></i>
                     Save Changes
                 </button>
             </div>
@@ -584,7 +600,7 @@
         }
 
         /* Animate stat progress bars from data-pct */
-        document.querySelectorAll('.stat-progress-fill').forEach(function (el) {
+        document.querySelectorAll('.premium-stat-progress-fill, .stat-progress-fill').forEach(function (el) {
             const pct = parseInt(el.getAttribute('data-pct') || '0', 10);
             requestAnimationFrame(function () { el.style.width = pct + '%'; });
         });

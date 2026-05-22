@@ -2,6 +2,26 @@
 {% block title %}{{ project.name }} — HiveFlow{% endblock %}
 
 {% block content %}
+<style>
+.btn-join-call:hover {
+    border-color: #22c55e !important;
+    background: rgba(34, 197, 94, 0.05) !important;
+}
+.live-dot-glow {
+    width: 6px;
+    height: 6px;
+    background: #22c55e;
+    border-radius: 50%;
+    display: inline-block;
+    box-shadow: 0 0 8px #22c55e;
+    animation: livePulse 2s ease-in-out infinite;
+}
+@keyframes livePulse {
+    0%, 100% { opacity: 0.4; }
+    50% { opacity: 1; }
+}
+</style>
+
 <div id="boardUpdateBanner" class="update-banner" style="display:none;">
     <span class="update-banner-msg">
         <i data-lucide="refresh-cw" style="width:14px;height:14px;"></i>
@@ -32,7 +52,11 @@
             <div class="avatar-stack" title="Team members">
                 {% for m in org_members[:4] %}
                 {% if m.user.profile_picture and m.user.profile_picture != 'default.png' %}
-                <img src="{{ url_for('static', filename='uploads/profiles/' + m.user.profile_picture) }}" alt="{{ m.user.name or m.user.username }}" title="{{ m.user.name or m.user.username }}">
+                    {% if m.user.profile_picture.startswith('http://') or m.user.profile_picture.startswith('https://') %}
+                        <img src="{{ m.user.profile_picture }}" alt="{{ m.user.name or m.user.username }}" title="{{ m.user.name or m.user.username }}">
+                    {% else %}
+                        <img src="{{ url_for('static', filename='uploads/profiles/' + m.user.profile_picture) }}" alt="{{ m.user.name or m.user.username }}" title="{{ m.user.name or m.user.username }}">
+                    {% endif %}
                 {% else %}
                 <span title="{{ m.user.name or m.user.username }}">{{ (m.user.name or m.user.username or 'U')[0]|upper }}</span>
                 {% endif %}
@@ -42,6 +66,10 @@
                 {% endif %}
             </div>
             {% endif %}
+            <a href="{{ url_for('meetings.project_meeting', project_id=project.id) }}" class="btn-secondary btn-join-call" style="display: inline-flex; align-items: center; gap: 8px;">
+                <span class="live-dot-glow"></span>
+                <i data-lucide="video" style="width:16px;height:16px; color: #22c55e;"></i> Join Call
+            </a>
             <a href="{{ url_for('discussions.list_discussions', project_id=project.id) }}" class="btn-secondary">
                 <i data-lucide="message-square" style="width:16px;height:16px;"></i> Discussions
             </a>

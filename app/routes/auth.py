@@ -1,13 +1,13 @@
 import os
 import secrets
 import requests
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, date
 from urllib.parse import urlparse, urljoin
 
 from werkzeug.utils import secure_filename
 from flask import Blueprint, render_template, request, redirect, url_for, flash, current_app
 from flask_login import login_user, logout_user, login_required, current_user
-from app.models import User
+from app.models import User, Task
 from app.extensions import db, limiter
 
 BREVO_API_URL = "https://api.brevo.com/v3/smtp/email"
@@ -92,6 +92,82 @@ def _validate_image_upload(file) -> str | None:
     if detected is None:
         return 'File content does not match an allowed image type.'
     return None
+
+
+def _upload_to_supabase(file, unique_filename: str) -> str | None:
+    """Upload a file to Supabase Storage.
+    
+    Returns the public URL if successful, or None if credentials are missing
+    or the upload fails.
+    """
+    supabase_url = os.environ.get('SUPABASE_URL')
+    supabase_key = os.environ.get('SUPABASE_KEY')
+    supabase_bucket = os.environ.get('SUPABASE_STORAGE_BUCKET', 'HiveFlow-assets')
+    
+    if not supabase_url or not supabase_key:
+        return None
+        
+    supabase_url = supabase_url.rstrip('/')
+    file_path = f"profiles/{unique_filename}"
+    upload_url = f"{supabase_url}/storage/v1/object/{supabase_bucket}/{file_path}"
+    
+    file.seek(0)
+    file_data = file.read()
+    file.seek(0)
+    
+    headers = {
+        "Authorization": f"Bearer {supabase_key}",
+        "apikey": supabase_key,
+        "Content-Type": file.mimetype or "image/png",
+        "x-upsert": "true"
+    }
+    
+    try:
+        resp = requests.post(upload_url, headers=headers, data=file_data, timeout=30)
+        if resp.status_code == 200:
+            return f"{supabase_url}/storage/v1/object/public/{supabase_bucket}/{file_path}"
+        else:
+            print(f"[SUPABASE UPLOAD ERROR] {resp.status_code}: {resp.text[:300]}")
+            return None
+    except Exception as e:
+        print(f"[SUPABASE UPLOAD EXCEPTION] {type(e).__name__}: {e}")
+        return None
+
+
+def _delete_from_supabase(profile_picture_url: str) -> bool:
+    """Delete a profile picture from Supabase Storage if it is a cloud URL."""
+    supabase_url = os.environ.get('SUPABASE_URL')
+    supabase_key = os.environ.get('SUPABASE_KEY')
+    supabase_bucket = os.environ.get('SUPABASE_STORAGE_BUCKET', 'HiveFlow-assets')
+    
+    if not supabase_url or not supabase_key or not profile_picture_url:
+        return False
+        
+    supabase_url = supabase_url.rstrip('/')
+    prefix = f"{supabase_url}/storage/v1/object/public/{supabase_bucket}/"
+    
+    if not profile_picture_url.startswith(prefix):
+        return False
+        
+    file_path = profile_picture_url[len(prefix):]
+    delete_url = f"{supabase_url}/storage/v1/object/{supabase_bucket}/{file_path}"
+    
+    headers = {
+        "Authorization": f"Bearer {supabase_key}",
+        "apikey": supabase_key,
+    }
+    
+    try:
+        resp = requests.delete(delete_url, headers=headers, timeout=30)
+        if resp.status_code == 200:
+            return True
+        else:
+            print(f"[SUPABASE DELETE ERROR] {resp.status_code}: {resp.text[:300]}")
+            return False
+    except Exception as e:
+        print(f"[SUPABASE DELETE EXCEPTION] {type(e).__name__}: {e}")
+        return False
+
 
 
 def validate_password(password: str) -> str | None:
@@ -485,19 +561,104 @@ def reset_password():
 @auth_bp.route('/profile', methods=['GET'])
 @login_required
 def profile():
+    # Keep track of stats for personal tasks only
+    my_tasks = [t for t in current_user.tasks if t.project_id is None]
+
     today = datetime.now().date()
-    total_tasks = len(current_user.tasks)
-    completed_tasks = sum(1 for t in current_user.tasks if t.status == 'Completed')
+    total_tasks = len(my_tasks)
+    completed_tasks = sum(1 for t in my_tasks if t.status == 'Completed')
     orgs_joined = len(current_user.org_memberships)
     
     # Calculate tasks due today (not completed)
-    due_today = sum(1 for t in current_user.tasks if t.deadline == today and t.status != 'Completed')
+    due_today = sum(1 for t in my_tasks if t.deadline == today and t.status != 'Completed')
     
+    # --- Activity Log and Streaks ---
+    activity_counts = {}
+    for task in my_tasks:
+        if task.status == 'Completed':
+            if task.deadline:
+                d_str = task.deadline.isoformat()
+            elif task.created_at:
+                if isinstance(task.created_at, datetime):
+                    d_str = task.created_at.date().isoformat()
+                else:
+                    d_str = task.created_at.isoformat()
+            else:
+                continue
+            activity_counts[d_str] = activity_counts.get(d_str, 0) + 1
+
+    # Current streak (going backwards from today or yesterday)
+    streak = 0
+    check_date = today
+    if activity_counts.get(check_date.isoformat(), 0) > 0:
+        while activity_counts.get(check_date.isoformat(), 0) > 0:
+            streak += 1
+            check_date -= timedelta(days=1)
+    else:
+        check_date = today - timedelta(days=1)
+        while activity_counts.get(check_date.isoformat(), 0) > 0:
+            streak += 1
+            check_date -= timedelta(days=1)
+
+    # Longest streak calculation
+    max_streak = 0
+    temp_streak = 0
+    sorted_dates = sorted([datetime.strptime(d, "%Y-%m-%d").date() for d in activity_counts.keys()])
+    if sorted_dates:
+        last_date = None
+        for d in sorted_dates:
+            if last_date is None:
+                temp_streak = 1
+            elif (d - last_date).days == 1:
+                temp_streak += 1
+            elif (d - last_date).days > 1:
+                if temp_streak > max_streak:
+                    max_streak = temp_streak
+                temp_streak = 1
+            last_date = d
+        if temp_streak > max_streak:
+            max_streak = temp_streak
+
+    # Generate 53 weeks of activity blocks (371 days) ending on today's week saturday
+    # Let's align start_date to the Sunday of 52 weeks ago
+    start_date = today - timedelta(days=364 + (today.weekday() + 1) % 7)
+    
+    flat_days = []
+    current_date = start_date
+    while current_date <= today:
+        date_str = current_date.isoformat()
+        count = activity_counts.get(date_str, 0)
+        
+        # Level mapping: 0, 1, 2, 3, 4
+        if count == 0:
+            level = 0
+        elif count <= 2:
+            level = 1
+        elif count <= 4:
+            level = 2
+        elif count <= 6:
+            level = 3
+        else:
+            level = 4
+            
+        flat_days.append({
+            'date': date_str,
+            'count': count,
+            'level': level,
+            'day': current_date.day,
+            'weekday': current_date.weekday(),
+            'month': current_date.strftime('%b') if current_date.day == 1 or current_date == start_date else ''
+        })
+        current_date += timedelta(days=1)
+        
     return render_template('profile.html', 
                            total_tasks=total_tasks, 
                            completed_tasks=completed_tasks, 
                            orgs_joined=orgs_joined,
-                           due_today=due_today)
+                           due_today=due_today,
+                           streak=streak,
+                           max_streak=max_streak,
+                           flat_days=flat_days)
 
 # ─── Profile Update ──────────────────────────────────────
 
@@ -523,9 +684,15 @@ def profile_update():
     
     if remove_picture:
         if current_user.profile_picture and current_user.profile_picture != 'default.png':
-            old_file_path = os.path.join(current_app.root_path, 'static', 'uploads', 'profiles', current_user.profile_picture)
-            if os.path.exists(old_file_path):
-                os.remove(old_file_path)
+            if current_user.profile_picture.startswith('http://') or current_user.profile_picture.startswith('https://'):
+                _delete_from_supabase(current_user.profile_picture)
+            else:
+                old_file_path = os.path.join(current_app.root_path, 'static', 'uploads', 'profiles', current_user.profile_picture)
+                if os.path.exists(old_file_path):
+                    try:
+                        os.remove(old_file_path)
+                    except Exception as e:
+                        print(f"[LOCAL DELETE EXCEPTION] {e}")
         current_user.profile_picture = 'default.png'
     else:
         file = request.files.get('profile_picture')
@@ -544,23 +711,47 @@ def profile_update():
                 flash(upload_error, 'danger')
                 return redirect(request.referrer or url_for('tasks.view_tasks'))
 
-            # Delete old profile picture if it exists
-            if current_user.profile_picture and current_user.profile_picture != 'default.png':
-                old_file_path = os.path.join(current_app.root_path, 'static', 'uploads', 'profiles', current_user.profile_picture)
-                if os.path.exists(old_file_path):
-                    os.remove(old_file_path)
-
             filename = secure_filename(file.filename)
             # Create a collision-proof unique filename
             ext = filename.rsplit('.', 1)[1].lower() if '.' in filename else 'jpg'
             unique_filename = f"user_{current_user.id}_{secrets.token_hex(8)}.{ext}"
 
-            upload_folder = os.path.join(current_app.root_path, 'static', 'uploads', 'profiles')
-            os.makedirs(upload_folder, exist_ok=True)
+            # Try uploading to Supabase first if credentials are set
+            cloud_url = _upload_to_supabase(file, unique_filename)
+            if cloud_url:
+                # Delete old profile picture if it exists (both cloud or local)
+                if current_user.profile_picture and current_user.profile_picture != 'default.png':
+                    if current_user.profile_picture.startswith('http://') or current_user.profile_picture.startswith('https://'):
+                        _delete_from_supabase(current_user.profile_picture)
+                    else:
+                        old_file_path = os.path.join(current_app.root_path, 'static', 'uploads', 'profiles', current_user.profile_picture)
+                        if os.path.exists(old_file_path):
+                            try:
+                                os.remove(old_file_path)
+                            except Exception as e:
+                                print(f"[LOCAL DELETE EXCEPTION] {e}")
+                
+                current_user.profile_picture = cloud_url
+            else:
+                # Fall back to local filesystem storage
+                # Delete old profile picture if it exists (both cloud or local)
+                if current_user.profile_picture and current_user.profile_picture != 'default.png':
+                    if current_user.profile_picture.startswith('http://') or current_user.profile_picture.startswith('https://'):
+                        _delete_from_supabase(current_user.profile_picture)
+                    else:
+                        old_file_path = os.path.join(current_app.root_path, 'static', 'uploads', 'profiles', current_user.profile_picture)
+                        if os.path.exists(old_file_path):
+                            try:
+                                os.remove(old_file_path)
+                            except Exception as e:
+                                print(f"[LOCAL DELETE EXCEPTION] {e}")
 
-            file_path = os.path.join(upload_folder, unique_filename)
-            file.save(file_path)
-            current_user.profile_picture = unique_filename
+                upload_folder = os.path.join(current_app.root_path, 'static', 'uploads', 'profiles')
+                os.makedirs(upload_folder, exist_ok=True)
+
+                file_path = os.path.join(upload_folder, unique_filename)
+                file.save(file_path)
+                current_user.profile_picture = unique_filename
     
     if email and email != current_user.email:
         existing = User.query.filter_by(email=email).first()

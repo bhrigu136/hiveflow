@@ -76,6 +76,8 @@ def create_app():
 
     # Jinja global
     app.jinja_env.globals['current_year'] = datetime.now().year
+    app.jinja_env.globals['pusher_key'] = os.environ.get('PUSHER_KEY', '')
+    app.jinja_env.globals['pusher_cluster'] = os.environ.get('PUSHER_CLUSTER', 'ap2')
 
     # ── HTTP Security Headers ──────────────────────────────────────
     @app.after_request
@@ -115,6 +117,8 @@ def create_app():
     from app.routes.projects import projects_bp
     from app.routes.discussions import discussions_bp
     from app.routes.notifications import notifications_bp
+    from app.routes.files import files_bp
+    from app.routes.meetings import meetings_bp
 
     app.register_blueprint(auth_bp)
     app.register_blueprint(tasks_bp)
@@ -123,6 +127,8 @@ def create_app():
     app.register_blueprint(projects_bp)
     app.register_blueprint(discussions_bp)
     app.register_blueprint(notifications_bp)
+    app.register_blueprint(files_bp)
+    app.register_blueprint(meetings_bp)
 
     # Serve robots.txt from the static folder at the root path
     from flask import send_from_directory

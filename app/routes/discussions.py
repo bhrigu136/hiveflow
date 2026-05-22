@@ -119,6 +119,22 @@ def add_discussion_comment(discussion_id):
 
     db.session.commit()
 
+    # Trigger WebSocket Push Event for real-time instant rendering
+    from app.extensions import get_pusher
+    pusher_client = get_pusher()
+    if pusher_client:
+        try:
+            pusher_client.trigger(
+                f"project-{discussion.project.id}",
+                "new-comment",
+                {
+                    'discussion_id': discussion.id,
+                    'comment': _comment_to_dict(comment)
+                }
+            )
+        except Exception:
+            pass
+
     if is_ajax:
         return jsonify({'ok': True, 'comment': _comment_to_dict(comment)})
     return redirect(url_for('discussions.view_discussion', discussion_id=discussion.id))
@@ -165,6 +181,23 @@ def add_task_comment(task_id):
                 create_notification(task.created_by, f"{current_user.name or current_user.username} commented on a task you created: {task.title}", url_for('projects.dashboard', project_id=task.project_id))
             
         db.session.commit()
+
+        # Trigger WebSocket event if part of a project
+        if task.project_id:
+            from app.extensions import get_pusher
+            pusher_client = get_pusher()
+            if pusher_client:
+                try:
+                    pusher_client.trigger(
+                        f"project-{task.project_id}",
+                        "new-task-comment",
+                        {
+                            'task_id': task.id,
+                            'comment': _comment_to_dict(comment)
+                        }
+                    )
+                except Exception:
+                    pass
         
     # Redirect back to wherever we came from
     next_url = request.form.get('next')

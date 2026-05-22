@@ -181,3 +181,25 @@ class Notification(db.Model):
     created_at = db.Column(db.DateTime, default=lambda: datetime.now(timezone.utc), index=True)
 
     user_rel = db.relationship('User', backref=db.backref('notifications', lazy='dynamic', cascade='all, delete-orphan'))
+
+
+class FileAttachment(db.Model):
+    id = db.Column(db.Integer, primary_key=True)
+    filename = db.Column(db.String(255), nullable=False)
+    file_url = db.Column(db.String(512), nullable=False)
+    file_size = db.Column(db.Integer, nullable=True) # in bytes
+    mime_type = db.Column(db.String(100), nullable=True)
+    uploaded_by = db.Column(db.Integer, db.ForeignKey('user.id'), nullable=False, index=True)
+    created_at = db.Column(db.DateTime, default=lambda: datetime.now(timezone.utc), index=True)
+
+    # Optional context scope
+    project_id = db.Column(db.Integer, db.ForeignKey('project.id'), nullable=True, index=True)
+    task_id = db.Column(db.Integer, db.ForeignKey('task.id'), nullable=True, index=True)
+    discussion_id = db.Column(db.Integer, db.ForeignKey('discussion.id'), nullable=True, index=True)
+
+    # Explicit relationships
+    uploader = db.relationship('User', backref=db.backref('file_attachments', lazy='dynamic', cascade='all, delete-orphan'), foreign_keys=[uploaded_by])
+    project_rel = db.relationship('Project', backref=db.backref('file_attachments', lazy='dynamic', cascade='all, delete-orphan'), foreign_keys=[project_id])
+    task_rel = db.relationship('Task', backref=db.backref('file_attachments', lazy='dynamic', cascade='all, delete-orphan'), foreign_keys=[task_id])
+    discussion_rel = db.relationship('Discussion', backref=db.backref('file_attachments', lazy='dynamic', cascade='all, delete-orphan'), foreign_keys=[discussion_id])
+

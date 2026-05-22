@@ -51,7 +51,7 @@
                     <div style="font-size: 11px; color: var(--text-muted);"><time datetime="{{ comment.created_at.strftime('%Y-%m-%dT%H:%M:%SZ') }}" data-fmt="short">{{ comment.created_at.strftime('%b %d, %I:%M %p') }}</time></div>
                 </div>
             </div>
-            <div style="line-height: 1.5; color: var(--text); font-size: 14px; white-space: pre-wrap;">{{ comment.content }}</div>
+            <div class="comment-body" style="line-height: 1.5; color: var(--text); font-size: 14px; white-space: pre-wrap;">{{ comment.content }}</div>
         </div>
         {% endfor %}
     </div>
@@ -62,6 +62,17 @@
             <div style="margin-bottom: 15px;">
                 <textarea name="content" required rows="3" placeholder="Add a comment..." style="width: 100%; padding: 12px; border-radius: 8px; border: 1px solid var(--glass-border); background: var(--surface); color: var(--text); box-sizing: border-box; resize: vertical; font-family: inherit;"></textarea>
             </div>
+            
+            <!-- Direct Cloud Upload Drag & Drop Bucket -->
+            <div style="margin-bottom: 15px;">
+                <div id="dropzone" style="border: 2px dashed var(--glass-border); border-radius: 8px; padding: 15px; text-align: center; background: rgba(255,255,255,0.01); cursor: pointer; transition: all 0.2s;" onmouseover="this.style.background='rgba(255,255,255,0.03)'" onmouseout="this.style.background='rgba(255,255,255,0.01)'">
+                    <i data-lucide="upload-cloud" style="width: 20px; height: 20px; color: var(--text-muted); margin-bottom: 5px; vertical-align: middle;"></i>
+                    <span style="font-size: 13px; color: var(--text); margin-left: 8px;">Drag & drop photos or code files here, or <span style="color: var(--accent); font-weight: 500;">browse</span></span>
+                    <input type="file" id="fileInput" multiple style="display: none;">
+                </div>
+                <div id="uploadList" style="display: flex; flex-direction: column; gap: 8px; margin-top: 10px;"></div>
+            </div>
+
             <div style="text-align: right;">
                 <button type="submit" class="btn primary">Post Comment</button>
             </div>
@@ -78,9 +89,13 @@
     from { opacity: 0; transform: translateY(8px); }
     to   { opacity: 1; transform: translateY(0); }
 }
+@keyframes spin {
+    to { transform: rotate(360deg); }
+}
 .comment-bubble.new { animation: commentAppear 0.3s ease-out; }
 </style>
 
+<script src="https://js.pusher.com/8.0.1/pusher.min.js"></script>
 <script>
 (function() {
     var section = document.querySelector('.comments-section');
@@ -96,11 +111,192 @@
     var submitBtn = form ? form.querySelector('button[type="submit"]') : null;
     var liveIndicator = document.getElementById('liveIndicator');
 
+    var dropzone = document.getElementById('dropzone');
+    var fileInput = document.getElementById('fileInput');
+    var uploadList = document.getElementById('uploadList');
+
     function escapeHTML(s) {
         return String(s).replace(/[&<>"']/g, function(c) {
             return ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' })[c];
         });
     }
+
+    // Drag and Drop & Cloud Presigned upload implementation
+    if (dropzone && fileInput && uploadList) {
+        dropzone.addEventListener('click', function() {
+            fileInput.click();
+        });
+
+        fileInput.addEventListener('change', function(e) {
+            handleFiles(e.target.files);
+        });
+
+        dropzone.addEventListener('dragover', function(e) {
+            e.preventDefault();
+            dropzone.style.borderColor = 'var(--accent)';
+            dropzone.style.background = 'rgba(255,255,255,0.05)';
+        });
+
+        ['dragleave', 'dragend'].forEach(function(evt) {
+            dropzone.addEventListener(evt, function(e) {
+                e.preventDefault();
+                dropzone.style.borderColor = 'var(--glass-border)';
+                dropzone.style.background = 'rgba(255,255,255,0.01)';
+            });
+        });
+
+        dropzone.addEventListener('drop', function(e) {
+            e.preventDefault();
+            dropzone.style.borderColor = 'var(--glass-border)';
+            dropzone.style.background = 'rgba(255,255,255,0.01)';
+            if (e.dataTransfer.files) {
+                handleFiles(e.dataTransfer.files);
+            }
+        });
+    }
+
+    function handleFiles(files) {
+        if (!files || !files.length) return;
+        Array.from(files).forEach(function(file) {
+            uploadFile(file);
+        });
+    }
+
+    function uploadFile(file) {
+        var row = document.createElement('div');
+        row.style.cssText = 'display:flex;align-items:center;justify-content:space-between;background:rgba(255,255,255,0.02);border:1px solid var(--glass-border);padding:8px 12px;border-radius:6px;font-size:12px;flex-wrap:wrap;gap:4px;';
+        
+        var nameSpan = document.createElement('span');
+        nameSpan.style.cssText = 'font-weight:500;color:var(--text);overflow:hidden;text-overflow:ellipsis;white-space:nowrap;max-width:60%;';
+        nameSpan.textContent = file.name;
+
+        var statusSpan = document.createElement('span');
+        statusSpan.style.cssText = 'color:var(--text-muted);display:flex;align-items:center;gap:6px;';
+        statusSpan.innerHTML = '<i data-lucide="loader" style="width:14px;height:14px;animation:spin 1s linear infinite;display:inline-block;"></i> Uploading...';
+        
+        row.appendChild(nameSpan);
+        row.appendChild(statusSpan);
+        uploadList.appendChild(row);
+        
+        if (window.lucide) lucide.createIcons({node: row});
+
+        var csrfToken = form ? form.querySelector('input[name="csrf_token"]').value : '';
+
+        fetch('/api/files/sign-upload', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'X-CSRFToken': csrfToken
+            },
+            body: JSON.stringify({
+                filename: file.name,
+                mime_type: file.type || 'application/octet-stream',
+                project_id: '{{ discussion.project_id }}'
+            })
+        })
+        .then(function(r) {
+            if (!r.ok) return r.json().then(function(err) { throw new Error(err.error || 'Sign failed'); });
+            return r.json();
+        })
+        .then(function(data) {
+            var uploadUrl = data.upload_url;
+            var publicUrl = data.public_url;
+
+            return fetch(uploadUrl, {
+                method: 'PUT',
+                body: file,
+                headers: {
+                    'Content-Type': file.type || 'application/octet-stream'
+                }
+            })
+            .then(function(uploadRes) {
+                if (!uploadRes.ok) throw new Error('Storage upload failed');
+                return publicUrl;
+            });
+        })
+        .then(function(publicUrl) {
+            return fetch('/api/files/register', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'X-CSRFToken': csrfToken
+                },
+                body: JSON.stringify({
+                    filename: file.name,
+                    file_url: publicUrl,
+                    file_size: file.size,
+                    mime_type: file.type || 'application/octet-stream',
+                    project_id: '{{ discussion.project_id }}',
+                    discussion_id: discussionId
+                })
+            })
+            .then(function(regRes) {
+                if (!regRes.ok) return regRes.json().then(function(err) { throw new Error(err.error || 'Register failed'); });
+                return regRes.json();
+            })
+            .then(function() {
+                var markdown = '';
+                if (file.type.startsWith('image/')) {
+                    markdown = '![' + file.name + '](' + publicUrl + ')';
+                } else {
+                    markdown = '[' + file.name + '](' + publicUrl + ')';
+                }
+                
+                if (textarea) {
+                    var val = textarea.value;
+                    textarea.value = val ? val + '\n' + markdown : markdown;
+                }
+
+                statusSpan.style.color = '#4ade80';
+                statusSpan.innerHTML = '<i data-lucide="check" style="width:14px;height:14px;"></i> Done';
+                if (window.lucide) lucide.createIcons({node: row});
+
+                setTimeout(function() {
+                    row.style.transition = 'all 0.5s';
+                    row.style.opacity = '0';
+                    setTimeout(function() {
+                        row.remove();
+                    }, 500);
+                }, 2000);
+            });
+        })
+        .catch(function(err) {
+            console.error('File upload failed:', err);
+            statusSpan.style.color = '#f87171';
+            statusSpan.innerHTML = '<i data-lucide="x" style="width:14px;height:14px;"></i> Error';
+            if (window.lucide) lucide.createIcons({node: row});
+            
+            var errDiv = document.createElement('div');
+            errDiv.style.cssText = 'color:#f87171;font-size:10px;margin-top:4px;width:100%;';
+            errDiv.textContent = err.message || 'Upload failed. Check your config.';
+            row.appendChild(errDiv);
+        });
+    }
+
+    function formatMarkdownAttachments(el) {
+        var content = el.innerHTML;
+        // Parse images first with placeholders
+        content = content.replace(/!\[(.*?)\]\((.*?)\)/g, function(match, name, url) {
+            return 'IMAGE_PLACEHOLDER_START' + url + 'IMAGE_PLACEHOLDER_MID' + name + 'IMAGE_PLACEHOLDER_END';
+        });
+        // Parse links next (since images are now placeholders and don't match the link regex)
+        content = content.replace(/\[(.*?)\]\((.*?)\)/g, function(match, name, url) {
+            return '<div style="margin-top: 8px;"><a href="' + url + '" target="_blank" style="display: inline-flex; align-items: center; gap: 8px; background: rgba(255,255,255,0.03); border: 1px solid var(--glass-border); border-radius: 6px; padding: 8px 16px; text-decoration: none; color: var(--accent); font-size: 13px; font-weight: 500; transition: all 0.2s; max-width: 100%; word-break: break-all;" onmouseover="this.style.background=\'rgba(255,255,255,0.06)\'" onmouseout="this.style.background=\'rgba(255,255,255,0.03)\'"><i data-lucide="file-text" style="width: 15px; height: 15px; color: var(--text-muted);"></i> ' + escapeHTML(name) + '</a></div>';
+        });
+        // Restore images into full HTML
+        content = content.replace(/IMAGE_PLACEHOLDER_START(.*?)IMAGE_PLACEHOLDER_MID(.*?)IMAGE_PLACEHOLDER_END/g, function(match, url, name) {
+            return '<div style="margin-top: 10px;"><img src="' + url + '" alt="' + name + '" style="max-width: 100%; max-height: 300px; border-radius: 8px; border: 1px solid var(--glass-border); display: block; box-shadow: 0 4px 12px rgba(0,0,0,0.15);"></div>';
+        });
+        el.innerHTML = content;
+        if (window.lucide) {
+            lucide.createIcons();
+        }
+    }
+
+    // Format all initially loaded comments on page load
+    document.querySelectorAll('.comment-body').forEach(function(el) {
+        formatMarkdownAttachments(el);
+    });
 
     function renderComment(c) {
         var div = document.createElement('div');
@@ -119,7 +315,7 @@
             +     '</div>'
             +   '</div>'
             + '</div>'
-            + '<div style="line-height:1.5;color:var(--text);font-size:14px;white-space:pre-wrap;">' + escapeHTML(c.content) + '</div>';
+            + '<div class="comment-body" style="line-height:1.5;color:var(--text);font-size:14px;white-space:pre-wrap;">' + escapeHTML(c.content) + '</div>';
         return div;
     }
 
@@ -127,9 +323,13 @@
         if (!comments.length) return;
         var nearBottom = (window.innerHeight + window.scrollY) >= (document.body.offsetHeight - 200);
         comments.forEach(function(c) {
-            // Avoid double-inserting if a poll races with our optimistic POST
             if (list.querySelector('[data-comment-id="' + c.id + '"]')) return;
-            list.appendChild(renderComment(c));
+            var commentDiv = renderComment(c);
+            list.appendChild(commentDiv);
+            var body = commentDiv.querySelector('.comment-body');
+            if (body) {
+                formatMarkdownAttachments(body);
+            }
         });
         if (countEl) countEl.textContent = list.querySelectorAll('.comment-bubble').length;
         if (nearBottom) window.scrollTo({ top: document.body.scrollHeight, behavior: 'smooth' });
@@ -200,19 +400,48 @@
         });
     }
 
-    // Poll every 4s when tab is visible; back off to 15s when hidden
-    var visibleInterval = 4000;
-    var hiddenInterval = 15000;
-    var timer = setInterval(poll, visibleInterval);
-    document.addEventListener('visibilitychange', function() {
-        clearInterval(timer);
-        if (document.hidden) {
-            timer = setInterval(poll, hiddenInterval);
-        } else {
-            poll();
-            timer = setInterval(poll, visibleInterval);
+    // Setup Real-Time WebSockets via Pusher with absolute fallback to polling if keys are missing
+    var pusherKey = '{{ pusher_key }}';
+    var pusherCluster = '{{ pusher_cluster }}';
+
+    if (pusherKey && pusherKey.trim() !== '' && pusherKey.indexOf('your-') === -1) {
+        try {
+            var pusher = new Pusher(pusherKey, {
+                cluster: pusherCluster,
+                forceTLS: true
+            });
+            var channel = pusher.subscribe('project-{{ discussion.project_id }}');
+            channel.bind('new-comment', function(data) {
+                if (data.discussion_id == discussionId) {
+                    if (data.comment.id > lastId) {
+                        lastId = data.comment.id;
+                    }
+                    appendNew([data.comment]);
+                }
+            });
+        } catch (e) {
+            console.error('Failed to init Pusher sockets, falling back to polling:', e);
+            startPollingFallback();
         }
-    });
+    } else {
+        startPollingFallback();
+    }
+
+    function startPollingFallback() {
+        // Poll every 4s when tab is visible; back off to 15s when hidden
+        var visibleInterval = 4000;
+        var hiddenInterval = 15000;
+        var timer = setInterval(poll, visibleInterval);
+        document.addEventListener('visibilitychange', function() {
+            clearInterval(timer);
+            if (document.hidden) {
+                timer = setInterval(poll, hiddenInterval);
+            } else {
+                poll();
+                timer = setInterval(poll, visibleInterval);
+            }
+        });
+    }
 })();
 </script>
 {% endblock %}
