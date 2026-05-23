@@ -22,20 +22,39 @@
     <!-- Theme Loader Script - Run before rendering to prevent flashing -->
     <script>
         (function() {
-            // Determine theme: use localStorage if available, otherwise use server preference (authenticated users)
-            let theme = localStorage.getItem('theme');
+            // Read the user's stored preference: 'light' | 'dark' | 'system'
+            let preference = localStorage.getItem('theme');
 
             {% if current_user.is_authenticated %}
-            // If user is authenticated and no localStorage theme, use their preference
-            if (!theme) {
-                theme = '{{ current_user.theme_preference or "light" }}';
-                localStorage.setItem('theme', theme);
+            if (!preference) {
+                preference = '{{ current_user.theme_preference or "light" }}';
+                localStorage.setItem('theme', preference);
             }
             {% endif %}
 
-            // Default to light if no theme is set
-            theme = theme || 'light';
-            document.documentElement.setAttribute('data-theme', theme);
+            if (!['light', 'dark', 'system'].includes(preference)) preference = 'light';
+
+            const resolve = (pref) => {
+                if (pref === 'system') {
+                    return (window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches) ? 'dark' : 'light';
+                }
+                return pref;
+            };
+
+            document.documentElement.setAttribute('data-theme', resolve(preference));
+
+            // If preference is 'system', keep the active theme synced when the OS toggles
+            if (window.matchMedia) {
+                const mq = window.matchMedia('(prefers-color-scheme: dark)');
+                const handler = () => {
+                    const current = localStorage.getItem('theme') || 'light';
+                    if (current === 'system') {
+                        document.documentElement.setAttribute('data-theme', resolve('system'));
+                    }
+                };
+                if (mq.addEventListener) mq.addEventListener('change', handler);
+                else if (mq.addListener) mq.addListener(handler);
+            }
         })();
     </script>
 </head>

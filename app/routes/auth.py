@@ -5,7 +5,7 @@ from datetime import datetime, timedelta, date
 from urllib.parse import urlparse, urljoin
 
 from werkzeug.utils import secure_filename
-from flask import Blueprint, render_template, request, redirect, url_for, flash, current_app
+from flask import Blueprint, render_template, request, redirect, url_for, flash, current_app, jsonify
 from flask_login import login_user, logout_user, login_required, current_user
 from app.models import User, Task
 from app.extensions import db, limiter
@@ -668,6 +668,21 @@ def profile():
                            max_streak=max_streak,
                            flat_days=flat_days)
 
+# ─── Theme Update (AJAX) ─────────────────────────────────
+
+@auth_bp.route('/theme_update', methods=['POST'])
+@login_required
+def theme_update():
+    """Persist the user's theme preference without reloading the page."""
+    data = request.get_json(silent=True) or {}
+    theme = (data.get('theme') or '').strip().lower()
+    if theme not in ('dark', 'light', 'system'):
+        return jsonify(ok=False, error='invalid theme'), 400
+    current_user.theme_preference = theme
+    db.session.commit()
+    return jsonify(ok=True, theme=theme)
+
+
 # ─── Profile Update ──────────────────────────────────────
 
 @auth_bp.route('/profile_update', methods=['POST'])
@@ -681,7 +696,7 @@ def profile_update():
     confirm_password = request.form.get('confirm_password', '')
 
     # Update theme preference
-    if theme in ['dark', 'light']:
+    if theme in ['dark', 'light', 'system']:
         current_user.theme_preference = theme
 
     # Update basic info

@@ -137,22 +137,106 @@
                 </div>
 
                 <div class="premium-section-body">
-                    <div class="theme-selector-grid">
-                        <!-- Dark Theme Option -->
-                        <label for="theme_dark" class="theme-selector-label" id="dark_label">
-                            <input type="radio" id="theme_dark" name="theme" value="dark" class="theme-radio-input" {% if current_user.theme_preference == 'dark' %}checked{% endif %}>
-                            <div>
-                                <h4 class="theme-label-title">Dark Theme</h4>
-                                <p class="theme-label-desc">Easy on the eyes, modern look</p>
+                    <div class="theme-section-intro">
+                        <p class="avatar-upload-subtitle" style="margin: 0;">Choose how HiveFlow looks. Changes apply and save instantly.</p>
+                        <span id="theme_save_indicator" class="theme-save-indicator" aria-live="polite">
+                            <span class="theme-save-indicator-icon" aria-hidden="true"></span>
+                            <span class="theme-save-indicator-label">Saved</span>
+                        </span>
+                    </div>
+
+                    <div class="theme-selector-grid" role="radiogroup" aria-label="Theme selection">
+                        <!-- Light Theme -->
+                        <label for="theme_light" class="theme-card" id="card_light" data-theme-value="light">
+                            <input type="radio" id="theme_light" name="theme" value="light" class="theme-radio-input" {% if current_user.theme_preference == 'light' %}checked{% endif %}>
+                            <div class="theme-card-preview theme-preview-light" aria-hidden="true">
+                                <div class="tp-sidebar">
+                                    <div class="tp-dot"></div>
+                                    <div class="tp-mini"></div>
+                                    <div class="tp-mini"></div>
+                                    <div class="tp-mini"></div>
+                                </div>
+                                <div class="tp-content">
+                                    <div class="tp-bar tp-bar-accent"></div>
+                                    <div class="tp-bar"></div>
+                                    <div class="tp-bar tp-bar-sm"></div>
+                                    <div class="tp-row">
+                                        <div class="tp-chip"></div>
+                                        <div class="tp-chip"></div>
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="theme-card-meta">
+                                <div>
+                                    <h4 class="theme-card-title">
+                                        <i data-lucide="sun"></i> Light
+                                    </h4>
+                                    <p class="theme-card-desc">Bright and clean</p>
+                                </div>
+                                <span class="theme-card-check" aria-hidden="true">
+                                    <i data-lucide="check"></i>
+                                </span>
                             </div>
                         </label>
 
-                        <!-- Light Theme Option -->
-                        <label for="theme_light" class="theme-selector-label" id="light_label">
-                            <input type="radio" id="theme_light" name="theme" value="light" class="theme-radio-input" {% if current_user.theme_preference == 'light' %}checked{% endif %}>
-                            <div>
-                                <h4 class="theme-label-title">Light Theme</h4>
-                                <p class="theme-label-desc">Bright and clean interface</p>
+                        <!-- Dark Theme -->
+                        <label for="theme_dark" class="theme-card" id="card_dark" data-theme-value="dark">
+                            <input type="radio" id="theme_dark" name="theme" value="dark" class="theme-radio-input" {% if current_user.theme_preference == 'dark' %}checked{% endif %}>
+                            <div class="theme-card-preview theme-preview-dark" aria-hidden="true">
+                                <div class="tp-sidebar">
+                                    <div class="tp-dot"></div>
+                                    <div class="tp-mini"></div>
+                                    <div class="tp-mini"></div>
+                                    <div class="tp-mini"></div>
+                                </div>
+                                <div class="tp-content">
+                                    <div class="tp-bar tp-bar-accent"></div>
+                                    <div class="tp-bar"></div>
+                                    <div class="tp-bar tp-bar-sm"></div>
+                                    <div class="tp-row">
+                                        <div class="tp-chip"></div>
+                                        <div class="tp-chip"></div>
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="theme-card-meta">
+                                <div>
+                                    <h4 class="theme-card-title">
+                                        <i data-lucide="moon"></i> Dark
+                                    </h4>
+                                    <p class="theme-card-desc">Easy on the eyes</p>
+                                </div>
+                                <span class="theme-card-check" aria-hidden="true">
+                                    <i data-lucide="check"></i>
+                                </span>
+                            </div>
+                        </label>
+
+                        <!-- System Theme -->
+                        <label for="theme_system" class="theme-card" id="card_system" data-theme-value="system">
+                            <input type="radio" id="theme_system" name="theme" value="system" class="theme-radio-input" {% if current_user.theme_preference == 'system' %}checked{% endif %}>
+                            <div class="theme-card-preview theme-preview-system" aria-hidden="true">
+                                <div class="tp-half tp-half-light">
+                                    <div class="tp-mini-bar tp-mini-bar-accent-light"></div>
+                                    <div class="tp-mini-bar"></div>
+                                    <div class="tp-mini-bar tp-mini-bar-sm"></div>
+                                </div>
+                                <div class="tp-half tp-half-dark">
+                                    <div class="tp-mini-bar tp-mini-bar-accent-dark"></div>
+                                    <div class="tp-mini-bar"></div>
+                                    <div class="tp-mini-bar tp-mini-bar-sm"></div>
+                                </div>
+                            </div>
+                            <div class="theme-card-meta">
+                                <div>
+                                    <h4 class="theme-card-title">
+                                        <i data-lucide="monitor"></i> System
+                                    </h4>
+                                    <p class="theme-card-desc">Match device setting</p>
+                                </div>
+                                <span class="theme-card-check" aria-hidden="true">
+                                    <i data-lucide="check"></i>
+                                </span>
                             </div>
                         </label>
                     </div>
@@ -388,46 +472,96 @@ function togglePasswordVisibility(fieldId, btn) {
     }
 }
 
-// Theme switching
+// Theme switching — instant apply + AJAX persist with "Saved" indicator
 function setupThemeSwitcher() {
-    const themeDark = document.getElementById('theme_dark');
-    const themeLight = document.getElementById('theme_light');
-    const darkLabel = document.getElementById('dark_label');
-    const lightLabel = document.getElementById('light_label');
-    
-    if (themeDark && themeLight) {
-        const updateThemeUI = (theme) => {
-            if (darkLabel) {
-                if (theme === 'dark') {
-                    darkLabel.classList.add('active-theme');
-                } else {
-                    darkLabel.classList.remove('active-theme');
-                }
+    const cards = document.querySelectorAll('.theme-card');
+    const indicator = document.getElementById('theme_save_indicator');
+    if (!cards.length) return;
+
+    const csrfInput = document.querySelector('input[name="csrf_token"]');
+    const csrfToken = csrfInput ? csrfInput.value : '';
+
+    const systemPrefersDark = () =>
+        !!(window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches);
+
+    const resolveTheme = (preference) =>
+        preference === 'system' ? (systemPrefersDark() ? 'dark' : 'light') : preference;
+
+    const applyTheme = (preference) => {
+        document.documentElement.setAttribute('data-theme', resolveTheme(preference));
+        localStorage.setItem('theme', preference);
+    };
+
+    const updateActiveCard = (preference) => {
+        cards.forEach(card => {
+            const value = card.dataset.themeValue;
+            const input = card.querySelector('input[type="radio"]');
+            if (value === preference) {
+                card.classList.add('active-theme');
+                if (input) input.checked = true;
+            } else {
+                card.classList.remove('active-theme');
+                if (input) input.checked = false;
             }
-            if (lightLabel) {
-                if (theme === 'light') {
-                    lightLabel.classList.add('active-theme');
-                } else {
-                    lightLabel.classList.remove('active-theme');
-                }
-            }
-            
-            document.documentElement.setAttribute('data-theme', theme);
-            localStorage.setItem('theme', theme);
-        };
-        
-        // Initial setup
-        const activeTheme = document.documentElement.getAttribute('data-theme') || 'dark';
-        updateThemeUI(activeTheme);
-        
-        themeDark.addEventListener('change', function() {
-            if (this.checked) updateThemeUI('dark');
         });
-        
-        themeLight.addEventListener('change', function() {
-            if (this.checked) updateThemeUI('light');
+    };
+
+    let hideTimer = null;
+    const setIndicator = (state) => {
+        if (!indicator) return;
+        clearTimeout(hideTimer);
+        indicator.classList.remove('is-saving', 'is-error');
+        const label = indicator.querySelector('.theme-save-indicator-label');
+        if (state === 'saving') {
+            indicator.classList.add('is-saving', 'visible');
+            if (label) label.textContent = 'Saving…';
+        } else if (state === 'saved') {
+            indicator.classList.add('visible');
+            if (label) label.textContent = 'Saved';
+            hideTimer = setTimeout(() => indicator.classList.remove('visible'), 1600);
+        } else if (state === 'error') {
+            indicator.classList.add('is-error', 'visible');
+            if (label) label.textContent = 'Save failed';
+            hideTimer = setTimeout(() => indicator.classList.remove('visible'), 2500);
+        }
+    };
+
+    const persistTheme = (preference) => {
+        setIndicator('saving');
+        fetch('{{ url_for("auth.theme_update") }}', {
+            method: 'POST',
+            credentials: 'same-origin',
+            headers: {
+                'Content-Type': 'application/json',
+                'X-CSRFToken': csrfToken
+            },
+            body: JSON.stringify({ theme: preference })
+        })
+        .then(r => (r.ok ? r.json() : Promise.reject(r)))
+        .then(() => setIndicator('saved'))
+        .catch(() => setIndicator('error'));
+    };
+
+    let currentPreference = '{{ current_user.theme_preference or "" }}'
+        || localStorage.getItem('theme')
+        || 'light';
+    if (!['dark', 'light', 'system'].includes(currentPreference)) currentPreference = 'light';
+
+    updateActiveCard(currentPreference);
+
+    cards.forEach(card => {
+        const input = card.querySelector('input[type="radio"]');
+        if (!input) return;
+        input.addEventListener('change', function() {
+            if (!this.checked) return;
+            const value = card.dataset.themeValue;
+            if (value === currentPreference) return;
+            currentPreference = value;
+            updateActiveCard(value);
+            applyTheme(value);
+            persistTheme(value);
         });
-    }
+    });
 }
 
 document.addEventListener('DOMContentLoaded', setupThemeSwitcher);
