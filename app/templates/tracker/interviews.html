@@ -99,8 +99,8 @@
             <form method="POST" action="{{ url_for('tracker.delete_interview', plan_id=plan.id, int_id=rec.id) }}"
                   style="margin:0;" data-confirm="Delete this interview record?">
                 <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
-                <button type="submit" class="tracker-btn tracker-btn--danger tracker-btn--sm" title="Delete">
-                    <i data-lucide="trash-2" style="width:13px;height:13px;"></i>
+                <button type="submit" class="icon-btn icon-btn--danger" title="Delete">
+                    <i data-lucide="trash-2" style="width:14px;height:14px;"></i>
                 </button>
             </form>
         </div>

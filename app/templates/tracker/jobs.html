@@ -75,16 +75,18 @@
                 <td>{{ job.result or '—' }}</td>
                 <td>{{ job.salary_offered or '—' }}</td>
                 <td style="white-space:nowrap;">
-                    <button type="button" class="tracker-btn tracker-btn--outline tracker-btn--sm" onclick="openJobModal({{ job.id }})" title="Edit">
-                        <i data-lucide="edit-3" style="width:13px;height:13px;"></i>
-                    </button>
-                    <form method="POST" action="{{ url_for('tracker.delete_job', plan_id=plan.id, job_id=job.id) }}"
-                          style="display:inline;margin:0;" data-confirm="Delete this job application?">
-                        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
-                        <button type="submit" class="tracker-btn tracker-btn--danger tracker-btn--sm" title="Delete">
-                            <i data-lucide="trash-2" style="width:13px;height:13px;"></i>
+                    <div style="display:inline-flex;gap:6px;vertical-align:middle;">
+                        <button type="button" class="icon-btn" onclick="openJobModal({{ job.id }})" title="Edit">
+                            <i data-lucide="edit-3" style="width:14px;height:14px;"></i>
                         </button>
-                    </form>
+                        <form method="POST" action="{{ url_for('tracker.delete_job', plan_id=plan.id, job_id=job.id) }}"
+                              style="display:inline;margin:0;" data-confirm="Delete this job application?">
+                            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                            <button type="submit" class="icon-btn icon-btn--danger" title="Delete">
+                                <i data-lucide="trash-2" style="width:14px;height:14px;"></i>
+                            </button>
+                        </form>
+                    </div>
                 </td>
             </tr>
             {% endfor %}

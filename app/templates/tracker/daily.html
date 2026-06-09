@@ -56,12 +56,12 @@
                 <td class="notes-cell" title="{{ day.notes }}">{{ day.notes or '—' }}</td>
                 <td>
                     {% if day.is_future %}
-                    <button type="button" class="tracker-btn tracker-btn--outline tracker-btn--sm" disabled title="Available on {{ day.date.strftime('%b %d') }}">
-                        <i data-lucide="lock" style="width:13px;height:13px;"></i>
+                    <button type="button" class="icon-btn" disabled title="Available on {{ day.date.strftime('%b %d') }}">
+                        <i data-lucide="lock" style="width:14px;height:14px;"></i>
                     </button>
                     {% else %}
-                    <button type="button" class="tracker-btn tracker-btn--outline tracker-btn--sm" onclick="openDayModal({{ day.number }})">
-                        <i data-lucide="edit-3" style="width:13px;height:13px;"></i>
+                    <button type="button" class="icon-btn" onclick="openDayModal({{ day.number }})" title="Log / edit this day">
+                        <i data-lucide="edit-3" style="width:14px;height:14px;"></i>
                     </button>
                     {% endif %}
                 </td>

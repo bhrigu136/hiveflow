@@ -16,32 +16,39 @@
 <div class="weekly-timeline">
     {% for item in weekly_plan %}
     <div class="week-card {{ item.status }}">
-        <span class="week-number">{{ item.weeks }}</span>
-        <div class="week-status">
-            {% if item.status == 'completed' %}<i data-lucide="check-circle" style="width:13px;height:13px;vertical-align:-2px;"></i> Completed
-            {% elif item.status == 'current' %}<i data-lucide="zap" style="width:13px;height:13px;vertical-align:-2px;"></i> In Progress
-            {% else %}<i data-lucide="clock" style="width:13px;height:13px;vertical-align:-2px;"></i> Upcoming{% endif %}
+        <span class="week-number">{{ loop.index }}</span>
+        <div class="week-card-head">
+            <div>
+                <div class="week-status">
+                    {% if item.status == 'completed' %}<i data-lucide="check-circle" style="width:13px;height:13px;vertical-align:-2px;"></i> Completed
+                    {% elif item.status == 'current' %}<i data-lucide="zap" style="width:13px;height:13px;vertical-align:-2px;"></i> In Progress
+                    {% else %}<i data-lucide="clock" style="width:13px;height:13px;vertical-align:-2px;"></i> Upcoming{% endif %}
+                </div>
+                <div class="week-title">{{ item.weeks }}</div>
+            </div>
+            <div class="week-card-tools">
+                <button type="button" class="icon-btn"
+                        data-index="{{ item.index }}" data-weeks="{{ item.weeks }}" data-topics="{{ item.topics|join(', ') }}"
+                        onclick="openWeekEdit(this)" title="Edit week">
+                    <i data-lucide="edit-3" style="width:14px;height:14px;"></i>
+                </button>
+                <form method="POST" action="{{ url_for('tracker.weekly', plan_id=plan.id) }}"
+                      data-confirm="Delete this week block?" style="margin:0;">
+                    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                    <input type="hidden" name="action" value="delete_week">
+                    <input type="hidden" name="index" value="{{ item.index }}">
+                    <button type="submit" class="icon-btn icon-btn--danger" title="Delete week">
+                        <i data-lucide="trash-2" style="width:14px;height:14px;"></i>
+                    </button>
+                </form>
+            </div>
         </div>
-        <div style="font-size:15px;font-weight:600;color:var(--text);">{{ item.weeks }}</div>
         <div class="week-topics">
             {% for topic in item.topics %}
             <span class="week-tag">{{ topic }}</span>
+            {% else %}
+            <span style="color:var(--text-muted);font-size:13px;">No focus areas yet — click edit to add some.</span>
             {% endfor %}
-        </div>
-        <div style="display:flex;gap:8px;margin-top:14px;">
-            <button type="button" class="tracker-btn tracker-btn--outline tracker-btn--sm"
-                    onclick="openWeekModal({{ item.index }}, {{ item.weeks|tojson }}, {{ item.topics|join(', ')|tojson }})">
-                <i data-lucide="edit-3" style="width:12px;height:12px;"></i> Edit
-            </button>
-            <form method="POST" action="{{ url_for('tracker.weekly', plan_id=plan.id) }}"
-                  data-confirm="Delete this week block?" style="margin:0;">
-                <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
-                <input type="hidden" name="action" value="delete_week">
-                <input type="hidden" name="index" value="{{ item.index }}">
-                <button type="submit" class="tracker-btn tracker-btn--outline tracker-btn--sm" style="color:var(--danger,#f87171);">
-                    <i data-lucide="trash-2" style="width:12px;height:12px;"></i>
-                </button>
-            </form>
         </div>
     </div>
     {% endfor %}
@@ -82,6 +89,9 @@
 </div>
 
 <script>
+function openWeekEdit(btn) {
+    openWeekModal(btn.dataset.index, btn.dataset.weeks, btn.dataset.topics);
+}
 function openWeekModal(index, weeks, topics) {
     var isEdit = index !== undefined;
     document.getElementById('weekModalTitle').textContent = isEdit ? 'Edit Week Block' : 'Add Week Block';

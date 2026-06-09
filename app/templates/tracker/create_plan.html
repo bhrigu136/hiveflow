@@ -83,12 +83,21 @@
     var nameField = document.getElementById('name');
     var durationField = document.getElementById('duration');
 
+    // Track whether the user has manually edited the duration so a template
+    // switch never silently clobbers a value they typed (e.g. "60 days yoga").
+    var durationTouched = false;
+    durationField.addEventListener('input', function () { durationTouched = true; });
+
     cards.forEach(function (card) {
         card.addEventListener('click', function () {
             cards.forEach(function (c) { c.classList.remove('selected'); });
             card.classList.add('selected');
             templateField.value = card.dataset.template;
-            if (card.dataset.duration) durationField.value = card.dataset.duration;
+            // Career has a fixed 90-day structure; otherwise respect the user's own duration.
+            if (card.dataset.template === 'career_90day') {
+                durationField.value = 90;
+                durationTouched = false;
+            }
             // Only overwrite the name if it's empty or matches a known template name
             var presetNames = ['90-Day Career Growth Challenge', ''];
             if (presetNames.indexOf(nameField.value.trim()) !== -1) {

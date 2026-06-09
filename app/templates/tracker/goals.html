@@ -40,18 +40,19 @@
             <div class="progress-fill" style="width: {{ m.pct }}%;"></div>
         </div>
         {% if m.editable %}
-        <div style="display:flex;gap:8px;margin-top:12px;">
-            <button type="button" class="tracker-btn tracker-btn--outline tracker-btn--sm"
-                    onclick="openMetricModal({{ m.index }}, {{ m.name|tojson }}, {{ m.target }}, {{ m.current }})">
-                <i data-lucide="edit-3" style="width:12px;height:12px;"></i> Edit
+        <div style="display:flex;gap:6px;margin-top:14px;">
+            <button type="button" class="icon-btn"
+                    data-index="{{ m.index }}" data-name="{{ m.name }}" data-target="{{ m.target }}" data-current="{{ m.current }}"
+                    onclick="openMetricEdit(this)" title="Edit metric">
+                <i data-lucide="edit-3" style="width:14px;height:14px;"></i>
             </button>
             <form method="POST" action="{{ url_for('tracker.goals', plan_id=plan.id) }}"
                   data-confirm="Delete the goal metric &quot;{{ m.name }}&quot;?" style="margin:0;">
                 <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
                 <input type="hidden" name="action" value="delete_metric">
                 <input type="hidden" name="index" value="{{ m.index }}">
-                <button type="submit" class="tracker-btn tracker-btn--outline tracker-btn--sm" style="color:var(--danger,#f87171);">
-                    <i data-lucide="trash-2" style="width:12px;height:12px;"></i>
+                <button type="submit" class="icon-btn icon-btn--danger" title="Delete metric">
+                    <i data-lucide="trash-2" style="width:14px;height:14px;"></i>
                 </button>
             </form>
         </div>
@@ -126,6 +127,9 @@
 <script>
 function openPrimaryModal() {
     document.getElementById('primaryModal').style.display = 'flex';
+}
+function openMetricEdit(btn) {
+    openMetricModal(btn.dataset.index, btn.dataset.name, Number(btn.dataset.target), Number(btn.dataset.current));
 }
 function openMetricModal(index, name, target, current) {
     var isEdit = index !== undefined;

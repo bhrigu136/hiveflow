@@ -1006,6 +1006,45 @@ def goals(plan_id):
 
 
 # ═══════════════════════════════════════════════════════════════════════════════
+# EDIT PLAN (name / description / duration / start date)
+# ═══════════════════════════════════════════════════════════════════════════════
+
+@tracker_bp.route('/<int:plan_id>/edit', methods=['POST'])
+@login_required
+def edit_plan(plan_id):
+    plan = _get_plan_or_404(plan_id)
+    fallback = request.referrer or url_for('tracker.dashboard', plan_id=plan_id)
+
+    name = request.form.get('name', '').strip()
+    if not name:
+        flash('Plan name is required.', 'danger')
+        return redirect(fallback)
+    plan.name = name
+    plan.description = request.form.get('description', '').strip() or None
+
+    try:
+        plan.duration_days = max(1, min(365, int(request.form.get('duration', plan.duration_days))))
+    except (ValueError, TypeError):
+        pass
+
+    start_str = request.form.get('start_date', '')
+    if start_str:
+        try:
+            new_start = datetime.strptime(start_str, '%Y-%m-%d').date()
+            if new_start != plan.start_date:
+                plan.start_date = new_start
+                # Realign stored daily-log dates so they match the new start date
+                for log in DailyLog.query.filter_by(plan_id=plan.id).all():
+                    log.date = new_start + timedelta(days=log.day_number - 1)
+        except ValueError:
+            pass
+
+    db.session.commit()
+    flash('Plan updated!', 'success')
+    return redirect(fallback)
+
+
+# ═══════════════════════════════════════════════════════════════════════════════
 # DELETE PLAN
 # ═══════════════════════════════════════════════════════════════════════════════
 

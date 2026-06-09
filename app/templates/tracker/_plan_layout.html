@@ -20,10 +20,13 @@
         <div>
             <h1>{{ plan.name }}</h1>
             <div class="tracker-subtitle">
-                {% if plan.description %}{{ plan.description }}{% else %}{{ plan.duration_days }}-day plan · started {{ plan.start_date.strftime('%b %d, %Y') }}{% endif %}
+                {% if plan.description %}{{ plan.description }} · {% endif %}{{ plan.duration_days }}-day plan · started {{ plan.start_date.strftime('%b %d, %Y') }}
             </div>
         </div>
         <div class="tracker-actions">
+            <button type="button" class="tracker-btn tracker-btn--outline tracker-btn--sm" onclick="document.getElementById('editPlanModal').style.display='flex'">
+                <i data-lucide="settings" style="width:15px;height:15px;"></i> Edit Plan
+            </button>
             <a href="{{ url_for('tracker.plans_list') }}" class="tracker-btn tracker-btn--outline tracker-btn--sm">
                 <i data-lucide="arrow-left" style="width:15px;height:15px;"></i> All Plans
             </a>
@@ -84,6 +87,38 @@
     </nav>
 
     {% block tracker_content %}{% endblock %}
+
+    {# ---- Edit plan modal (available on every plan page) ---- #}
+    <div class="modal-overlay" id="editPlanModal" style="display:none;" onclick="if(event.target===this)this.style.display='none'">
+        <div class="modal-content">
+            <h3 style="font-size:18px;font-weight:600;color:var(--text);margin-bottom:16px;">Edit Plan</h3>
+            <form method="POST" action="{{ url_for('tracker.edit_plan', plan_id=plan.id) }}">
+                <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                <div class="form-group">
+                    <label for="editPlanName">Plan name</label>
+                    <input type="text" name="name" id="editPlanName" value="{{ plan.name }}" required>
+                </div>
+                <div class="form-group">
+                    <label for="editPlanDesc">Description <span style="color:var(--text-muted);font-weight:400;">(optional)</span></label>
+                    <input type="text" name="description" id="editPlanDesc" value="{{ plan.description or '' }}" placeholder="A short note about this plan">
+                </div>
+                <div class="inline-form">
+                    <div class="form-group" style="margin:0;">
+                        <label for="editPlanDuration">Duration (days)</label>
+                        <input type="number" name="duration" id="editPlanDuration" min="1" max="365" value="{{ plan.duration_days }}">
+                    </div>
+                    <div class="form-group" style="margin:0;">
+                        <label for="editPlanStart">Start date</label>
+                        <input type="date" name="start_date" id="editPlanStart" value="{{ plan.start_date.strftime('%Y-%m-%d') }}">
+                    </div>
+                </div>
+                <div class="tracker-actions" style="justify-content:flex-end;margin-top:8px;">
+                    <button type="button" class="tracker-btn tracker-btn--outline" onclick="document.getElementById('editPlanModal').style.display='none'">Cancel</button>
+                    <button type="submit" class="tracker-btn"><i data-lucide="check" style="width:15px;height:15px;"></i> Save Changes</button>
+                </div>
+            </form>
+        </div>
+    </div>
 
 </div>
 {% endblock %}

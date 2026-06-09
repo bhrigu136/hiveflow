@@ -1247,11 +1247,62 @@ html[data-theme="light"] .interview-card {
     z-index: 1;
 }
 
+.week-card .week-card-head {
+    display: flex;
+    align-items: flex-start;
+    justify-content: space-between;
+    gap: 12px;
+}
+
+.week-card .week-title {
+    font-size: 15px;
+    font-weight: 600;
+    color: var(--text);
+    margin-top: 2px;
+}
+
+.week-card .week-card-tools {
+    display: flex;
+    gap: 6px;
+    flex-shrink: 0;
+}
+
 .week-card .week-topics {
     display: flex;
     flex-wrap: wrap;
     gap: 6px;
-    margin-top: 8px;
+    margin-top: 12px;
+}
+
+/* Compact square icon button — used for inline edit/delete actions */
+.icon-btn {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 30px;
+    height: 30px;
+    border-radius: 8px;
+    background: var(--surface-sunken, rgba(148, 163, 184, 0.08));
+    border: 1px solid var(--border-muted);
+    color: var(--text-secondary);
+    cursor: pointer;
+    transition: all var(--transition);
+}
+
+.icon-btn:hover:not(:disabled) {
+    background: var(--surface);
+    border-color: var(--border-strong);
+    color: var(--text);
+}
+
+.icon-btn--danger:hover:not(:disabled) {
+    border-color: var(--danger, #f87171);
+    color: var(--danger, #f87171);
+}
+
+.icon-btn:disabled {
+    opacity: 0.45;
+    cursor: not-allowed;
 }
 
 .week-card .week-status {
