@@ -1,0 +1,251 @@
+{% extends "tracker/_plan_layout.html" %}
+
+{% block tracker_content %}
+{% set checkboxes = config.get('daily_checkboxes', []) %}
+{% set metrics = config.get('daily_metrics', []) %}
+
+<div style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:12px;margin-bottom:18px;">
+    <p style="color:var(--text-muted);font-size:13px;margin:0;">
+        Tick off what you completed each day. Click <strong style="color:var(--text-secondary);">Edit</strong> to log hours, counts &amp; notes.
+    </p>
+    <div style="display:flex;gap:8px;">
+        <button type="button" class="tracker-btn tracker-btn--outline tracker-btn--sm" onclick="document.getElementById('fieldsModal').style.display='flex'">
+            <i data-lucide="sliders-horizontal" style="width:14px;height:14px;"></i> Customize
+        </button>
+        {% if today_day_number >= 1 and today_day_number <= plan.duration_days %}
+        <button type="button" class="tracker-btn tracker-btn--sm" onclick="openDayModal({{ today_day_number }})">
+            <i data-lucide="edit-3" style="width:14px;height:14px;"></i> Log Today (Day {{ today_day_number }})
+        </button>
+        {% endif %}
+    </div>
+</div>
+
+<div class="daily-table-container">
+    <table class="tracker-table">
+        <thead>
+            <tr>
+                <th>Day</th>
+                <th>Date</th>
+                {% for cb in checkboxes %}<th>{{ cb.label }}</th>{% endfor %}
+                {% for m in metrics %}<th>{{ m.label }}</th>{% endfor %}
+                <th>Completion</th>
+                <th>Notes</th>
+                <th></th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for day in days %}
+            <tr class="{% if day.is_today %}today-row{% endif %}{% if day.is_future %} future-row{% endif %}">
+                <td><span class="day-badge">{{ day.number }}</span></td>
+                <td style="white-space:nowrap;">{{ day.date.strftime('%a, %b %d') }}</td>
+                {% for cb in checkboxes %}
+                <td>
+                    <button type="button"
+                            class="check-btn {% if day.checkboxes.get(cb.key) %}checked{% endif %}"
+                            data-day="{{ day.number }}" data-field="{{ cb.key }}"
+                            {% if day.is_future %}disabled title="Available on {{ day.date.strftime('%b %d') }}"{% else %}onclick="toggleCheck(this)" title="{{ cb.label }}"{% endif %}></button>
+                </td>
+                {% endfor %}
+                {% for m in metrics %}
+                <td>{{ day.metrics.get(m.key, 0) or 0 }}</td>
+                {% endfor %}
+                <td>
+                    <span class="pct-bar"><span class="pct-fill" data-day="{{ day.number }}" style="width: {{ day.completion_pct }}%;"></span></span>
+                    <span style="font-size:12px;color:var(--text-muted);margin-left:6px;" class="pct-text" data-day="{{ day.number }}">{{ day.completion_pct }}%</span>
+                </td>
+                <td class="notes-cell" title="{{ day.notes }}">{{ day.notes or '—' }}</td>
+                <td>
+                    {% if day.is_future %}
+                    <button type="button" class="tracker-btn tracker-btn--outline tracker-btn--sm" disabled title="Available on {{ day.date.strftime('%b %d') }}">
+                        <i data-lucide="lock" style="width:13px;height:13px;"></i>
+                    </button>
+                    {% else %}
+                    <button type="button" class="tracker-btn tracker-btn--outline tracker-btn--sm" onclick="openDayModal({{ day.number }})">
+                        <i data-lucide="edit-3" style="width:13px;height:13px;"></i>
+                    </button>
+                    {% endif %}
+                </td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+</div>
+
+{# ---- Edit modal ---- #}
+<div class="modal-overlay" id="dayModal" style="display:none;" onclick="if(event.target===this)closeDayModal()">
+    <div class="modal-content">
+        <h3 style="font-size:18px;font-weight:600;color:var(--text);margin-bottom:4px;">Log Day <span id="modalDayNum"></span></h3>
+        <p style="color:var(--text-muted);font-size:13px;margin-bottom:20px;" id="modalDayDate"></p>
+
+        <form method="POST" action="{{ url_for('tracker.daily', plan_id=plan.id) }}">
+            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+            <input type="hidden" name="day_number" id="modalDayNumberField">
+
+            {% if checkboxes %}
+            <div class="form-group">
+                <label>Completed</label>
+                <div style="display:flex;flex-wrap:wrap;gap:14px;margin-top:6px;">
+                    {% for cb in checkboxes %}
+                    <label style="display:flex;align-items:center;gap:8px;font-weight:400;cursor:pointer;color:var(--text-secondary);">
+                        <input type="checkbox" name="cb_{{ cb.key }}" id="modal_cb_{{ cb.key }}" style="width:auto;">
+                        {{ cb.label }}
+                    </label>
+                    {% endfor %}
+                </div>
+            </div>
+            {% endif %}
+
+            {% for m in metrics %}
+            <div class="form-group">
+                <label for="modal_metric_{{ m.key }}">{{ m.label }}</label>
+                <input type="number" step="any" min="0" name="metric_{{ m.key }}" id="modal_metric_{{ m.key }}" value="0">
+            </div>
+            {% endfor %}
+
+            <div class="form-group">
+                <label for="modal_notes">Notes</label>
+                <textarea name="notes" id="modal_notes" rows="3" placeholder="What did you work on?"></textarea>
+            </div>
+
+            <div class="tracker-actions" style="justify-content:flex-end;margin-top:8px;">
+                <button type="button" class="tracker-btn tracker-btn--outline" onclick="closeDayModal()">Cancel</button>
+                <button type="submit" class="tracker-btn"><i data-lucide="check" style="width:15px;height:15px;"></i> Save</button>
+            </div>
+        </form>
+    </div>
+</div>
+
+{# ---- Customize fields modal ---- #}
+<div class="modal-overlay" id="fieldsModal" style="display:none;" onclick="if(event.target===this)this.style.display='none'">
+    <div class="modal-content">
+        <h3 style="font-size:18px;font-weight:600;color:var(--text);margin-bottom:4px;">Customize Daily Fields</h3>
+        <p style="color:var(--text-muted);font-size:13px;margin-bottom:20px;">Rename, add or remove the columns you track each day.</p>
+
+        {% set fields_url = url_for('tracker.customize_daily', plan_id=plan.id) %}
+
+        <label style="font-size:12px;text-transform:uppercase;letter-spacing:0.5px;color:var(--text-secondary);">Checkboxes (things you tick off)</label>
+        <div style="display:flex;flex-direction:column;gap:8px;margin:10px 0 14px;">
+            {% for cb in checkboxes %}
+            <div style="display:flex;gap:6px;align-items:center;">
+                <form method="POST" action="{{ fields_url }}" style="display:flex;gap:6px;flex:1;margin:0;">
+                    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                    <input type="hidden" name="action" value="rename_checkbox">
+                    <input type="hidden" name="key" value="{{ cb.key }}">
+                    <input type="text" name="label" value="{{ cb.label }}" style="flex:1;" required>
+                    <button type="submit" class="tracker-btn tracker-btn--outline tracker-btn--sm" title="Save name"><i data-lucide="check" style="width:13px;height:13px;"></i></button>
+                </form>
+                <form method="POST" action="{{ fields_url }}" data-confirm="Remove the “{{ cb.label }}” checkbox column?" style="margin:0;">
+                    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                    <input type="hidden" name="action" value="delete_checkbox">
+                    <input type="hidden" name="key" value="{{ cb.key }}">
+                    <button type="submit" class="tracker-btn tracker-btn--outline tracker-btn--sm" style="color:var(--danger,#f87171);" title="Remove"><i data-lucide="trash-2" style="width:13px;height:13px;"></i></button>
+                </form>
+            </div>
+            {% endfor %}
+            <form method="POST" action="{{ fields_url }}" style="display:flex;gap:6px;margin:0;">
+                <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                <input type="hidden" name="action" value="add_checkbox">
+                <input type="text" name="label" placeholder="New checkbox, e.g. Morning yoga" style="flex:1;" required>
+                <button type="submit" class="tracker-btn tracker-btn--sm"><i data-lucide="plus" style="width:13px;height:13px;"></i> Add</button>
+            </form>
+        </div>
+
+        <label style="font-size:12px;text-transform:uppercase;letter-spacing:0.5px;color:var(--text-secondary);">Metrics (numbers you log)</label>
+        <div style="display:flex;flex-direction:column;gap:8px;margin:10px 0 4px;">
+            {% for m in metrics %}
+            <div style="display:flex;gap:6px;align-items:center;">
+                <form method="POST" action="{{ fields_url }}" style="display:flex;gap:6px;flex:1;margin:0;">
+                    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                    <input type="hidden" name="action" value="rename_metric">
+                    <input type="hidden" name="key" value="{{ m.key }}">
+                    <input type="text" name="label" value="{{ m.label }}" style="flex:1;" required>
+                    <button type="submit" class="tracker-btn tracker-btn--outline tracker-btn--sm" title="Save name"><i data-lucide="check" style="width:13px;height:13px;"></i></button>
+                </form>
+                <form method="POST" action="{{ fields_url }}" data-confirm="Remove the “{{ m.label }}” metric column?" style="margin:0;">
+                    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                    <input type="hidden" name="action" value="delete_metric">
+                    <input type="hidden" name="key" value="{{ m.key }}">
+                    <button type="submit" class="tracker-btn tracker-btn--outline tracker-btn--sm" style="color:var(--danger,#f87171);" title="Remove"><i data-lucide="trash-2" style="width:13px;height:13px;"></i></button>
+                </form>
+            </div>
+            {% endfor %}
+            <form method="POST" action="{{ fields_url }}" style="display:flex;gap:6px;margin:0;">
+                <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                <input type="hidden" name="action" value="add_metric">
+                <input type="text" name="label" placeholder="New metric, e.g. Minutes practiced" style="flex:1;" required>
+                <button type="submit" class="tracker-btn tracker-btn--sm"><i data-lucide="plus" style="width:13px;height:13px;"></i> Add</button>
+            </form>
+        </div>
+
+        <div class="tracker-actions" style="justify-content:flex-end;margin-top:18px;">
+            <button type="button" class="tracker-btn tracker-btn--outline" onclick="document.getElementById('fieldsModal').style.display='none'">Done</button>
+        </div>
+    </div>
+</div>
+
+<script>
+var DAYS_DATA = {{ days | map(attribute='number') | list | tojson }};
+var DAY_INFO = {
+    {% for day in days %}
+    {{ day.number }}: {
+        date: {{ day.date.strftime('%A, %b %d, %Y') | tojson }},
+        checkboxes: {{ day.checkboxes | tojson }},
+        metrics: {{ day.metrics | tojson }},
+        notes: {{ (day.notes or '') | tojson }}
+    }{% if not loop.last %},{% endif %}
+    {% endfor %}
+};
+var CHECKBOX_KEYS = {{ checkboxes | map(attribute='key') | list | tojson }};
+var METRIC_KEYS = {{ metrics | map(attribute='key') | list | tojson }};
+var TOGGLE_URL_TPL = "{{ url_for('tracker.toggle_daily', plan_id=plan.id, day_number=0) }}";
+var CSRF = "{{ csrf_token() }}";
+
+function openDayModal(dayNum) {
+    var info = DAY_INFO[dayNum];
+    if (!info) return;
+    document.getElementById('modalDayNum').textContent = dayNum;
+    document.getElementById('modalDayDate').textContent = info.date;
+    document.getElementById('modalDayNumberField').value = dayNum;
+    CHECKBOX_KEYS.forEach(function (k) {
+        var el = document.getElementById('modal_cb_' + k);
+        if (el) el.checked = !!info.checkboxes[k];
+    });
+    METRIC_KEYS.forEach(function (k) {
+        var el = document.getElementById('modal_metric_' + k);
+        if (el) el.value = info.metrics[k] != null ? info.metrics[k] : 0;
+    });
+    document.getElementById('modal_notes').value = info.notes || '';
+    document.getElementById('dayModal').style.display = 'flex';
+}
+
+function closeDayModal() {
+    document.getElementById('dayModal').style.display = 'none';
+}
+
+function toggleCheck(btn) {
+    var day = btn.dataset.day;
+    var field = btn.dataset.field;
+    var url = TOGGLE_URL_TPL.replace(/0$/, day);
+    var fd = new FormData();
+    fd.append('csrf_token', CSRF);
+    fd.append('field', field);
+    btn.disabled = true;
+    fetch(url, { method: 'POST', body: fd, headers: { 'X-CSRFToken': CSRF } })
+        .then(function (r) { return r.json(); })
+        .then(function (data) {
+            if (data.ok) {
+                btn.classList.toggle('checked', data.value);
+                if (DAY_INFO[day]) DAY_INFO[day].checkboxes[field] = data.value;
+                document.querySelectorAll('.pct-fill[data-day="' + day + '"]').forEach(function (el) {
+                    el.style.width = data.completion_pct + '%';
+                });
+                document.querySelectorAll('.pct-text[data-day="' + day + '"]').forEach(function (el) {
+                    el.textContent = data.completion_pct + '%';
+                });
+            }
+        })
+        .catch(function () {})
+        .finally(function () { btn.disabled = false; });
+}
+</script>
+{% endblock %}

@@ -1,0 +1,76 @@
+{% extends "base.html" %}
+
+{% block title %}Growth Plans · HiveFlow{% endblock %}
+
+{% block extra_head %}
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/tracker.css') }}">
+{% endblock %}
+
+{% block content %}
+<div class="tracker-container">
+
+    <div class="tracker-header">
+        <div>
+            <h1>Growth Plans</h1>
+            <div class="tracker-subtitle">Build and track any multi-week growth challenge — your way.</div>
+        </div>
+        <div class="tracker-actions">
+            <a href="{{ url_for('tracker.create_plan') }}" class="tracker-btn">
+                <i data-lucide="plus" style="width:16px;height:16px;"></i> New Plan
+            </a>
+        </div>
+    </div>
+
+    {% if plans %}
+    <div class="plans-grid">
+        {% for plan in plans %}
+        {% set stats = plan_stats.get(plan.id, {}) %}
+        <div class="plan-card" onclick="window.location='{{ url_for('tracker.dashboard', plan_id=plan.id) }}'">
+            <span class="plan-card-badge">
+                <i data-lucide="sparkles" style="width:12px;height:12px;"></i>
+                {{ plan.template_type|replace('_', ' ')|title }}
+            </span>
+            <div class="plan-card-title">{{ plan.name }}</div>
+            <div class="plan-card-meta">
+                <span><i data-lucide="calendar" style="width:13px;height:13px;vertical-align:-2px;"></i> {{ plan.duration_days }} days</span>
+                <span><i data-lucide="flag" style="width:13px;height:13px;vertical-align:-2px;"></i> Day {{ stats.get('days_elapsed', 0) }}</span>
+                <span><i data-lucide="trending-up" style="width:13px;height:13px;vertical-align:-2px;"></i> {{ stats.get('pct', 0) }}%</span>
+            </div>
+            <div class="plan-card-progress">
+                <div class="progress-fill" style="width: {{ stats.get('pct', 0) }}%;"></div>
+            </div>
+            <div class="plan-card-actions" onclick="event.stopPropagation();">
+                <a href="{{ url_for('tracker.dashboard', plan_id=plan.id) }}" class="tracker-btn tracker-btn--sm">
+                    Open
+                </a>
+                <form action="{{ url_for('tracker.delete_plan', plan_id=plan.id) }}" method="POST" style="margin:0;"
+                      data-confirm="Delete plan &quot;{{ plan.name }}&quot;? This removes all its data.">
+                    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                    <button type="submit" class="tracker-btn tracker-btn--danger tracker-btn--sm">
+                        <i data-lucide="trash-2" style="width:14px;height:14px;"></i>
+                    </button>
+                </form>
+            </div>
+        </div>
+        {% endfor %}
+
+        <a href="{{ url_for('tracker.create_plan') }}" class="create-plan-card">
+            <span class="plus-icon"><i data-lucide="plus" style="width:24px;height:24px;"></i></span>
+            <span>Create a new plan</span>
+        </a>
+    </div>
+    {% else %}
+    <div class="tracker-card">
+        <div class="tracker-empty">
+            <span class="empty-icon"><i data-lucide="rocket" style="width:48px;height:48px;"></i></span>
+            <div class="empty-message">No growth plans yet</div>
+            <div class="empty-sub">Start with the 90-Day Career template or build a blank plan from scratch. Track DSA, SQL, job applications, interviews, skills and more.</div>
+            <a href="{{ url_for('tracker.create_plan') }}" class="tracker-btn" style="margin-top:8px;">
+                <i data-lucide="plus" style="width:16px;height:16px;"></i> Create your first plan
+            </a>
+        </div>
+    </div>
+    {% endif %}
+
+</div>
+{% endblock %}

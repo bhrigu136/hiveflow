@@ -1,0 +1,101 @@
+{% extends "base.html" %}
+
+{% block title %}New Plan · HiveFlow{% endblock %}
+
+{% block extra_head %}
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/tracker.css') }}">
+{% endblock %}
+
+{% block content %}
+<div class="tracker-container">
+
+    <div class="tracker-header">
+        <div>
+            <h1>Create a Growth Plan</h1>
+            <div class="tracker-subtitle">Pick a starting template, then customize the details.</div>
+        </div>
+        <div class="tracker-actions">
+            <a href="{{ url_for('tracker.plans_list') }}" class="tracker-btn tracker-btn--outline tracker-btn--sm">
+                <i data-lucide="arrow-left" style="width:15px;height:15px;"></i> Back
+            </a>
+        </div>
+    </div>
+
+    <form method="POST" action="{{ url_for('tracker.create_plan') }}">
+        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+        <input type="hidden" name="template" id="templateField" value="career_90day">
+
+        <h3 style="font-size:14px;font-weight:600;color:var(--text-secondary);text-transform:uppercase;letter-spacing:0.5px;margin-bottom:14px;">1 · Choose a template</h3>
+        <div class="template-grid">
+            <div class="template-card selected" data-template="career_90day" data-name="90-Day Career Growth Challenge" data-duration="90">
+                <span class="template-icon">🚀</span>
+                <span class="template-name">90-Day Career Challenge</span>
+                <span class="template-desc">Full job-prep tracker: DSA, SQL, Data Science, job applications, interviews, weekly roadmap, skills &amp; goals — pre-seeded.</span>
+            </div>
+            <div class="template-card" data-template="blank" data-name="" data-duration="90">
+                <span class="template-icon">📋</span>
+                <span class="template-name">Blank Plan</span>
+                <span class="template-desc">Start empty and add your own daily checkboxes, metrics, topics and goals. Track anything over any number of days.</span>
+            </div>
+        </div>
+
+        <h3 style="font-size:14px;font-weight:600;color:var(--text-secondary);text-transform:uppercase;letter-spacing:0.5px;margin-bottom:14px;">2 · Plan details</h3>
+        <div class="create-plan-form">
+            <div class="form-group">
+                <label for="name">Plan name</label>
+                <input type="text" id="name" name="name" required placeholder="e.g. My 90-Day Career Sprint" value="90-Day Career Growth Challenge">
+            </div>
+
+            <div class="form-group">
+                <label for="description">Description <span style="color:var(--text-muted);font-weight:400;">(optional)</span></label>
+                <input type="text" id="description" name="description" placeholder="A short note about this plan">
+            </div>
+
+            <div class="inline-form" style="margin-top:4px;">
+                <div class="form-group" style="margin:0;">
+                    <label for="duration">Duration (days)</label>
+                    <input type="number" id="duration" name="duration" min="1" max="365" value="90">
+                </div>
+                <div class="form-group" style="margin:0;">
+                    <label for="start_date">Start date</label>
+                    <input type="date" id="start_date" name="start_date">
+                </div>
+            </div>
+
+            <button type="submit" class="tracker-btn" style="margin-top:20px;width:100%;">
+                <i data-lucide="check" style="width:16px;height:16px;"></i> Create Plan
+            </button>
+        </div>
+    </form>
+
+</div>
+
+<script>
+(function () {
+    // Default start date = today
+    var startInput = document.getElementById('start_date');
+    if (startInput && !startInput.value) {
+        startInput.value = new Date().toISOString().slice(0, 10);
+    }
+
+    var cards = document.querySelectorAll('.template-card');
+    var templateField = document.getElementById('templateField');
+    var nameField = document.getElementById('name');
+    var durationField = document.getElementById('duration');
+
+    cards.forEach(function (card) {
+        card.addEventListener('click', function () {
+            cards.forEach(function (c) { c.classList.remove('selected'); });
+            card.classList.add('selected');
+            templateField.value = card.dataset.template;
+            if (card.dataset.duration) durationField.value = card.dataset.duration;
+            // Only overwrite the name if it's empty or matches a known template name
+            var presetNames = ['90-Day Career Growth Challenge', ''];
+            if (presetNames.indexOf(nameField.value.trim()) !== -1) {
+                nameField.value = card.dataset.name || '';
+            }
+        });
+    });
+})();
+</script>
+{% endblock %}

@@ -1,0 +1,118 @@
+{% extends "tracker/_plan_layout.html" %}
+
+{% block tracker_content %}
+
+<div style="margin-bottom:18px;">
+    <button type="button" class="tracker-btn" onclick="var f=document.getElementById('addIntForm');f.style.display=(f.style.display==='none'?'block':'none')">
+        <i data-lucide="plus" style="width:16px;height:16px;"></i> Record Interview
+    </button>
+</div>
+
+<form method="POST" action="{{ url_for('tracker.interviews', plan_id=plan.id) }}" class="job-form" id="addIntForm" style="display:none;">
+    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+    <div class="inline-form">
+        <div class="form-group" style="margin:0;"><label>Company *</label><input type="text" name="company" required placeholder="Acme Corp"></div>
+        <div class="form-group" style="margin:0;"><label>Date</label><input type="date" name="date"></div>
+        <div class="form-group" style="margin:0;"><label>Round</label><input type="text" name="round_name" placeholder="Technical / HR"></div>
+    </div>
+    <div class="inline-form" style="margin-top:14px;">
+        <div class="form-group" style="margin:0;">
+            <label>Performance (1–5)</label>
+            <input type="number" name="rating" min="1" max="5" placeholder="4">
+        </div>
+        <div class="form-group" style="margin:0;">
+            <label>Result</label>
+            <select name="result">
+                <option value="">—</option>
+                <option value="Pending">Pending</option>
+                <option value="Passed">Passed</option>
+                <option value="Failed">Failed</option>
+            </select>
+        </div>
+        <div class="form-group" style="margin:0;display:flex;align-items:center;gap:8px;padding-top:24px;">
+            <label style="display:flex;align-items:center;gap:8px;font-weight:400;cursor:pointer;margin:0;">
+                <input type="checkbox" name="followup" style="width:auto;"> Follow-up required
+            </label>
+        </div>
+    </div>
+    <div class="form-group" style="margin-top:14px;">
+        <label>Questions asked</label>
+        <textarea name="questions" rows="2" placeholder="List the key questions..."></textarea>
+    </div>
+    <div class="form-group">
+        <label>Weak areas</label>
+        <textarea name="weak_areas" rows="2" placeholder="What to improve..."></textarea>
+    </div>
+    <div class="tracker-actions" style="justify-content:flex-end;">
+        <button type="submit" class="tracker-btn"><i data-lucide="check" style="width:15px;height:15px;"></i> Save</button>
+    </div>
+</form>
+
+{% if records %}
+<div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(320px,1fr));gap:20px;">
+    {% for rec in records %}
+    <div class="interview-card">
+        <div style="display:flex;justify-content:space-between;align-items:flex-start;gap:8px;">
+            <div>
+                <div style="font-size:16px;font-weight:600;color:var(--text);">{{ rec.company }}</div>
+                <div style="font-size:13px;color:var(--text-muted);">
+                    {{ rec.date.strftime('%b %d, %Y') }}{% if rec.round_name %} · {{ rec.round_name }}{% endif %}
+                </div>
+            </div>
+            {% if rec.result %}
+            {% set rcls = 'pending' %}
+            {% if rec.result|lower == 'passed' %}{% set rcls = 'passed' %}{% elif rec.result|lower == 'failed' %}{% set rcls = 'failed' %}{% endif %}
+            <span class="result-badge result-badge--{{ rcls }}">{{ rec.result }}</span>
+            {% endif %}
+        </div>
+
+        {% if rec.performance_rating %}
+        <div class="rating-stars">
+            {% for i in range(1, 6) %}
+            <span class="star {% if i <= rec.performance_rating %}filled{% endif %}">
+                <i data-lucide="star" style="width:18px;height:18px;{% if i <= rec.performance_rating %}fill:currentColor;{% endif %}"></i>
+            </span>
+            {% endfor %}
+        </div>
+        {% endif %}
+
+        {% if rec.questions_asked %}
+        <div>
+            <div style="font-size:11px;text-transform:uppercase;letter-spacing:0.4px;color:var(--text-muted);margin-bottom:4px;">Questions</div>
+            <div style="font-size:13px;color:var(--text-secondary);white-space:pre-wrap;">{{ rec.questions_asked }}</div>
+        </div>
+        {% endif %}
+
+        {% if rec.weak_areas %}
+        <div>
+            <div style="font-size:11px;text-transform:uppercase;letter-spacing:0.4px;color:var(--text-muted);margin-bottom:4px;">Weak areas</div>
+            <div style="font-size:13px;color:var(--text-secondary);white-space:pre-wrap;">{{ rec.weak_areas }}</div>
+        </div>
+        {% endif %}
+
+        <div style="display:flex;justify-content:space-between;align-items:center;margin-top:auto;padding-top:8px;border-top:1px solid var(--border-muted);">
+            {% if rec.followup_required %}
+            <span class="stat-badge stat-badge--warning" style="font-size:12px;padding:4px 10px;">
+                <i data-lucide="bell" style="width:13px;height:13px;"></i> Follow-up
+            </span>
+            {% else %}<span></span>{% endif %}
+            <form method="POST" action="{{ url_for('tracker.delete_interview', plan_id=plan.id, int_id=rec.id) }}"
+                  style="margin:0;" data-confirm="Delete this interview record?">
+                <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                <button type="submit" class="tracker-btn tracker-btn--danger tracker-btn--sm" title="Delete">
+                    <i data-lucide="trash-2" style="width:13px;height:13px;"></i>
+                </button>
+            </form>
+        </div>
+    </div>
+    {% endfor %}
+</div>
+{% else %}
+<div class="tracker-empty">
+    <span class="empty-icon"><i data-lucide="messages-square" style="width:48px;height:48px;"></i></span>
+    <div class="empty-message">No interviews recorded yet</div>
+    <div class="empty-sub">Log each interview to review questions, ratings and weak areas over time.</div>
+</div>
+{% endif %}
+
+{% endblock %}

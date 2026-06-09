@@ -1,0 +1,95 @@
+{% extends "tracker/_plan_layout.html" %}
+
+{% block tracker_content %}
+
+<div style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:12px;margin-bottom:18px;">
+    <p style="color:var(--text-muted);font-size:13px;margin:0;">
+        {% if weekly_plan %}Your roadmap at a glance — you're currently in <strong style="color:var(--accent-light);">week {{ current_week }}</strong>.
+        {% else %}Break your plan into weekly focus blocks.{% endif %}
+    </p>
+    <button type="button" class="tracker-btn tracker-btn--sm" onclick="openWeekModal()">
+        <i data-lucide="plus" style="width:14px;height:14px;"></i> Add Week
+    </button>
+</div>
+
+{% if weekly_plan %}
+<div class="weekly-timeline">
+    {% for item in weekly_plan %}
+    <div class="week-card {{ item.status }}">
+        <span class="week-number">{{ item.weeks }}</span>
+        <div class="week-status">
+            {% if item.status == 'completed' %}<i data-lucide="check-circle" style="width:13px;height:13px;vertical-align:-2px;"></i> Completed
+            {% elif item.status == 'current' %}<i data-lucide="zap" style="width:13px;height:13px;vertical-align:-2px;"></i> In Progress
+            {% else %}<i data-lucide="clock" style="width:13px;height:13px;vertical-align:-2px;"></i> Upcoming{% endif %}
+        </div>
+        <div style="font-size:15px;font-weight:600;color:var(--text);">{{ item.weeks }}</div>
+        <div class="week-topics">
+            {% for topic in item.topics %}
+            <span class="week-tag">{{ topic }}</span>
+            {% endfor %}
+        </div>
+        <div style="display:flex;gap:8px;margin-top:14px;">
+            <button type="button" class="tracker-btn tracker-btn--outline tracker-btn--sm"
+                    onclick="openWeekModal({{ item.index }}, {{ item.weeks|tojson }}, {{ item.topics|join(', ')|tojson }})">
+                <i data-lucide="edit-3" style="width:12px;height:12px;"></i> Edit
+            </button>
+            <form method="POST" action="{{ url_for('tracker.weekly', plan_id=plan.id) }}"
+                  data-confirm="Delete this week block?" style="margin:0;">
+                <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                <input type="hidden" name="action" value="delete_week">
+                <input type="hidden" name="index" value="{{ item.index }}">
+                <button type="submit" class="tracker-btn tracker-btn--outline tracker-btn--sm" style="color:var(--danger,#f87171);">
+                    <i data-lucide="trash-2" style="width:12px;height:12px;"></i>
+                </button>
+            </form>
+        </div>
+    </div>
+    {% endfor %}
+</div>
+{% else %}
+<div class="tracker-empty">
+    <span class="empty-icon"><i data-lucide="calendar-range" style="width:48px;height:48px;"></i></span>
+    <div class="empty-message">No weekly roadmap yet</div>
+    <div class="empty-sub">Add focus blocks like “Week 1–2 · Foundations” to map out your plan.</div>
+    <button type="button" class="tracker-btn tracker-btn--sm" style="margin-top:16px;" onclick="openWeekModal()">
+        <i data-lucide="plus" style="width:14px;height:14px;"></i> Add Week
+    </button>
+</div>
+{% endif %}
+
+{# ---- Add / edit week modal ---- #}
+<div class="modal-overlay" id="weekModal" style="display:none;" onclick="if(event.target===this)this.style.display='none'">
+    <div class="modal-content">
+        <h3 id="weekModalTitle" style="font-size:18px;font-weight:600;color:var(--text);margin-bottom:16px;">Add Week Block</h3>
+        <form method="POST" action="{{ url_for('tracker.weekly', plan_id=plan.id) }}">
+            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+            <input type="hidden" name="action" id="weekAction" value="add_week">
+            <input type="hidden" name="index" id="weekIndex" value="">
+            <div class="form-group">
+                <label for="weekLabel">Week label</label>
+                <input type="text" name="weeks" id="weekLabel" required placeholder="e.g. 1–2  or  Week 3">
+            </div>
+            <div class="form-group">
+                <label for="weekTopics">Focus areas <span style="color:var(--text-muted);font-weight:400;">(comma separated)</span></label>
+                <textarea name="topics" id="weekTopics" rows="3" placeholder="e.g. Sun salutations, Breathing, Balance poses"></textarea>
+            </div>
+            <div class="tracker-actions" style="justify-content:flex-end;margin-top:8px;">
+                <button type="button" class="tracker-btn tracker-btn--outline" onclick="document.getElementById('weekModal').style.display='none'">Cancel</button>
+                <button type="submit" class="tracker-btn"><i data-lucide="check" style="width:15px;height:15px;"></i> Save</button>
+            </div>
+        </form>
+    </div>
+</div>
+
+<script>
+function openWeekModal(index, weeks, topics) {
+    var isEdit = index !== undefined;
+    document.getElementById('weekModalTitle').textContent = isEdit ? 'Edit Week Block' : 'Add Week Block';
+    document.getElementById('weekAction').value = isEdit ? 'update_week' : 'add_week';
+    document.getElementById('weekIndex').value = isEdit ? index : '';
+    document.getElementById('weekLabel').value = isEdit ? weeks : '';
+    document.getElementById('weekTopics').value = isEdit ? topics : '';
+    document.getElementById('weekModal').style.display = 'flex';
+}
+</script>
+{% endblock %}

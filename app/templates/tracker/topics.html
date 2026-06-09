@@ -1,0 +1,87 @@
+{% extends "tracker/_plan_layout.html" %}
+
+{% block tracker_content %}
+
+<div class="topic-summary-cards">
+    <div class="stat-badge stat-badge--info">
+        <i data-lucide="list" style="width:15px;height:15px;"></i> {{ entries|length }} topics
+    </div>
+    <div class="stat-badge stat-badge--success">
+        <i data-lucide="check-circle" style="width:15px;height:15px;"></i> {{ total_solved }} / {{ total_target }} solved
+    </div>
+    <div class="stat-badge stat-badge--warning">
+        <i data-lucide="trending-up" style="width:15px;height:15px;"></i> {{ overall_pct }}% complete
+    </div>
+</div>
+
+<div class="tracker-card" style="margin-bottom:24px;padding:18px 22px;">
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px;">
+        <span style="font-size:13px;font-weight:600;color:var(--text);">{{ cat_label }} — Overall</span>
+        <span style="font-size:13px;color:var(--text-secondary);">{{ total_solved }} / {{ total_target }}</span>
+    </div>
+    <div class="progress-bar progress-bar--lg">
+        <div class="progress-fill" style="width: {{ overall_pct }}%;"></div>
+    </div>
+</div>
+
+{% if entries %}
+<div class="topic-grid">
+    {% for entry in entries %}
+    <div class="topic-row">
+        <div class="topic-name">{{ entry.topic }}</div>
+        <div class="topic-progress">
+            <div class="progress-fill" style="width: {{ entry.progress_pct }}%;"></div>
+        </div>
+        <div class="topic-stats">{{ entry.solved_count }} / {{ entry.target_count }} ({{ entry.progress_pct }}%)</div>
+
+        <form method="POST" action="{{ url_for('tracker.topics', plan_id=plan.id, category=category) }}"
+              style="display:flex;gap:8px;align-items:center;margin:0;flex-wrap:wrap;">
+            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+            <input type="hidden" name="action" value="update">
+            <input type="hidden" name="entry_id" value="{{ entry.id }}">
+            <input type="number" name="solved" value="{{ entry.solved_count }}" min="0" max="9999"
+                   style="width:80px;" title="Solved count">
+            <input type="text" name="notes" value="{{ entry.notes or '' }}" placeholder="Notes"
+                   style="width:150px;">
+            <button type="submit" class="tracker-btn tracker-btn--sm" title="Save">
+                <i data-lucide="save" style="width:14px;height:14px;"></i>
+            </button>
+        </form>
+
+        <form method="POST" action="{{ url_for('tracker.topics', plan_id=plan.id, category=category) }}"
+              style="margin:0;" data-confirm="Remove topic &quot;{{ entry.topic }}&quot;?">
+            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+            <input type="hidden" name="action" value="delete">
+            <input type="hidden" name="entry_id" value="{{ entry.id }}">
+            <button type="submit" class="tracker-btn tracker-btn--danger tracker-btn--sm" title="Delete">
+                <i data-lucide="trash-2" style="width:14px;height:14px;"></i>
+            </button>
+        </form>
+    </div>
+    {% endfor %}
+</div>
+{% else %}
+<div class="tracker-empty">
+    <span class="empty-icon"><i data-lucide="list-plus" style="width:48px;height:48px;"></i></span>
+    <div class="empty-message">No topics yet</div>
+    <div class="empty-sub">Add your first {{ cat_label }} topic below to start tracking progress.</div>
+</div>
+{% endif %}
+
+<form method="POST" action="{{ url_for('tracker.topics', plan_id=plan.id, category=category) }}" class="add-topic-form">
+    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+    <input type="hidden" name="action" value="add">
+    <div class="form-group" style="margin:0;flex:2;">
+        <label for="topic">New topic</label>
+        <input type="text" id="topic" name="topic" placeholder="e.g. Two Pointers" required>
+    </div>
+    <div class="form-group" style="margin:0;flex:1;">
+        <label for="target">Target count</label>
+        <input type="number" id="target" name="target" value="10" min="1" max="9999">
+    </div>
+    <button type="submit" class="tracker-btn">
+        <i data-lucide="plus" style="width:15px;height:15px;"></i> Add Topic
+    </button>
+</form>
+
+{% endblock %}

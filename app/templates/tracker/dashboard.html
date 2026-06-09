@@ -1,0 +1,199 @@
+{% extends "tracker/_plan_layout.html" %}
+
+{% block tracker_head %}
+    <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
+{% endblock %}
+
+{% block tracker_content %}
+
+{# ---- KPI cards ---- #}
+<div class="dashboard-grid">
+    <div class="kpi-card kpi-card--accent">
+        <div class="kpi-icon"><i data-lucide="trending-up" style="width:18px;height:18px;"></i></div>
+        <div class="kpi-value">{{ stats.overall_pct }}%</div>
+        <div class="kpi-label">Overall Progress</div>
+        <div class="kpi-sub">Day {{ stats.days_elapsed }} of {{ plan.duration_days }}</div>
+    </div>
+    <div class="kpi-card kpi-card--success">
+        <div class="kpi-icon"><i data-lucide="calendar-check" style="width:18px;height:18px;"></i></div>
+        <div class="kpi-value">{{ stats.active_days }}</div>
+        <div class="kpi-label">Active Days</div>
+        <div class="kpi-sub">out of {{ plan.duration_days }} days</div>
+    </div>
+    <div class="kpi-card kpi-card--warning">
+        <div class="kpi-icon"><i data-lucide="flame" style="width:18px;height:18px;"></i></div>
+        <div class="kpi-value">{{ stats.current_streak }}</div>
+        <div class="kpi-label">Current Streak</div>
+        <div class="kpi-sub">longest: {{ stats.longest_streak }} days</div>
+    </div>
+    {% if 'jobs' in plan.modules %}
+    <div class="kpi-card kpi-card--info">
+        <div class="kpi-icon"><i data-lucide="briefcase" style="width:18px;height:18px;"></i></div>
+        <div class="kpi-value">{{ stats.total_jobs }}</div>
+        <div class="kpi-label">Jobs Applied</div>
+        <div class="kpi-sub">{{ stats.interviews_count }} interview{{ 's' if stats.interviews_count != 1 else '' }}</div>
+    </div>
+    {% else %}
+    <div class="kpi-card kpi-card--info">
+        <div class="kpi-icon"><i data-lucide="award" style="width:18px;height:18px;"></i></div>
+        <div class="kpi-value">{{ stats.longest_streak }}</div>
+        <div class="kpi-label">Longest Streak</div>
+        <div class="kpi-sub">best run so far</div>
+    </div>
+    {% endif %}
+</div>
+
+{# ---- Charts row 1: overall doughnut + topic progress ---- #}
+<div class="charts-row">
+    <div class="chart-card" style="{% if stats.topic_progress %}flex:0 0 320px;{% endif %}">
+        <h3>Overall Completion</h3>
+        <div style="position:relative;height:220px;display:flex;align-items:center;justify-content:center;">
+            <canvas id="overallChart"></canvas>
+        </div>
+    </div>
+
+    {% if stats.topic_progress %}
+    <div class="chart-card">
+        <h3>Topic Progress</h3>
+        <div style="display:flex;flex-direction:column;gap:18px;margin-top:6px;">
+            {% for row in stats.topic_progress %}
+            <div>
+                <div style="display:flex;justify-content:space-between;margin-bottom:8px;font-size:13px;">
+                    <span style="color:var(--text);font-weight:500;">{{ row.label }}</span>
+                    <span style="color:var(--text-secondary);">{{ row.solved }} / {{ row.target }}</span>
+                </div>
+                <div class="progress-bar">
+                    <div class="progress-fill" style="width: {{ row.pct }}%;"></div>
+                </div>
+            </div>
+            {% endfor %}
+        </div>
+    </div>
+    {% endif %}
+</div>
+
+{# ---- Charts row 2: weekly bar + daily trend line ---- #}
+<div class="charts-row">
+    <div class="chart-card">
+        <h3>Weekly Active Days</h3>
+        <div style="position:relative;height:240px;">
+            <canvas id="weeklyChart"></canvas>
+        </div>
+    </div>
+    <div class="chart-card">
+        <h3>Daily Study Trend</h3>
+        <div style="position:relative;height:240px;">
+            <canvas id="trendChart"></canvas>
+        </div>
+    </div>
+</div>
+
+<script>
+(function () {
+    if (typeof Chart === 'undefined') return;
+
+    var styles = getComputedStyle(document.documentElement);
+    var accent = (styles.getPropertyValue('--accent') || '#8b5cf6').trim();
+    var sky = (styles.getPropertyValue('--sky') || '#38bdf8').trim();
+    var sunken = (styles.getPropertyValue('--surface-sunken') || '#1e293b').trim();
+    var muted = (styles.getPropertyValue('--text-muted') || '#94a3b8').trim();
+    var grid = (styles.getPropertyValue('--border-muted') || 'rgba(148,163,184,0.15)').trim();
+    Chart.defaults.color = muted;
+    Chart.defaults.font.family = 'Inter, sans-serif';
+
+    // --- Overall doughnut ---
+    var overallPct = {{ stats.overall_pct }};
+    new Chart(document.getElementById('overallChart'), {
+        type: 'doughnut',
+        data: {
+            labels: ['Completed', 'Remaining'],
+            datasets: [{
+                data: [overallPct, 100 - overallPct],
+                backgroundColor: [accent, sunken],
+                borderWidth: 0,
+                cutout: '72%'
+            }]
+        },
+        options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            plugins: { legend: { display: false } }
+        },
+        plugins: [{
+            id: 'centerText',
+            afterDraw: function (chart) {
+                var ctx = chart.ctx;
+                var cx = chart.getDatasetMeta(0).data[0].x;
+                var cy = chart.getDatasetMeta(0).data[0].y;
+                ctx.save();
+                ctx.textAlign = 'center';
+                ctx.textBaseline = 'middle';
+                ctx.fillStyle = (getComputedStyle(document.documentElement).getPropertyValue('--text') || '#fff').trim();
+                ctx.font = '700 30px Inter, sans-serif';
+                ctx.fillText(overallPct + '%', cx, cy - 4);
+                ctx.font = '500 12px Inter, sans-serif';
+                ctx.fillStyle = muted;
+                ctx.fillText('complete', cx, cy + 18);
+                ctx.restore();
+            }
+        }]
+    });
+
+    // --- Weekly bar ---
+    var weekly = {{ stats.weekly_data | tojson }};
+    new Chart(document.getElementById('weeklyChart'), {
+        type: 'bar',
+        data: {
+            labels: weekly.map(function (w) { return 'W' + w.week; }),
+            datasets: [{
+                label: 'Active days',
+                data: weekly.map(function (w) { return w.active_days; }),
+                backgroundColor: accent,
+                borderRadius: 6,
+                maxBarThickness: 26
+            }]
+        },
+        options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            plugins: { legend: { display: false } },
+            scales: {
+                y: { beginAtZero: true, max: 7, ticks: { stepSize: 1 }, grid: { color: grid } },
+                x: { grid: { display: false } }
+            }
+        }
+    });
+
+    // --- Daily trend line — one series per metric this plan tracks ---
+    var trendLabels = {{ stats.trend_labels | tojson }};
+    var trendSeries = {{ stats.trend_series | tojson }};
+    var seriesColors = [accent, sky, '#f59e0b', '#34d399'];
+    new Chart(document.getElementById('trendChart'), {
+        type: 'line',
+        data: {
+            labels: trendLabels,
+            datasets: trendSeries.map(function (s, i) {
+                return {
+                    label: s.label,
+                    data: s.data,
+                    borderColor: seriesColors[i % seriesColors.length],
+                    backgroundColor: 'transparent',
+                    tension: 0.35,
+                    pointRadius: 2,
+                    borderWidth: 2
+                };
+            })
+        },
+        options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            plugins: { legend: { display: true, labels: { boxWidth: 12, font: { size: 11 } } } },
+            scales: {
+                y: { beginAtZero: true, grid: { color: grid } },
+                x: { grid: { display: false }, ticks: { maxTicksLimit: 12 } }
+            }
+        }
+    });
+})();
+</script>
+{% endblock %}

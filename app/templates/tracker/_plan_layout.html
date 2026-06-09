@@ -1,0 +1,89 @@
+{# ============================================================
+   Shared layout for all plan-scoped tracker pages.
+   Renders the page header + tab navigation, then yields to
+   {% block tracker_content %}. Pages that extend this must set
+   `plan` in their context and define `tracker_content`.
+   ============================================================ #}
+{% extends "base.html" %}
+
+{% block title %}{{ plan.name }} · HiveFlow{% endblock %}
+
+{% block extra_head %}
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/tracker.css') }}">
+    {% block tracker_head %}{% endblock %}
+{% endblock %}
+
+{% block content %}
+<div class="tracker-container">
+
+    <div class="tracker-header">
+        <div>
+            <h1>{{ plan.name }}</h1>
+            <div class="tracker-subtitle">
+                {% if plan.description %}{{ plan.description }}{% else %}{{ plan.duration_days }}-day plan · started {{ plan.start_date.strftime('%b %d, %Y') }}{% endif %}
+            </div>
+        </div>
+        <div class="tracker-actions">
+            <a href="{{ url_for('tracker.plans_list') }}" class="tracker-btn tracker-btn--outline tracker-btn--sm">
+                <i data-lucide="arrow-left" style="width:15px;height:15px;"></i> All Plans
+            </a>
+        </div>
+    </div>
+
+    {# ---- Tab navigation ---- #}
+    {% set ep = request.endpoint %}
+    {% set current_cat = request.view_args.get('category') if request.view_args else None %}
+    <nav class="tracker-tabs">
+        <a href="{{ url_for('tracker.dashboard', plan_id=plan.id) }}"
+           class="{% if ep == 'tracker.dashboard' %}active{% endif %}">
+            <i data-lucide="layout-dashboard" style="width:15px;height:15px;"></i> Dashboard
+        </a>
+        <a href="{{ url_for('tracker.daily', plan_id=plan.id) }}"
+           class="{% if ep == 'tracker.daily' %}active{% endif %}">
+            <i data-lucide="calendar-check" style="width:15px;height:15px;"></i> Daily
+        </a>
+        {% set modules = plan.modules %}
+        {% if 'topics' in modules %}
+        {% for cat in plan.config.get('topic_categories', []) %}
+        <a href="{{ url_for('tracker.topics', plan_id=plan.id, category=cat.key) }}"
+           class="{% if ep == 'tracker.topics' and current_cat == cat.key %}active{% endif %}">
+            <i data-lucide="{{ cat.icon or 'list-checks' }}" style="width:15px;height:15px;"></i> {{ cat.label }}
+        </a>
+        {% endfor %}
+        {% endif %}
+        {% if 'jobs' in modules %}
+        <a href="{{ url_for('tracker.jobs', plan_id=plan.id) }}"
+           class="{% if ep == 'tracker.jobs' %}active{% endif %}">
+            <i data-lucide="briefcase" style="width:15px;height:15px;"></i> Jobs
+        </a>
+        {% endif %}
+        {% if 'interviews' in modules %}
+        <a href="{{ url_for('tracker.interviews', plan_id=plan.id) }}"
+           class="{% if ep == 'tracker.interviews' %}active{% endif %}">
+            <i data-lucide="messages-square" style="width:15px;height:15px;"></i> Interviews
+        </a>
+        {% endif %}
+        {% if 'weekly' in modules %}
+        <a href="{{ url_for('tracker.weekly', plan_id=plan.id) }}"
+           class="{% if ep == 'tracker.weekly' %}active{% endif %}">
+            <i data-lucide="calendar-range" style="width:15px;height:15px;"></i> Weekly
+        </a>
+        {% endif %}
+        {% if 'skills' in modules %}
+        <a href="{{ url_for('tracker.skills', plan_id=plan.id) }}"
+           class="{% if ep == 'tracker.skills' %}active{% endif %}">
+            <i data-lucide="radar" style="width:15px;height:15px;"></i> Skills
+        </a>
+        {% endif %}
+        {% if 'goals' in modules %}
+        <a href="{{ url_for('tracker.goals', plan_id=plan.id) }}"
+           class="{% if ep == 'tracker.goals' %}active{% endif %}">
+            <i data-lucide="target" style="width:15px;height:15px;"></i> Goals
+        </a>
+        {% endif %}
+    </nav>
+
+    {% block tracker_content %}{% endblock %}
+
+</div>
+{% endblock %}

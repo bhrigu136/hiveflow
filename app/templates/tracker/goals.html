@@ -1,0 +1,141 @@
+{% extends "tracker/_plan_layout.html" %}
+
+{% block tracker_content %}
+
+<div style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:12px;margin-bottom:18px;">
+    <p style="color:var(--text-muted);font-size:13px;margin:0;">
+        Set your main goal and the measurable targets you want to hit.
+    </p>
+    <button type="button" class="tracker-btn tracker-btn--sm" onclick="openMetricModal()">
+        <i data-lucide="plus" style="width:14px;height:14px;"></i> Add Goal Metric
+    </button>
+</div>
+
+<div class="goals-header">
+    <div style="position:relative;z-index:1;">
+        <div style="font-size:12px;text-transform:uppercase;letter-spacing:1px;opacity:0.85;margin-bottom:8px;">
+            <i data-lucide="target" style="width:14px;height:14px;vertical-align:-2px;"></i> Primary Goal
+        </div>
+        <div style="font-size:20px;font-weight:600;line-height:1.4;max-width:680px;">
+            {{ goals_config.get('primary', 'Define your primary goal.') }}
+        </div>
+    </div>
+    <button type="button" class="tracker-btn tracker-btn--outline tracker-btn--sm"
+            style="position:absolute;top:18px;right:18px;z-index:2;"
+            onclick="openPrimaryModal()">
+        <i data-lucide="edit-3" style="width:13px;height:13px;"></i> Edit
+    </button>
+</div>
+
+{% if metrics %}
+<div class="goals-grid">
+    {% for m in metrics %}
+    <div class="goal-metric-card">
+        <div style="display:flex;justify-content:space-between;align-items:flex-start;gap:8px;">
+            <span style="font-size:14px;font-weight:500;color:var(--text);">{{ m.name }}</span>
+            <span style="font-size:13px;font-weight:600;color:var(--accent-light);">{{ m.pct }}%</span>
+        </div>
+        <div class="goal-current">{{ m.current }} <span class="goal-target">/ {{ m.target }}</span></div>
+        <div class="goal-bar">
+            <div class="progress-fill" style="width: {{ m.pct }}%;"></div>
+        </div>
+        {% if m.editable %}
+        <div style="display:flex;gap:8px;margin-top:12px;">
+            <button type="button" class="tracker-btn tracker-btn--outline tracker-btn--sm"
+                    onclick="openMetricModal({{ m.index }}, {{ m.name|tojson }}, {{ m.target }}, {{ m.current }})">
+                <i data-lucide="edit-3" style="width:12px;height:12px;"></i> Edit
+            </button>
+            <form method="POST" action="{{ url_for('tracker.goals', plan_id=plan.id) }}"
+                  data-confirm="Delete the goal metric &quot;{{ m.name }}&quot;?" style="margin:0;">
+                <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                <input type="hidden" name="action" value="delete_metric">
+                <input type="hidden" name="index" value="{{ m.index }}">
+                <button type="submit" class="tracker-btn tracker-btn--outline tracker-btn--sm" style="color:var(--danger,#f87171);">
+                    <i data-lucide="trash-2" style="width:12px;height:12px;"></i>
+                </button>
+            </form>
+        </div>
+        {% else %}
+        <div style="margin-top:12px;font-size:11px;color:var(--text-muted);">
+            <i data-lucide="zap" style="width:11px;height:11px;vertical-align:-1px;"></i> auto-tracked
+        </div>
+        {% endif %}
+    </div>
+    {% endfor %}
+</div>
+{% else %}
+<div class="tracker-empty">
+    <span class="empty-icon"><i data-lucide="target" style="width:48px;height:48px;"></i></span>
+    <div class="empty-message">No goal metrics yet</div>
+    <div class="empty-sub">Add a measurable target — e.g. “Yoga sessions” with a target of 60.</div>
+    <button type="button" class="tracker-btn tracker-btn--sm" style="margin-top:16px;" onclick="openMetricModal()">
+        <i data-lucide="plus" style="width:14px;height:14px;"></i> Add Goal Metric
+    </button>
+</div>
+{% endif %}
+
+{# ---- Primary goal modal ---- #}
+<div class="modal-overlay" id="primaryModal" style="display:none;" onclick="if(event.target===this)this.style.display='none'">
+    <div class="modal-content">
+        <h3 style="font-size:18px;font-weight:600;color:var(--text);margin-bottom:16px;">Edit Primary Goal</h3>
+        <form method="POST" action="{{ url_for('tracker.goals', plan_id=plan.id) }}">
+            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+            <input type="hidden" name="action" value="update_primary">
+            <div class="form-group">
+                <label for="primaryInput">What do you want to achieve?</label>
+                <textarea name="primary" id="primaryInput" rows="3" placeholder="e.g. Build a daily yoga habit and improve flexibility over 60 days.">{{ goals_config.get('primary', '') if goals_config.get('primary') != 'Define your primary goal.' else '' }}</textarea>
+            </div>
+            <div class="tracker-actions" style="justify-content:flex-end;margin-top:8px;">
+                <button type="button" class="tracker-btn tracker-btn--outline" onclick="document.getElementById('primaryModal').style.display='none'">Cancel</button>
+                <button type="submit" class="tracker-btn"><i data-lucide="check" style="width:15px;height:15px;"></i> Save</button>
+            </div>
+        </form>
+    </div>
+</div>
+
+{# ---- Add / edit metric modal ---- #}
+<div class="modal-overlay" id="metricModal" style="display:none;" onclick="if(event.target===this)this.style.display='none'">
+    <div class="modal-content">
+        <h3 id="metricModalTitle" style="font-size:18px;font-weight:600;color:var(--text);margin-bottom:16px;">Add Goal Metric</h3>
+        <form method="POST" action="{{ url_for('tracker.goals', plan_id=plan.id) }}">
+            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+            <input type="hidden" name="action" id="metricAction" value="add_metric">
+            <input type="hidden" name="index" id="metricIndex" value="">
+            <div class="form-group">
+                <label for="metricName">Metric name</label>
+                <input type="text" name="name" id="metricName" required placeholder="e.g. Yoga sessions">
+            </div>
+            <div class="inline-form">
+                <div class="form-group" style="margin:0;">
+                    <label for="metricCurrent">Current</label>
+                    <input type="number" name="current" id="metricCurrent" min="0" value="0">
+                </div>
+                <div class="form-group" style="margin:0;">
+                    <label for="metricTarget">Target</label>
+                    <input type="number" name="target" id="metricTarget" min="1" value="10">
+                </div>
+            </div>
+            <div class="tracker-actions" style="justify-content:flex-end;margin-top:8px;">
+                <button type="button" class="tracker-btn tracker-btn--outline" onclick="document.getElementById('metricModal').style.display='none'">Cancel</button>
+                <button type="submit" class="tracker-btn"><i data-lucide="check" style="width:15px;height:15px;"></i> Save</button>
+            </div>
+        </form>
+    </div>
+</div>
+
+<script>
+function openPrimaryModal() {
+    document.getElementById('primaryModal').style.display = 'flex';
+}
+function openMetricModal(index, name, target, current) {
+    var isEdit = index !== undefined;
+    document.getElementById('metricModalTitle').textContent = isEdit ? 'Edit Goal Metric' : 'Add Goal Metric';
+    document.getElementById('metricAction').value = isEdit ? 'update_metric' : 'add_metric';
+    document.getElementById('metricIndex').value = isEdit ? index : '';
+    document.getElementById('metricName').value = isEdit ? name : '';
+    document.getElementById('metricTarget').value = isEdit ? target : 10;
+    document.getElementById('metricCurrent').value = isEdit ? current : 0;
+    document.getElementById('metricModal').style.display = 'flex';
+}
+</script>
+{% endblock %}

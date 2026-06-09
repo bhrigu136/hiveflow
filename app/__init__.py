@@ -119,6 +119,7 @@ def create_app():
     from app.routes.notifications import notifications_bp
     from app.routes.files import files_bp
     from app.routes.meetings import meetings_bp
+    from app.routes.tracker import tracker_bp
 
     app.register_blueprint(auth_bp)
     app.register_blueprint(tasks_bp)
@@ -129,12 +130,19 @@ def create_app():
     app.register_blueprint(notifications_bp)
     app.register_blueprint(files_bp)
     app.register_blueprint(meetings_bp)
+    app.register_blueprint(tracker_bp)
 
     # Serve robots.txt from the static folder at the root path
     from flask import send_from_directory
     @app.route('/robots.txt')
     def robots_txt():
         return send_from_directory(app.static_folder, 'robots.txt')
+
+    # Import tracker models so SQLAlchemy registers the tables.
+    # NOTE: use `from app import ...` — `import app.tracker_models` would
+    # rebind the local name `app` to the package module and break the
+    # `app.app_context()` call below.
+    from app import tracker_models  # noqa: F401
 
     # Create tables on first run (migrations handle everything after that)
     with app.app_context():

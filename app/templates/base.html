@@ -57,6 +57,7 @@
             }
         })();
     </script>
+    {% block extra_head %}{% endblock %}
 </head>
 
 <body class="{% if current_user.is_authenticated %}has-sidebar{% endif %}">
@@ -89,6 +90,11 @@
                class="sidebar-link {% if request.endpoint == 'tasks.view_tasks' %}active{% endif %}">
                 <i data-lucide="check-square"></i>
                 <span>My Tasks</span>
+            </a>
+            <a href="{{ url_for('tracker.plans_list') }}"
+               class="sidebar-link {% if request.endpoint and request.endpoint.startswith('tracker.') %}active{% endif %}">
+                <i data-lucide="bar-chart-2"></i>
+                <span>Growth Plans</span>
             </a>
             <a href="{{ url_for('orgs.list_orgs') }}"
                class="sidebar-link {% if request.endpoint and request.endpoint.startswith(('orgs.', 'projects.', 'discussions.')) %}active{% endif %}">

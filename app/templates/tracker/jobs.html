@@ -1,0 +1,181 @@
+{% extends "tracker/_plan_layout.html" %}
+
+{% block tracker_content %}
+
+<div class="job-stats-row">
+    <div class="stat-badge"><i data-lucide="send" style="width:15px;height:15px;"></i> {{ total }} applied</div>
+    <div class="stat-badge stat-badge--warning"><i data-lucide="messages-square" style="width:15px;height:15px;"></i> {{ interviews }} interviewing</div>
+    <div class="stat-badge stat-badge--success"><i data-lucide="party-popper" style="width:15px;height:15px;"></i> {{ offers }} offer{{ 's' if offers != 1 else '' }}</div>
+    <div class="stat-badge stat-badge--danger"><i data-lucide="x-circle" style="width:15px;height:15px;"></i> {{ rejections }} rejected</div>
+    <div class="stat-badge stat-badge--info"><i data-lucide="percent" style="width:15px;height:15px;"></i> {{ response_rate }}% response</div>
+</div>
+
+<div style="margin-bottom:18px;">
+    <button type="button" class="tracker-btn" onclick="document.getElementById('addJobForm').style.display = (document.getElementById('addJobForm').style.display==='none'?'block':'none')">
+        <i data-lucide="plus" style="width:16px;height:16px;"></i> Add Application
+    </button>
+</div>
+
+<form method="POST" action="{{ url_for('tracker.jobs', plan_id=plan.id) }}" class="job-form" id="addJobForm" style="display:none;">
+    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+    <div class="inline-form">
+        <div class="form-group" style="margin:0;"><label>Company *</label><input type="text" name="company" required placeholder="Acme Corp"></div>
+        <div class="form-group" style="margin:0;"><label>Role *</label><input type="text" name="role" required placeholder="Software Engineer"></div>
+        <div class="form-group" style="margin:0;"><label>Platform</label><input type="text" name="platform" placeholder="LinkedIn"></div>
+    </div>
+    <div class="inline-form" style="margin-top:14px;">
+        <div class="form-group" style="margin:0;"><label>Applied date</label><input type="date" name="date"></div>
+        <div class="form-group" style="margin:0;">
+            <label>Status</label>
+            <select name="status">
+                <option value="Applied">Applied</option>
+                <option value="Interview">Interview</option>
+                <option value="Offered">Offered</option>
+                <option value="Rejected">Rejected</option>
+            </select>
+        </div>
+        <div class="form-group" style="margin:0;"><label>Interview date</label><input type="date" name="interview_date"></div>
+    </div>
+    <div class="inline-form" style="margin-top:14px;">
+        <div class="form-group" style="margin:0;">
+            <label>Result</label>
+            <select name="result">
+                <option value="">—</option>
+                <option value="Pending">Pending</option>
+                <option value="Selected">Selected</option>
+                <option value="Rejected">Rejected</option>
+            </select>
+        </div>
+        <div class="form-group" style="margin:0;"><label>Salary offered</label><input type="text" name="salary" placeholder="e.g. 12 LPA"></div>
+        <div class="form-group" style="margin:0;"><label>Notes</label><input type="text" name="notes" placeholder="Optional"></div>
+    </div>
+    <div class="tracker-actions" style="justify-content:flex-end;margin-top:16px;">
+        <button type="submit" class="tracker-btn"><i data-lucide="check" style="width:15px;height:15px;"></i> Save Application</button>
+    </div>
+</form>
+
+{% if apps %}
+<div class="daily-table-container">
+    <table class="tracker-table">
+        <thead>
+            <tr>
+                <th>Date</th><th>Company</th><th>Role</th><th>Platform</th>
+                <th>Status</th><th>Interview</th><th>Result</th><th>Salary</th><th></th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for job in apps %}
+            <tr>
+                <td style="white-space:nowrap;">{{ job.date.strftime('%b %d') }}</td>
+                <td style="color:var(--text);font-weight:500;">{{ job.company }}</td>
+                <td>{{ job.role }}</td>
+                <td>{{ job.platform or '—' }}</td>
+                <td><span class="status-pill status-pill--{{ job.status|lower }}">{{ job.status }}</span></td>
+                <td style="white-space:nowrap;">{{ job.interview_date.strftime('%b %d') if job.interview_date else '—' }}</td>
+                <td>{{ job.result or '—' }}</td>
+                <td>{{ job.salary_offered or '—' }}</td>
+                <td style="white-space:nowrap;">
+                    <button type="button" class="tracker-btn tracker-btn--outline tracker-btn--sm" onclick="openJobModal({{ job.id }})" title="Edit">
+                        <i data-lucide="edit-3" style="width:13px;height:13px;"></i>
+                    </button>
+                    <form method="POST" action="{{ url_for('tracker.delete_job', plan_id=plan.id, job_id=job.id) }}"
+                          style="display:inline;margin:0;" data-confirm="Delete this job application?">
+                        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                        <button type="submit" class="tracker-btn tracker-btn--danger tracker-btn--sm" title="Delete">
+                            <i data-lucide="trash-2" style="width:13px;height:13px;"></i>
+                        </button>
+                    </form>
+                </td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+</div>
+{% else %}
+<div class="tracker-empty">
+    <span class="empty-icon"><i data-lucide="briefcase" style="width:48px;height:48px;"></i></span>
+    <div class="empty-message">No applications logged yet</div>
+    <div class="empty-sub">Click "Add Application" to start tracking your job hunt.</div>
+</div>
+{% endif %}
+
+{# ---- Edit modal ---- #}
+<div class="modal-overlay" id="jobModal" style="display:none;" onclick="if(event.target===this)closeJobModal()">
+    <div class="modal-content">
+        <h3 style="font-size:18px;font-weight:600;color:var(--text);margin-bottom:20px;">Edit Application</h3>
+        <form method="POST" id="jobEditForm">
+            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+            <div class="inline-form">
+                <div class="form-group" style="margin:0;"><label>Company</label><input type="text" name="company" id="ej_company"></div>
+                <div class="form-group" style="margin:0;"><label>Role</label><input type="text" name="role" id="ej_role"></div>
+            </div>
+            <div class="inline-form" style="margin-top:14px;">
+                <div class="form-group" style="margin:0;"><label>Platform</label><input type="text" name="platform" id="ej_platform"></div>
+                <div class="form-group" style="margin:0;">
+                    <label>Status</label>
+                    <select name="status" id="ej_status">
+                        <option value="Applied">Applied</option>
+                        <option value="Interview">Interview</option>
+                        <option value="Offered">Offered</option>
+                        <option value="Rejected">Rejected</option>
+                    </select>
+                </div>
+            </div>
+            <div class="inline-form" style="margin-top:14px;">
+                <div class="form-group" style="margin:0;"><label>Interview date</label><input type="date" name="interview_date" id="ej_interview_date"></div>
+                <div class="form-group" style="margin:0;">
+                    <label>Result</label>
+                    <select name="result" id="ej_result">
+                        <option value="">—</option>
+                        <option value="Pending">Pending</option>
+                        <option value="Selected">Selected</option>
+                        <option value="Rejected">Rejected</option>
+                    </select>
+                </div>
+            </div>
+            <div class="inline-form" style="margin-top:14px;">
+                <div class="form-group" style="margin:0;"><label>Salary</label><input type="text" name="salary" id="ej_salary"></div>
+                <div class="form-group" style="margin:0;"><label>Notes</label><input type="text" name="notes" id="ej_notes"></div>
+            </div>
+            <div class="tracker-actions" style="justify-content:flex-end;margin-top:18px;">
+                <button type="button" class="tracker-btn tracker-btn--outline" onclick="closeJobModal()">Cancel</button>
+                <button type="submit" class="tracker-btn"><i data-lucide="check" style="width:15px;height:15px;"></i> Save</button>
+            </div>
+        </form>
+    </div>
+</div>
+
+<script>
+var JOBS = {
+    {% for job in apps %}
+    {{ job.id }}: {
+        company: {{ job.company | tojson }},
+        role: {{ job.role | tojson }},
+        platform: {{ (job.platform or '') | tojson }},
+        status: {{ job.status | tojson }},
+        interview_date: {{ (job.interview_date.strftime('%Y-%m-%d') if job.interview_date else '') | tojson }},
+        result: {{ (job.result or '') | tojson }},
+        salary: {{ (job.salary_offered or '') | tojson }},
+        notes: {{ (job.notes or '') | tojson }}
+    }{% if not loop.last %},{% endif %}
+    {% endfor %}
+};
+var JOB_EDIT_URL_TPL = "{{ url_for('tracker.edit_job', plan_id=plan.id, job_id=0) }}";
+
+function openJobModal(id) {
+    var j = JOBS[id];
+    if (!j) return;
+    document.getElementById('jobEditForm').action = JOB_EDIT_URL_TPL.replace(/0$/, id);
+    document.getElementById('ej_company').value = j.company;
+    document.getElementById('ej_role').value = j.role;
+    document.getElementById('ej_platform').value = j.platform;
+    document.getElementById('ej_status').value = j.status;
+    document.getElementById('ej_interview_date').value = j.interview_date;
+    document.getElementById('ej_result').value = j.result;
+    document.getElementById('ej_salary').value = j.salary;
+    document.getElementById('ej_notes').value = j.notes;
+    document.getElementById('jobModal').style.display = 'flex';
+}
+function closeJobModal() { document.getElementById('jobModal').style.display = 'none'; }
+</script>
+{% endblock %}

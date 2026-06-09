@@ -67,10 +67,10 @@
 </style>
 
 <!-- Load Jitsi Meet External API Script -->
-<script src="https://jitsi.riot.im/external_api.js"></script>
+<script src="https://meet.jit.si/external_api.js"></script>
 <script>
 document.addEventListener("DOMContentLoaded", function() {
-    var domain = "jitsi.riot.im";
+    var domain = "meet.jit.si";
     var roomName = "{{ room_name }}";
     var userName = "{{ current_user.name if current_user.name else current_user.username }}";
     var userEmail = "{{ current_user.email }}";
@@ -116,12 +116,31 @@ document.addEventListener("DOMContentLoaded", function() {
         }
     }
 
+    // Watch the container so we can stamp permission attributes on the iframe
+    // the moment Jitsi inserts it — setting them after the iframe begins
+    // loading can be too late for some browsers and leaves camera/mic blocked.
+    var ALLOW_PERMS = 'camera; microphone; display-capture; autoplay; clipboard-write; fullscreen';
+    var permsObserver = new MutationObserver(function(mutations) {
+        mutations.forEach(function(m) {
+            m.addedNodes.forEach(function(node) {
+                if (node.tagName === 'IFRAME') {
+                    node.setAttribute('allow', ALLOW_PERMS);
+                    node.setAttribute('allowfullscreen', 'true');
+                }
+            });
+        });
+    });
+    permsObserver.observe(document.querySelector('#jitsi-meet-container'), { childList: true });
+
     try {
         var api = new JitsiMeetExternalAPI(domain, options);
-        
-        // Hide loader when the iframe actually loads
+
+        // Belt-and-braces: also set perms on the iframe handle the API exposes,
+        // in case the observer missed it (e.g. iframe inserted synchronously).
         var iframe = api.getIFrame();
         if (iframe) {
+            iframe.setAttribute('allow', ALLOW_PERMS);
+            iframe.setAttribute('allowfullscreen', 'true');
             iframe.addEventListener('load', hideLoader);
         }
 
