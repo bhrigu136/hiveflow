@@ -1,5 +1,8 @@
-from app import create_app
 import os
+
+os.environ.setdefault('TZ', 'UTC')
+
+from app import create_app
 app = create_app()
 
 

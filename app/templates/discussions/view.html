@@ -2,12 +2,10 @@
 {% block title %}{{ discussion.title }} — Discussions{% endblock %}
 
 {% block content %}
-<div class="discussion-header" style="margin-bottom: 30px;">
-    <div style="display: flex; align-items: center; gap: 10px; margin-bottom: 15px;">
-        <a href="{{ url_for('discussions.list_discussions', project_id=discussion.project_id) }}" style="color: var(--text-muted); text-decoration: none; display: flex; align-items: center; font-size: 14px;">
-            <i data-lucide="arrow-left" style="width: 14px; height: 14px; margin-right: 4px;"></i> Back to Discussions
-        </a>
-    </div>
+<div class="discussion-header" style="margin-bottom: 24px;">
+    <a href="{{ url_for('discussions.list_discussions', project_id=discussion.project_id) }}" class="back-link">
+        <i data-lucide="arrow-left"></i> Back to Discussions
+    </a>
 </div>
 
 <div style="background: var(--surface-solid); border: 1px solid var(--glass-border); border-radius: 12px; padding: 30px; margin-bottom: 30px;">
@@ -74,7 +72,7 @@
             </div>
 
             <div style="text-align: right;">
-                <button type="submit" class="btn primary">Post Comment</button>
+                <button type="submit" class="btn-primary" style="width:auto;">Post Comment</button>
             </div>
         </form>
     </div>

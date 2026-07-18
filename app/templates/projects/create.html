@@ -1,47 +1,30 @@
 {% extends "base.html" %}
+{% from 'components/ui.html' import field, textarea_field %}
 {% block title %}Create Project — HiveFlow{% endblock %}
 
 {% block content %}
-<div style="max-width: 500px; margin: 40px auto 0; padding: 0 0 0 4px;">
-    <a href="{{ url_for('orgs.dashboard', slug=org.slug) }}" style="color: var(--text-muted); text-decoration: none; display: inline-flex; align-items: center; font-size: 14px;">
-        <i data-lucide="arrow-left" style="width: 14px; height: 14px; margin-right: 4px;"></i> Back to {{ org.name }}
-    </a>
-</div>
-<div class="auth-container" style="max-width: 500px; margin: 15px auto 40px;">
-    <div class="auth-card" style="background: var(--surface-solid); border: 1px solid var(--glass-border); border-radius: 16px; padding: 40px;">
-        <div class="auth-header" style="text-align: center; margin-bottom: 30px;">
-            <div style="width: 56px; height: 56px; border-radius: 50%; background: linear-gradient(135deg, var(--accent), var(--sky)); display: flex; align-items: center; justify-content: center; margin: 0 auto 20px;">
-                <i data-lucide="layout" style="color: var(--on-accent); width: 28px; height: 28px;"></i>
-            </div>
-            <h2 style="margin: 0; font-size: 24px;">Create a Project</h2>
-            <p style="color: var(--text-muted); margin-top: 8px;">In organization: <strong>{{ org.name }}</strong></p>
+<div class="form-page">
+    <a href="{{ url_for('orgs.dashboard', slug=org.slug) }}" class="ui-btn ui-btn--ghost ui-btn--sm" style="margin-bottom:var(--space-4);"><i data-lucide="arrow-left"></i> {{ org.name }}</a>
+    <div class="ui-card">
+        <div class="form-page-head">
+            <span class="ui-stat-icon" style="width:56px;height:56px;border-radius:14px;"><i data-lucide="layout" style="width:26px;height:26px;"></i></span>
+            <h1>Create a project</h1>
+            <p>In team <strong>{{ org.name }}</strong></p>
         </div>
-
         <form method="POST" action="{{ url_for('projects.create_project', org_slug=org.slug) }}">
             <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
-            
-            <div class="auth-form-group" style="margin-bottom: 20px;">
-                <label for="name" style="display: block; margin-bottom: 8px; font-weight: 500; font-size: 14px;">Project Name</label>
-                <div class="auth-input-wrapper" style="position: relative;">
-                    <span class="auth-input-icon" style="position: absolute; left: 12px; top: 50%; transform: translateY(-50%); color: var(--text-muted);">
-                        <i data-lucide="folder" style="width: 18px; height: 18px;"></i>
-                    </span>
-                    <input type="text" id="name" name="name" required placeholder="E.g., Q3 Marketing Campaign" style="width: 100%; padding: 12px 12px 12px 40px; border-radius: 8px; border: 1px solid var(--glass-border); background: var(--surface); color: var(--text); box-sizing: border-box;">
-                </div>
-            </div>
-
-            <div class="auth-form-group" style="margin-bottom: 25px;">
-                <label for="description" style="display: block; margin-bottom: 8px; font-weight: 500; font-size: 14px;">Description (Optional)</label>
-                <textarea id="description" name="description" rows="3" placeholder="What is the goal of this project?" style="width: 100%; padding: 12px; border-radius: 8px; border: 1px solid var(--glass-border); background: var(--surface); color: var(--text); box-sizing: border-box; resize: vertical; font-family: inherit;"></textarea>
-            </div>
-
-            <button type="submit" class="auth-btn" style="width: 100%; padding: 12px; background: linear-gradient(to right, var(--accent), var(--sky)); color: var(--on-accent); border: none; border-radius: 8px; font-weight: 600; cursor: pointer; display: flex; align-items: center; justify-content: center; gap: 8px;">
-                Create Project <i data-lucide="check" style="width: 16px; height: 16px;"></i>
-            </button>
-            <div style="text-align: center; margin-top: 15px;">
-                <a href="{{ url_for('orgs.dashboard', slug=org.slug) }}" style="color: var(--text-muted); text-decoration: none; font-size: 14px;">Cancel</a>
-            </div>
+            {{ field('Project name', 'name', placeholder='e.g. Q3 Marketing Campaign', icon='folder', required=True, attrs='autofocus') }}
+            {{ textarea_field('Description (optional)', 'description', placeholder='What is the goal of this project?', rows=3) }}
+            <button type="submit" class="ui-btn ui-btn--primary ui-btn--lg ui-btn--block" style="margin-top:6px;">Create project <i data-lucide="arrow-right"></i></button>
         </form>
     </div>
 </div>
+
+<style>
+.form-page { max-width:520px; margin:24px auto; }
+.form-page-head { text-align:center; margin-bottom:var(--space-6); }
+.form-page-head .ui-stat-icon { margin:0 auto var(--space-4); }
+.form-page-head h1 { font-size:var(--fs-2xl); font-weight:var(--fw-bold); color:var(--text); letter-spacing:var(--tracking-tight); }
+.form-page-head p { font-size:var(--fs-base); color:var(--text-muted); margin-top:8px; }
+</style>
 {% endblock %}

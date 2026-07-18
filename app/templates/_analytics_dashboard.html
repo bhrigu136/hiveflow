@@ -1,0 +1,103 @@
+{# Shared analytics dashboard. Expects: stats (from services.analytics),
+   export_url (CSV link), show_meetings (bool). Chart.js must be loaded by the
+   host template's extra_head block. #}
+{% if stats and stats.has_data %}
+<div class="adash" style="margin-bottom: 2rem;">
+
+    <div class="adash-kpis">
+        <div class="adash-kpi"><div class="adash-kpi-num">{{ stats.totals.total }}</div><div class="adash-kpi-lbl">Total tasks</div></div>
+        <div class="adash-kpi"><div class="adash-kpi-num">{{ stats.totals.completed }}</div><div class="adash-kpi-lbl">Completed</div></div>
+        <div class="adash-kpi"><div class="adash-kpi-num">{{ stats.totals.completion_rate }}%</div><div class="adash-kpi-lbl">Completion</div></div>
+        <div class="adash-kpi"><div class="adash-kpi-num" style="color:#ef4444;">{{ stats.totals.overdue }}</div><div class="adash-kpi-lbl">Overdue</div></div>
+        {% if show_meetings %}
+        <div class="adash-kpi"><div class="adash-kpi-num">{{ stats.meetings.total_hours }}</div><div class="adash-kpi-lbl">Meeting hrs (30d)</div></div>
+        {% endif %}
+    </div>
+
+    <div class="adash-charts">
+        <div class="adash-card">
+            <h4 class="adash-h">Task status</h4>
+            <div style="height: 220px;"><canvas id="statusChart"></canvas></div>
+        </div>
+        <div class="adash-card">
+            <h4 class="adash-h">Completed per week</h4>
+            <div style="height: 220px;"><canvas id="velocityChart"></canvas></div>
+        </div>
+    </div>
+
+    {% if stats.members %}
+    <div class="adash-card" style="margin-bottom: 16px;">
+        <h4 class="adash-h">Completed by member</h4>
+        <div style="height: 240px;"><canvas id="memberChart"></canvas></div>
+    </div>
+    {% endif %}
+
+    <div style="text-align: right;">
+        <a href="{{ export_url }}" class="back-link" style="display:inline-flex; align-items:center; gap:6px;">
+            <i data-lucide="download" style="width:15px;height:15px;"></i> Export CSV
+        </a>
+    </div>
+</div>
+
+<style>
+.adash-kpis { display: grid; grid-template-columns: repeat(auto-fit, minmax(140px, 1fr)); gap: 14px; margin-bottom: 18px; }
+.adash-kpi { background: var(--bg-card, var(--surface-solid)); border: 1px solid var(--border-color, var(--glass-border)); border-radius: 12px; padding: 16px; text-align: center; }
+.adash-kpi-num { font-size: 1.6rem; font-weight: 700; color: var(--text-main, var(--text)); }
+.adash-kpi-lbl { font-size: 0.72rem; color: var(--text-muted); text-transform: uppercase; letter-spacing: 0.5px; margin-top: 4px; }
+.adash-charts { display: grid; grid-template-columns: 1fr 1.4fr; gap: 16px; margin-bottom: 16px; }
+.adash-card { background: var(--bg-card, var(--surface-solid)); border: 1px solid var(--border-color, var(--glass-border)); border-radius: 14px; padding: 18px; }
+.adash-h { margin: 0 0 12px; font-size: 0.95rem; color: var(--text-main, var(--text)); }
+@media (max-width: 768px) { .adash-charts { grid-template-columns: 1fr; } }
+</style>
+
+<script>
+(function () {
+    if (typeof Chart === 'undefined') return;
+    var css = getComputedStyle(document.documentElement);
+    function v(n, f) { return (css.getPropertyValue(n) || f).trim(); }
+    var accent = v('--accent-light', '#8b5cf6');
+    var muted = v('--text-muted', '#94a3b8');
+    var grid = 'rgba(148,163,184,0.15)';
+    Chart.defaults.color = muted;
+    Chart.defaults.font.family = 'Inter, sans-serif';
+
+    var status = {{ stats.status | tojson }};
+    new Chart(document.getElementById('statusChart'), {
+        type: 'doughnut',
+        data: { labels: ['Completed', 'In progress', 'Pending'],
+                datasets: [{ data: [status.Completed, status.Working, status.Pending],
+                             backgroundColor: ['#22c55e', '#3b82f6', '#94a3b8'], borderWidth: 0, cutout: '62%' }] },
+        options: { responsive: true, maintainAspectRatio: false,
+                   plugins: { legend: { position: 'bottom', labels: { boxWidth: 12, font: { size: 11 } } } } }
+    });
+
+    var vel = {{ stats.velocity | tojson }};
+    new Chart(document.getElementById('velocityChart'), {
+        type: 'line',
+        data: { labels: vel.labels,
+                datasets: [{ label: 'Completed', data: vel.data, borderColor: accent,
+                             backgroundColor: 'transparent', tension: 0.35, pointRadius: 2, borderWidth: 2 }] },
+        options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { display: false } },
+                   scales: { y: { beginAtZero: true, ticks: { precision: 0 }, grid: { color: grid } }, x: { grid: { display: false } } } }
+    });
+
+    var members = {{ stats.members | tojson }};
+    var mc = document.getElementById('memberChart');
+    if (mc && members.length) {
+        new Chart(mc, {
+            type: 'bar',
+            data: { labels: members.map(function (m) { return m.name; }),
+                    datasets: [{ label: 'Completed', data: members.map(function (m) { return m.completed; }),
+                                 backgroundColor: accent, borderRadius: 6, maxBarThickness: 36 }] },
+            options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { display: false } },
+                       scales: { y: { beginAtZero: true, ticks: { precision: 0 }, grid: { color: grid } }, x: { grid: { display: false } } } }
+        });
+    }
+    if (window.lucide) window.lucide.createIcons();
+})();
+</script>
+{% else %}
+<div style="background: var(--bg-card, var(--surface-solid)); border: 1px solid var(--border-color, var(--glass-border)); border-radius: 14px; text-align: center; padding: 30px; margin-bottom: 2rem; color: var(--text-muted);">
+    No task data yet — assign and complete some tasks to see charts here.
+</div>
+{% endif %}

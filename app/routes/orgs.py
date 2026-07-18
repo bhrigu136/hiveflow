@@ -1,10 +1,13 @@
 import re
+import csv
+import io
 import secrets
-from flask import Blueprint, render_template, request, redirect, url_for, flash
+from flask import Blueprint, render_template, request, redirect, url_for, flash, Response
 from flask_login import login_required, current_user
 from app.models import Organization, OrgMember, Project, Task
 from app.extensions import db, limiter
 from app.utils import create_notification
+from app.services.analytics import org_analytics
 
 orgs_bp = Blueprint('orgs', __name__, url_prefix='/orgs')
 
@@ -179,4 +182,31 @@ def analytics(slug):
     # Sort members by completed tasks descending
     members_data.sort(key=lambda x: x['completed'], reverse=True)
 
-    return render_template('orgs/analytics.html', org=org, members_data=members_data)
+    stats = org_analytics(org.id)
+    return render_template('orgs/analytics.html', org=org, members_data=members_data, stats=stats)
+
+
+@orgs_bp.route('/<slug>/analytics/export.csv')
+@login_required
+def analytics_export(slug):
+    org = Organization.query.filter_by(slug=slug).first_or_404()
+    membership = OrgMember.query.filter_by(org_id=org.id, user_id=current_user.id).first()
+    if not membership or membership.role != 'Admin':
+        flash('You do not have permission to export analytics.', 'danger')
+        return redirect(url_for('orgs.dashboard', slug=org.slug))
+
+    stats = org_analytics(org.id)
+    buf = io.StringIO()
+    writer = csv.writer(buf)
+    writer.writerow(['Metric', 'Value'])
+    for label, key in (('Total tasks', 'total'), ('Completed', 'completed'),
+                       ('In progress', 'working'), ('Pending', 'pending'),
+                       ('Overdue', 'overdue'), ('Completion rate %', 'completion_rate')):
+        writer.writerow([label, stats['totals'][key]])
+    writer.writerow([])
+    writer.writerow(['Member', 'Assigned', 'Completed'])
+    for m in stats['members']:
+        writer.writerow([m['name'], m['total'], m['completed']])
+
+    return Response(buf.getvalue(), mimetype='text/csv',
+                    headers={'Content-Disposition': f'attachment; filename={org.slug}-analytics.csv'})

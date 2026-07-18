@@ -10,82 +10,78 @@
     <button type="button" id="discussionsRefreshNow" class="update-banner-btn">Refresh now</button>
 </div>
 
-<div class="project-header" style="margin-bottom: 30px;">
-    <div style="display: flex; align-items: center; gap: 10px; margin-bottom: 15px;">
-        <a href="{{ url_for('projects.dashboard', project_id=project.id) }}" style="color: var(--text-muted); text-decoration: none; display: flex; align-items: center; font-size: 14px;">
-            <i data-lucide="arrow-left" style="width: 14px; height: 14px; margin-right: 4px;"></i> Back to {{ project.name }}
-        </a>
+<div class="page-header">
+    <div class="breadcrumb">
+        <a href="{{ url_for('projects.dashboard', project_id=project.id) }}">{{ project.name }}</a>
+        <span class="breadcrumb-sep">/</span>
+        <span>Discussions</span>
     </div>
-    
-    <div style="background: var(--surface-solid); border: 1px solid var(--glass-border); border-radius: 12px; padding: 25px; display: flex; justify-content: space-between; align-items: center;">
+    <div class="page-header-row">
         <div>
-            <h2 style="margin: 0; display: flex; align-items: center; gap: 10px;">
-                <i data-lucide="message-square" style="color: var(--accent-light);"></i> Project Discussions
-            </h2>
-            <p style="color: var(--text-muted); margin-top: 8px; margin-bottom: 0;">Talk about {{ project.name }} with your team.</p>
+            <h1 class="page-title">
+                <i data-lucide="message-square" style="width:30px;height:30px;color:var(--accent);"></i> Discussions
+            </h1>
+            <p class="page-subtitle">Talk about {{ project.name }} with your team.</p>
         </div>
-        
-        <button onclick="document.getElementById('newDiscussionModal').style.display='flex'" class="btn primary" style="width: auto; flex: 0 0 auto; padding: 10px 18px; font-size: 14px; white-space: nowrap;">
-            <i data-lucide="plus" style="width: 16px; height: 16px;"></i> New Discussion
-        </button>
+        <div class="page-header-actions">
+            <button onclick="document.getElementById('newDiscussionModal').style.display='flex'" class="btn-primary">
+                <i data-lucide="plus" style="width: 16px; height: 16px;"></i> New Discussion
+            </button>
+        </div>
     </div>
 </div>
 
-<div class="discussions-list" style="display: flex; flex-direction: column; gap: 15px;">
+<div class="discussions-list" style="display: flex; flex-direction: column; gap: 14px;">
     {% for discussion in discussions %}
-    <a href="{{ url_for('discussions.view_discussion', discussion_id=discussion.id) }}" style="display: block; text-decoration: none; background: var(--surface-solid); border: 1px solid var(--glass-border); border-radius: 12px; padding: 20px; transition: transform 0.2s, box-shadow 0.2s;" class="project-card">
-        <div style="display: flex; justify-content: space-between; align-items: flex-start;">
-            <div>
-                <h4 style="margin: 0 0 8px 0; color: var(--text); font-size: 16px;">{{ discussion.title }}</h4>
-                <p style="color: var(--text-muted); font-size: 13px; margin: 0; overflow: hidden; text-overflow: ellipsis; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical;">
-                    {{ discussion.content }}
-                </p>
+    <a href="{{ url_for('discussions.view_discussion', discussion_id=discussion.id) }}" class="discussion-card">
+        <div style="min-width:0;">
+            <h4 class="discussion-card-title">{{ discussion.title }}</h4>
+            <p class="discussion-card-excerpt">{{ discussion.content }}</p>
+        </div>
+        <div class="discussion-card-meta">
+            <div class="discussion-card-author">
+                By {{ discussion.creator.name if discussion.creator.name else discussion.creator.username }}
             </div>
-            <div style="text-align: right; min-width: 120px;">
-                <div style="font-size: 12px; color: var(--text-muted); margin-bottom: 5px;">
-                    By {{ discussion.creator.name if discussion.creator.name else discussion.creator.username }}
-                </div>
-                <div style="font-size: 12px; display: inline-flex; align-items: center; gap: 4px; background: var(--surface-elev); padding: 2px 8px; border-radius: 10px; border: 1px solid var(--glass-border); color: var(--text-muted);">
-                    <i data-lucide="message-circle" style="width: 12px; height: 12px;"></i> {{ discussion.comments.count() }}
-                </div>
+            <div class="discussion-card-count">
+                <i data-lucide="message-circle" style="width: 12px; height: 12px;"></i> {{ discussion.comments.count() }}
             </div>
         </div>
     </a>
     {% else %}
-    <div style="background: var(--surface-solid); border: 1px dashed var(--glass-border); border-radius: 12px; padding: 40px; text-align: center;">
-        <div style="width: 48px; height: 48px; border-radius: 50%; background: var(--glass-border); display: flex; align-items: center; justify-content: center; margin: 0 auto 15px;">
-            <i data-lucide="message-square" style="color: var(--text-muted);"></i>
+    <div class="empty-projects-state">
+        <div class="empty-projects-icon-box">
+            <i data-lucide="message-square"></i>
         </div>
-        <h4 style="margin-top: 0;">No discussions yet</h4>
-        <p style="color: var(--text-muted); font-size: 14px;">Start a conversation with your team.</p>
+        <h4 class="empty-projects-title">No discussions yet</h4>
+        <p class="empty-projects-desc">Start a conversation with your team to keep decisions and questions in one place.</p>
     </div>
     {% endfor %}
 </div>
 
 <!-- New Discussion Modal -->
-<div id="newDiscussionModal" style="display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: var(--overlay); z-index: 1000; align-items: center; justify-content: center; backdrop-filter: blur(4px);">
-    <div style="background: var(--bg-start); border: 1px solid var(--glass-border); border-radius: 16px; padding: 30px; width: 100%; max-width: 600px; box-shadow: var(--shadow-md);">
-        <h3 style="margin-top: 0; margin-bottom: 20px; display: flex; justify-content: space-between; align-items: center;">
-            Start a Discussion
-            <button onclick="document.getElementById('newDiscussionModal').style.display='none'" style="background: none; border: none; color: var(--text-muted); cursor: pointer;"><i data-lucide="x"></i></button>
-        </h3>
-        
+<div id="newDiscussionModal" class="hf-modal" style="display: none;">
+    <div class="hf-modal-card" style="max-width: 600px;">
+        <div class="hf-modal-head">
+            <h3>Start a Discussion</h3>
+            <button type="button" class="hf-modal-close" onclick="document.getElementById('newDiscussionModal').style.display='none'" aria-label="Close"><i data-lucide="x" style="width:18px;height:18px;"></i></button>
+        </div>
+
         <form method="POST" action="{{ url_for('discussions.create_discussion', project_id=project.id) }}">
             <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
-            
-                <div style="margin-bottom: 15px;">
-                <label style="display: block; margin-bottom: 5px; font-size: 14px;">Title</label>
-                <input type="text" name="title" required placeholder="What's on your mind?" style="width: 100%; padding: 10px; border-radius: 8px; border: 1px solid var(--glass-border); background: var(--surface); color: var(--text); box-sizing: border-box;">
+
+            <div class="hf-field">
+                <label class="hf-label">Title</label>
+                <input type="text" name="title" required placeholder="What's on your mind?" class="hf-input">
             </div>
-            
-                <div style="margin-bottom: 20px;">
-                <label style="display: block; margin-bottom: 5px; font-size: 14px;">Content</label>
-                <textarea name="content" required rows="5" placeholder="Share your thoughts..." style="width: 100%; padding: 10px; border-radius: 8px; border: 1px solid var(--glass-border); background: var(--surface); color: var(--text); box-sizing: border-box; resize: vertical; font-family: inherit;"></textarea>
+
+            <div class="hf-field">
+                <label class="hf-label">Content</label>
+                <textarea name="content" required rows="5" placeholder="Share your thoughts..." class="hf-textarea"></textarea>
             </div>
-            
-            <div style="display: flex; justify-content: flex-end; gap: 10px;">
-                <button type="button" onclick="document.getElementById('newDiscussionModal').style.display='none'" class="btn" style="background: transparent; border: 1px solid var(--glass-border);">Cancel</button>
-                <button type="submit" class="btn primary">Post Discussion</button>
+
+            <div class="hf-modal-actions">
+                <button type="button" onclick="document.getElementById('newDiscussionModal').style.display='none'" class="btn-secondary">Cancel</button>
+                <button type="submit" class="btn-primary">Post Discussion</button>
             </div>
         </form>
     </div>

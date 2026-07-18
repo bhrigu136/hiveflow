@@ -1,0 +1,78 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="description" content="HiveFlow — where meetings become momentum.">
+    <title>{% block auth_title %}HiveFlow{% endblock %}</title>
+    <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='8' fill='%237c6cff'/%3E%3Cpath d='M16 7l7 4v8l-7 4-7-4v-8z' fill='none' stroke='%23fff' stroke-width='2.2' stroke-linejoin='round'/%3E%3Ccircle cx='16' cy='15' r='2.4' fill='%23fff'/%3E%3C/svg%3E">
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/tokens.css') }}">
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/components.css') }}">
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/authx.css') }}">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+    <script src="https://unpkg.com/lucide@latest/dist/umd/lucide.js"></script>
+    <script defer src="https://unpkg.com/alpinejs@3.x.x/dist/cdn.min.js"></script>
+    <script>
+        (function () {
+            var p = localStorage.getItem('theme') || 'light';
+            if (p === 'system') p = (window.matchMedia && matchMedia('(prefers-color-scheme: dark)').matches) ? 'dark' : 'light';
+            if (!['light', 'dark'].includes(p)) p = 'light';
+            document.documentElement.setAttribute('data-theme', p);
+        })();
+    </script>
+</head>
+
+<body class="ax">
+    <div class="ax-split">
+        <!-- Shared brand showcase -->
+        <aside class="ax-showcase">
+            <div class="ax-glow ax-glow-1"></div>
+            <div class="ax-glow ax-glow-2"></div>
+            <div class="ax-showcase-inner">
+                <div class="ax-brand"><span class="ax-brand-mark"><i data-lucide="hexagon"></i></span> HiveFlow</div>
+                <div>
+                    <h1 class="ax-headline">Where meetings<br>become momentum.</h1>
+                    <p class="ax-tagline">Run the call, and HiveFlow writes the notes, pulls out the action items, and drops them on your board — assigned. One workspace instead of five.</p>
+                    <ul class="ax-features">
+                        <li><span class="ax-feat-ic"><i data-lucide="sparkles"></i></span> AI meeting notes → assigned tasks</li>
+                        <li><span class="ax-feat-ic"><i data-lucide="book-open"></i></span> Team docs &amp; wiki, built in</li>
+                        <li><span class="ax-feat-ic"><i data-lucide="bar-chart-3"></i></span> Live analytics, no spreadsheets</li>
+                    </ul>
+                </div>
+                <div class="ax-preview">
+                    <div class="ax-preview-head">
+                        <span class="ax-dot"></span><span class="ax-dot"></span><span class="ax-dot"></span>
+                        <span class="ax-preview-title">Today · Product sync</span>
+                    </div>
+                    <div class="ax-row"><span class="ax-check done"><i data-lucide="check"></i></span><span>Send pricing deck to finance</span><span class="ax-pill">Priya</span></div>
+                    <div class="ax-row"><span class="ax-check"></span><span>Draft launch announcement</span><span class="ax-pill">Arjun</span></div>
+                    <div class="ax-row"><span class="ax-check"></span><span>Review onboarding flow</span><span class="ax-pill">You</span></div>
+                    <div class="ax-preview-foot"><i data-lucide="sparkles"></i> 3 tasks created from this meeting</div>
+                </div>
+            </div>
+        </aside>
+
+        <!-- Form side -->
+        <main class="ax-form-side">
+            <div class="ax-form-wrap">
+                <div class="ax-form-brand"><span class="ax-brand-mark sm"><i data-lucide="hexagon"></i></span> HiveFlow</div>
+                {% with messages = get_flashed_messages(with_categories=true) %}
+                {% for category, message in messages %}
+                <div class="flash {{ category }}">{{ message }}</div>
+                {% endfor %}
+                {% endwith %}
+                {% block auth_form %}{% endblock %}
+            </div>
+        </main>
+    </div>
+
+    <script src="{{ url_for('static', filename='js/script.js') }}"></script>
+    <script>lucide.createIcons();</script>
+    {% block auth_scripts %}{% endblock %}
+</body>
+
+</html>

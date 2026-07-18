@@ -1,0 +1,1552 @@
+{% extends "base.html" %}
+{% block title %}Calendar — HiveFlow{% endblock %}
+
+{% block extra_head %}
+<link rel="stylesheet" href="{{ url_for('static', filename='css/calendar.css') }}">
+{% endblock %}
+
+{% block content %}
+<div class="cal-page-layout">
+
+    <!-- ==========================================================
+         LEFT SIDEBAR (Collapsible)
+         ========================================================== -->
+    <aside class="cal-sidebar" id="calSidebar">
+        <!-- "+ Create" Button Dropdown -->
+        <div class="cal-create-wrapper">
+            <button type="button" class="cal-create-btn" onclick="toggleCreateDropdown(event)">
+                <i data-lucide="plus" style="width:20px;height:20px;"></i>
+                <span>Create</span>
+                <i data-lucide="chevron-down" style="width:14px;height:14px;margin-left:4px;opacity:0.6;"></i>
+            </button>
+            <div class="cal-create-dropdown" id="calCreateDropdown">
+                <button type="button" class="cal-create-item" onclick="openBookingModal()">
+                    <i data-lucide="video"></i>
+                    <span>Schedule Meeting</span>
+                </button>
+                <button type="button" class="cal-create-item" onclick="openCreateTaskModal()">
+                    <i data-lucide="check-square"></i>
+                    <span>Create Task</span>
+                </button>
+            </div>
+        </div>
+
+        <!-- Mini Calendar Widget -->
+        <div class="mini-cal-container">
+            <div class="mini-cal-header">
+                <span class="mini-cal-month-label" id="miniCalLabel">June 2026</span>
+                <div class="mini-cal-nav">
+                    <button type="button" class="mini-cal-nav-btn" onclick="navigateMiniCal(-1)">
+                        <i data-lucide="chevron-left" style="width:14px;height:14px;"></i>
+                    </button>
+                    <button type="button" class="mini-cal-nav-btn" onclick="navigateMiniCal(1)">
+                        <i data-lucide="chevron-right" style="width:14px;height:14px;"></i>
+                    </button>
+                </div>
+            </div>
+            <div class="mini-cal-grid" id="miniCalGrid"></div>
+        </div>
+
+        <!-- Layer Checkboxes -->
+        <div class="cal-layers-container">
+            <h4 class="cal-layers-title">My Calendars</h4>
+            <label class="cal-layer-item" style="--layer-color: var(--accent);">
+                <input type="checkbox" id="layerMeetings" checked onchange="toggleLayer('meetings')">
+                <span class="cal-layer-checkbox"><i data-lucide="check"></i></span>
+                <span class="cal-layer-color-dot"></span>
+                <span>Meetings</span>
+            </label>
+            <label class="cal-layer-item" style="--layer-color: var(--success);">
+                <input type="checkbox" id="layerTasks" checked onchange="toggleLayer('tasks')">
+                <span class="cal-layer-checkbox"><i data-lucide="check"></i></span>
+                <span class="cal-layer-color-dot"></span>
+                <span>Tasks</span>
+            </label>
+        </div>
+
+        <!-- Upcoming Meetings List -->
+        <div class="cal-side-upcoming" style="margin-top:auto;border-top:1px solid var(--border-muted);padding-top:16px;">
+            <h4 class="cal-layers-title" style="margin-bottom:12px;">Upcoming meetings</h4>
+            {% if upcoming %}
+            <div class="cal-up-list" style="display:flex;flex-direction:column;gap:8px;">
+                {% for u in upcoming %}
+                <a href="{{ u.join_url }}" class="cal-up-item" style="text-decoration:none;display:flex;gap:10px;padding:8px;border-radius:var(--radius-sm);background:var(--surface-sunken);border:1px solid var(--border-muted);">
+                    <div style="font-size:10px;font-weight:700;text-transform:uppercase;color:{{ u.color }};display:flex;flex-direction:column;align-items:center;justify-content:center;background:color-mix(in srgb, {{ u.color }} 12%, var(--surface));width:36px;height:36px;border-radius:6px;flex-shrink:0;">
+                        <span>{{ u.month_abbr }}</span>
+                        <span style="font-size:14px;font-weight:800;color:var(--text);">{{ u.day_num }}</span>
+                    </div>
+                    <div style="min-width:0;flex:1;">
+                        <div style="font-size:12px;font-weight:600;color:var(--text);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">{{ u.title }}</div>
+                        <div style="font-size:10px;color:var(--text-muted);margin-top:2px;">{{ u.time }}</div>
+                    </div>
+                </a>
+                {% endfor %}
+            </div>
+            {% else %}
+            <p style="font-size:12px;color:var(--text-muted);text-align:center;padding:12px 0;">No upcoming meetings.</p>
+            {% endif %}
+        </div>
+    </aside>
+
+    <div class="cal-sidebar-overlay" onclick="toggleSidebar()"></div>
+
+    <!-- ==========================================================
+         MAIN CALENDAR WINDOW
+         ========================================================== -->
+    <div class="cal-main-content">
+        <!-- Toolbar header -->
+        <div class="cal-header-bar">
+            <div class="cal-header-left">
+                <button type="button" class="cal-sidebar-toggle" onclick="toggleSidebar()" title="Toggle sidebar">
+                    <i data-lucide="menu" style="width:18px;height:18px;"></i>
+                </button>
+                <div class="cal-logo-area">
+                    <i data-lucide="calendar"></i>
+                    <span>Calendar</span>
+                </div>
+                <button type="button" class="cal-nav-today-btn" onclick="navigateToday()" style="margin-left:12px;">Today</button>
+                <div class="cal-nav-arrows" style="margin-left:8px;">
+                    <button type="button" class="cal-nav-arrow-btn" onclick="navigateOffset(-1)" title="Previous">
+                        <i data-lucide="chevron-left" style="width:16px;height:16px;"></i>
+                    </button>
+                    <button type="button" class="cal-nav-arrow-btn" onclick="navigateOffset(1)" title="Next">
+                        <i data-lucide="chevron-right" style="width:16px;height:16px;"></i>
+                    </button>
+                </div>
+                <span class="cal-current-date-label" id="calCurrentLabel">June 2026</span>
+            </div>
+
+            <div class="cal-header-right">
+                <div class="cal-view-selector">
+                    <button type="button" class="cal-view-btn" id="viewBtnDay" onclick="setView('day')">Day</button>
+                    <button type="button" class="cal-view-btn" id="viewBtnWeek" onclick="setView('week')">Week</button>
+                    <button type="button" class="cal-view-btn" id="viewBtnMonth" onclick="setView('month')">Month</button>
+                </div>
+            </div>
+        </div>
+
+        <!-- Render Target Grid -->
+        <div class="cal-grid-container" id="calGrid"></div>
+    </div>
+</div>
+
+<!-- ==========================================================
+     MODALS
+     ========================================================== -->
+
+<!-- Meeting Booking Modal -->
+<div id="calBookingModal" class="cal-modal-overlay" aria-hidden="true">
+    <div class="cal-modal" role="dialog" aria-modal="true" aria-labelledby="calBookTitle">
+        <div class="cal-modal-head">
+            <h3 id="calBookTitle"><i data-lucide="video" style="width:18px;height:18px;color:var(--accent);"></i> Schedule a Meeting</h3>
+            <button type="button" class="cal-modal-x" onclick="closeModal('calBookingModal')" aria-label="Close"><i data-lucide="x"></i></button>
+        </div>
+
+        <form method="POST" action="{{ url_for('calendar.book_meeting') }}" class="cal-form"
+              onsubmit="if(this.dataset.s)return false;this.dataset.s=1;var b=this.querySelector('button[type=submit]');b.style.opacity=.7;b.textContent='Scheduling…';return true;">
+            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+
+            <label class="cal-field">
+                <span class="cal-label">Title</span>
+                <input type="text" name="title" required maxlength="150" placeholder="e.g. Sprint planning, Design sync" class="cal-input">
+            </label>
+
+            <label class="cal-field">
+                <span class="cal-label">Team</span>
+                <select name="team" id="calTeamSelect" required class="cal-input" onchange="renderMeetingAttendees()">
+                    {% for t in teams_data %}
+                    <option value="{{ t.slug }}" {% if team_filter == t.slug %}selected{% endif %}>{{ t.name }}</option>
+                    {% endfor %}
+                </select>
+            </label>
+
+            <div class="cal-field-row">
+                <label class="cal-field">
+                    <span class="cal-label">Date</span>
+                    <input type="date" name="date" id="calDateInput" required value="{{ default_date }}" min="{{ today_iso }}" class="cal-input">
+                </label>
+                <label class="cal-field">
+                    <span class="cal-label">Time</span>
+                    <input type="time" name="time" id="calTimeInput" required value="10:00" class="cal-input">
+                </label>
+                <label class="cal-field">
+                    <span class="cal-label">Duration</span>
+                    <select name="duration" class="cal-input">
+                        <option value="15">15 min</option>
+                        <option value="30" selected>30 min</option>
+                        <option value="45">45 min</option>
+                        <option value="60">1 hour</option>
+                        <option value="90">1.5 hours</option>
+                        <option value="120">2 hours</option>
+                    </select>
+                </label>
+            </div>
+
+            <div class="cal-field">
+                <span class="cal-label">Invite teammates</span>
+                <div id="calAttendees" class="cal-attendees"></div>
+            </div>
+
+            <label class="cal-field">
+                <span class="cal-label">Notes <span class="cal-label-opt">(optional)</span></span>
+                <textarea name="description" rows="2" placeholder="Agenda, links, what to prepare…" class="cal-input cal-textarea"></textarea>
+            </label>
+
+            <div class="cal-modal-foot">
+                <button type="button" class="btn-secondary" onclick="closeModal('calBookingModal')">Cancel</button>
+                <button type="submit" class="btn-primary"><i data-lucide="check" style="width:15px;height:15px;"></i> Schedule</button>
+            </div>
+        </form>
+    </div>
+</div>
+
+<!-- Task Creation Modal -->
+<div id="calCreateTaskModal" class="cal-modal-overlay" aria-hidden="true">
+    <div class="cal-modal" role="dialog" aria-modal="true" aria-labelledby="calTaskTitle">
+        <div class="cal-modal-head">
+            <h3 id="calTaskTitle"><i data-lucide="check-square" style="width:18px;height:18px;color:var(--success);"></i> Add Personal Task</h3>
+            <button type="button" class="cal-modal-x" onclick="closeModal('calCreateTaskModal')" aria-label="Close"><i data-lucide="x"></i></button>
+        </div>
+
+        <form method="POST" action="{{ url_for('tasks.add_task') }}" class="cal-form"
+              onsubmit="if(this.dataset.s)return false;this.dataset.s=1;var b=this.querySelector('button[type=submit]');b.style.opacity=.7;b.textContent='Adding…';return true;">
+            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+            <input type="hidden" name="next" value="{{ url_for('calendar.my_calendar', month='%s-%02d'|format(year, month)) }}">
+
+            <label class="cal-field">
+                <span class="cal-label">Task Title</span>
+                <input type="text" name="title" required maxlength="100" placeholder="e.g. Finish project draft, Buy groceries" class="cal-input">
+            </label>
+
+            <label class="cal-field">
+                <span class="cal-label">Description</span>
+                <textarea name="description" rows="2" placeholder="Task description or checklist items…" class="cal-input cal-textarea"></textarea>
+            </label>
+
+            <div class="cal-field-row" style="grid-template-columns: 1fr 1fr 1fr;">
+                <label class="cal-field">
+                    <span class="cal-label">Priority</span>
+                    <select name="priority" class="cal-input">
+                        <option value="High">High</option>
+                        <option value="Medium" selected>Medium</option>
+                        <option value="Low">Low</option>
+                    </select>
+                </label>
+                <label class="cal-field">
+                    <span class="cal-label">Due Date</span>
+                    <input type="date" name="deadline" id="taskDateInput" required class="cal-input">
+                </label>
+                <label class="cal-field">
+                    <span class="cal-label">Time <span class="cal-label-opt">(optional)</span></span>
+                    <input type="time" name="time_slot" id="taskTimeInput" class="cal-input">
+                </label>
+            </div>
+
+            <div class="cal-modal-foot">
+                <button type="button" class="btn-secondary" onclick="closeModal('calCreateTaskModal')">Cancel</button>
+                <button type="submit" class="btn-primary" style="background:var(--success);border-color:rgba(255,255,255,0.06);box-shadow:none;"><i data-lucide="check" style="width:15px;height:15px;"></i> Add Task</button>
+            </div>
+        </form>
+    </div>
+</div>
+
+<!-- Meeting Details Modal -->
+<div id="calMeetingDetailModal" class="cal-modal-overlay" aria-hidden="true">
+    <div class="cal-modal cal-modal-detail" role="dialog" aria-modal="true">
+        <div class="cal-detail-accent" id="calMtgAccent"></div>
+        <div class="cal-modal-head">
+            <h3 id="calMtgTitle" style="color:var(--text);font-weight:700;">Meeting</h3>
+            <button type="button" class="cal-modal-x" onclick="closeModal('calMeetingDetailModal')" aria-label="Close"><i data-lucide="x"></i></button>
+        </div>
+
+        <div class="cal-detail-body">
+            <div class="cal-detail-meta">
+                <div class="cal-detail-row"><i data-lucide="calendar"></i> <span id="calMtgWhen"></span></div>
+                <div class="cal-detail-row"><i data-lucide="clock"></i> <span id="calMtgTime"></span></div>
+                <div class="cal-detail-row"><i data-lucide="users"></i> <span id="calMtgTeam"></span></div>
+                <div class="cal-detail-row"><i data-lucide="user"></i> Organized by <span id="calMtgOrganizer" style="margin-left:4px;font-weight:600;"></span></div>
+            </div>
+
+            <div id="calMtgDescWrap" class="cal-detail-desc" style="display:none;">
+                <span id="calMtgDesc"></span>
+            </div>
+
+            <div class="cal-detail-attendees">
+                <div class="cal-detail-sub">Attendees (<span id="calMtgCount">0</span>)</div>
+                <div id="calMtgAvatars" class="cal-detail-avatars"></div>
+            </div>
+        </div>
+
+        <div class="cal-modal-foot cal-detail-foot">
+            <form id="calMtgCancelForm" method="POST" style="margin:0;display:none;"
+                  data-confirm="Cancel this meeting for everyone? Calendar events and the room will be removed.">
+                <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                <button type="submit" class="btn-secondary cal-btn-danger"><i data-lucide="trash-2" style="width:15px;height:15px;"></i> Cancel meeting</button>
+            </form>
+            <a id="calMtgJoinBtn" href="#" class="btn-primary" target="_blank"><i data-lucide="video" style="width:16px;height:16px;"></i> Join room</a>
+        </div>
+    </div>
+</div>
+
+<!-- Task Details & CRUD Modal -->
+<div id="calTaskDetailModal" class="cal-modal-overlay" aria-hidden="true">
+    <div class="cal-modal cal-modal-detail" role="dialog" aria-modal="true" style="max-width:480px;">
+        <div class="cal-detail-accent" style="background: var(--success);"></div>
+        <div class="cal-modal-head" style="padding-bottom:6px;">
+            <h3 id="taskDetailHeaderTitle" style="color:var(--text);font-weight:700;">Task details</h3>
+            <button type="button" class="cal-modal-x" onclick="closeModal('calTaskDetailModal')" aria-label="Close"><i data-lucide="x"></i></button>
+        </div>
+
+        <!-- Render Container: Toggle between details block and edit form -->
+        <div class="cal-detail-body" id="taskDetailsView">
+            <h2 id="taskDTitle" style="font-size:19px;font-weight:700;margin-bottom:14px;color:var(--text);line-height:1.3;">Task Title</h2>
+            
+            <div class="cal-detail-meta">
+                <div class="cal-detail-row"><i data-lucide="calendar"></i> <span id="taskDDate">Due date</span></div>
+                <div class="cal-detail-row"><i data-lucide="check-circle-2"></i> Status: <span id="taskDStatus" style="font-weight:600;margin-left:4px;">Pending</span></div>
+                <div class="cal-detail-row"><i data-lucide="alert-circle"></i> Priority: <span id="taskDPriority" style="font-weight:600;margin-left:4px;">Medium</span></div>
+                <div class="cal-detail-row" id="taskDProjRow" style="display:none;"><i data-lucide="folder"></i> Project: <span id="taskDProject" style="font-weight:600;margin-left:4px;">Project Name</span></div>
+                <div class="cal-detail-row" id="taskDAssigneeRow" style="display:none;"><i data-lucide="user"></i> Assigned to: <span id="taskDAssignee" style="font-weight:600;margin-left:4px;">Assignee</span></div>
+            </div>
+
+            <div id="taskDDescWrap" class="cal-detail-desc" style="display:none;margin-top:16px;">
+                <span id="taskDDesc"></span>
+            </div>
+            
+            <div class="cal-modal-foot cal-detail-foot" style="margin-top:20px;padding:12px 0 0 0;border-top:1px solid var(--border-muted);">
+                <div style="display:flex;gap:8px;">
+                    <!-- Delete Form -->
+                    <form id="taskDDeleteForm" method="POST" style="margin:0;">
+                        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                        <input type="hidden" name="next" value="{{ url_for('calendar.my_calendar', month='%s-%02d'|format(year, month)) }}">
+                        <button type="submit" class="btn-secondary cal-btn-danger" style="padding:6px 12px;height:34px;" onclick="return confirm('Are you sure you want to delete this task?')">
+                            <i data-lucide="trash-2" style="width:14px;height:14px;"></i>
+                        </button>
+                    </form>
+                    <!-- Edit Button -->
+                    <button type="button" class="btn-secondary" style="padding:6px 12px;height:34px;" onclick="toggleTaskEditMode(true)" id="taskDEditBtn">
+                        <i data-lucide="edit-3" style="width:14px;height:14px;"></i> Edit
+                    </button>
+                </div>
+
+                <!-- Status Progression Form -->
+                <form id="taskDToggleForm" method="POST" style="margin:0;">
+                    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                    <input type="hidden" name="next" value="{{ url_for('calendar.my_calendar', month='%s-%02d'|format(year, month)) }}">
+                    <button type="submit" class="btn-primary" style="background:var(--success);border-color:transparent;" id="taskDStatusBtn">
+                        <i data-lucide="arrow-right" style="width:14px;height:14px;"></i> Advance Status
+                    </button>
+                </form>
+            </div>
+        </div>
+
+        <!-- Task Edit Form Container -->
+        <form method="POST" class="cal-form" id="taskEditForm" style="display:none;padding:12px 22px 20px;">
+            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+            <input type="hidden" name="next" value="{{ url_for('calendar.my_calendar', month='%s-%02d'|format(year, month)) }}">
+
+            <label class="cal-field">
+                <span class="cal-label">Task Title</span>
+                <input type="text" name="title" id="editTaskTitle" required maxlength="100" class="cal-input">
+            </label>
+
+            <label class="cal-field">
+                <span class="cal-label">Description</span>
+                <textarea name="description" id="editTaskDesc" rows="2" class="cal-input cal-textarea"></textarea>
+            </label>
+
+            <div class="cal-field-row" style="grid-template-columns: 1.1fr 1fr 1fr;">
+                <label class="cal-field">
+                    <span class="cal-label">Priority</span>
+                    <select name="priority" id="editTaskPriority" class="cal-input">
+                        <option value="High">High</option>
+                        <option value="Medium">Medium</option>
+                        <option value="Low">Low</option>
+                    </select>
+                </label>
+                <label class="cal-field">
+                    <span class="cal-label">Due Date</span>
+                    <input type="date" name="deadline" id="editTaskDate" class="cal-input">
+                </label>
+                <label class="cal-field">
+                    <span class="cal-label">Time slot</span>
+                    <input type="time" name="time_slot" id="editTaskTime" class="cal-input">
+                </label>
+            </div>
+
+            <label class="cal-field">
+                <span class="cal-label">Status</span>
+                <select name="status" id="editTaskStatus" class="cal-input">
+                    <option value="Pending">Pending</option>
+                    <option value="Working">Working</option>
+                    <option value="Completed">Completed</option>
+                </select>
+            </label>
+
+            <div class="cal-modal-foot" style="margin-top:10px;">
+                <button type="button" class="btn-secondary" onclick="toggleTaskEditMode(false)">Cancel</button>
+                <button type="submit" class="btn-primary" style="background:var(--success);border-color:transparent;"><i data-lucide="check" style="width:15px;height:15px;"></i> Save Changes</button>
+            </div>
+        </form>
+    </div>
+</div>
+
+<!-- Toast Reminder Container -->
+<div class="cal-toast-container" id="calToastContainer"></div>
+
+<!-- ==========================================================
+     CALENDAR SCRIPT ENGINE
+     ========================================================== -->
+<script>
+(function () {
+    // 1. Data Serialization
+    var meetings = {{ meetings_json | safe }};
+    var tasks = {{ tasks_json | safe }};
+    var teams = {{ teams_data | tojson }};
+    
+    // Server state params
+    var currentYear = {{ year }};
+    var currentMonth = {{ month }};
+    
+    // Loaded Date boundaries based on active month
+    var calendarBounds = getGridBounds(currentYear, currentMonth);
+
+    // Dynamic UI states (restored from localStorage or defaulted)
+    var activeView = localStorage.getItem('cal_view') || 'month';
+    var sidebarCollapsed = localStorage.getItem('cal_sidebar_collapsed') === 'true';
+    
+    // Layer checkboxes
+    var filterMeetings = localStorage.getItem('cal_filter_meetings') !== 'false';
+    var filterTasks = localStorage.getItem('cal_filter_tasks') !== 'false';
+    
+    // Active date (defaults to today if within current loaded range, else first of loaded month)
+    var today = new Date();
+    var activeDate = new Date();
+    // Validate if today falls in the active bounds. If not, use first day of active month.
+    if (today < calendarBounds.start || today > calendarBounds.end) {
+        activeDate = new Date(currentYear, currentMonth - 1, 1);
+    }
+    
+    // Track mini calendar active year/month
+    var miniCalYear = currentYear;
+    var miniCalMonth = currentMonth;
+
+    // Helper functions
+    function esc(s) { var d = document.createElement('div'); d.textContent = s == null ? '' : s; return d.innerHTML; }
+    
+    function parseDateISO(isoStr) {
+        if (!isoStr) return null;
+        // Parse "YYYY-MM-DD" or full ISO timestamp into local Date object safely
+        var parts = isoStr.split(/[-T:]/);
+        if (parts.length >= 5) {
+            // YYYY, MM-1, DD, HH, MM
+            return new Date(parts[0], parts[1] - 1, parts[2], parts[3], parts[4]);
+        } else if (parts.length >= 3) {
+            // YYYY, MM-1, DD
+            return new Date(parts[0], parts[1] - 1, parts[2], 0, 0);
+        }
+        return new Date(isoStr);
+    }
+    
+    function formatDateISO(d) {
+        var y = d.getFullYear();
+        var m = String(d.getMonth() + 1).padStart(2, '0');
+        var r = String(d.getDate()).padStart(2, '0');
+        return y + '-' + m + '-' + r;
+    }
+    
+    function getGridBounds(yr, mo) {
+        var first = new Date(yr, mo - 1, 1);
+        var start = new Date(first);
+        start.setDate(first.getDate() - first.getDay()); // Sunday offset
+        
+        var last = new Date(yr, mo, 0);
+        var end = new Date(last);
+        end.setDate(last.getDate() + (6 - last.getDay())); // Saturday offset
+        
+        return { start: start, end: end };
+    }
+
+    // Main Init
+    window.addEventListener('DOMContentLoaded', function () {
+        // Apply sidebar classes
+        var sidebar = document.getElementById('calSidebar');
+        if (sidebarCollapsed && sidebar) {
+            sidebar.classList.add('collapsed');
+        }
+        
+        // Restore toggles
+        var checkM = document.getElementById('layerMeetings');
+        var checkT = document.getElementById('layerTasks');
+        if (checkM) checkM.checked = filterMeetings;
+        if (checkT) checkT.checked = filterTasks;
+        
+        // Init components
+        renderMiniCalendar();
+        setView(activeView);   // render the main grid on load (was skipRender=true → blank grid)
+        initTimeIndicator();
+        
+        // Request notifications
+        if (Notification && Notification.permission === 'default') {
+            Notification.requestPermission();
+        }
+        
+        // Run reminders checking immediately, and schedule every 30 seconds
+        checkReminders();
+        setInterval(checkReminders, 30000);
+        
+        // Document click listener to close dropdowns
+        document.addEventListener('click', function (e) {
+            var dd = document.getElementById('calCreateDropdown');
+            var btn = e.target.closest('.cal-create-btn');
+            if (dd && !btn) {
+                dd.classList.remove('open');
+            }
+        });
+    });
+
+    // ==========================================================
+    // SIDEBAR & NAVIGATION CONTROLLERS
+    // ==========================================================
+    window.toggleSidebar = function () {
+        var sidebar = document.getElementById('calSidebar');
+        if (!sidebar) return;
+        sidebar.classList.toggle('collapsed');
+        if (window.innerWidth <= 960) {
+            sidebar.classList.toggle('open');
+        }
+        localStorage.setItem('cal_sidebar_collapsed', sidebar.classList.contains('collapsed'));
+    };
+
+    window.toggleCreateDropdown = function (e) {
+        e.stopPropagation();
+        var dd = document.getElementById('calCreateDropdown');
+        if (dd) dd.classList.toggle('open');
+    };
+
+    window.toggleLayer = function (layer) {
+        if (layer === 'meetings') {
+            filterMeetings = document.getElementById('layerMeetings').checked;
+            localStorage.setItem('cal_filter_meetings', filterMeetings);
+        } else if (layer === 'tasks') {
+            filterTasks = document.getElementById('layerTasks').checked;
+            localStorage.setItem('cal_filter_tasks', filterTasks);
+        }
+        renderGrid();
+    };
+
+    window.setView = function (view, skipRender) {
+        activeView = view;
+        localStorage.setItem('cal_view', view);
+        
+        // Update view selector UI buttons
+        ['Day', 'Week', 'Month'].forEach(function (v) {
+            var b = document.getElementById('viewBtn' + v);
+            if (b) {
+                if (v.toLowerCase() === view) b.classList.add('active');
+                else b.classList.remove('active');
+            }
+        });
+        
+        if (!skipRender) renderGrid();
+    };
+
+    // Nav arrows offset navigation
+    window.navigateOffset = function (dir) {
+        if (activeView === 'month') {
+            // Month navigation always reloads month
+            navigateMonthOffset(dir);
+        } else if (activeView === 'week') {
+            var nextD = new Date(activeDate);
+            nextD.setDate(activeDate.getDate() + dir * 7);
+            jumpToDate(nextD);
+        } else { // day view
+            var nextD = new Date(activeDate);
+            nextD.setDate(activeDate.getDate() + dir);
+            jumpToDate(nextD);
+        }
+    };
+
+    function navigateMonthOffset(dir) {
+        var targetM = currentMonth + dir;
+        var targetY = currentYear;
+        if (targetM > 12) { targetM = 1; targetY += 1; }
+        if (targetM < 1) { targetM = 12; targetY -= 1; }
+        var monthParam = targetY + '-' + String(targetM).padStart(2, '0');
+        window.location.href = '?month=' + monthParam + (window.HFCal_team ? '&team=' + window.HFCal_team : '');
+    }
+
+    window.navigateToday = function () {
+        var d = new Date();
+        jumpToDate(d);
+    };
+
+    function jumpToDate(d) {
+        // Check if date is inside the currently queried grid boundaries
+        if (d >= calendarBounds.start && d <= calendarBounds.end) {
+            activeDate = d;
+            // Update mini calendar focused month as well
+            miniCalYear = d.getFullYear();
+            miniCalMonth = d.getMonth() + 1;
+            renderMiniCalendar();
+            renderGrid();
+        } else {
+            // Date is outside range, redirect to target month's page
+            var monthParam = d.getFullYear() + '-' + String(d.getMonth() + 1).padStart(2, '0');
+            window.location.href = '?month=' + monthParam + (window.HFCal_team ? '&team=' + window.HFCal_team : '');
+        }
+    }
+
+    // Mini calendar navigate
+    window.navigateMiniCal = function (dir) {
+        miniCalMonth += dir;
+        if (miniCalMonth > 12) { miniCalMonth = 1; miniCalYear += 1; }
+        if (miniCalMonth < 1) { miniCalMonth = 12; miniCalYear -= 1; }
+        renderMiniCalendar();
+    };
+
+    // ==========================================================
+    // RENDER LOGIC: MINI-CALENDAR
+    // ==========================================================
+    function renderMiniCalendar() {
+        var label = document.getElementById('miniCalLabel');
+        var grid = document.getElementById('miniCalGrid');
+        if (!label || !grid) return;
+        
+        // Month name label
+        var tempD = new Date(miniCalYear, miniCalMonth - 1, 1);
+        label.textContent = tempD.toLocaleString('default', { month: 'long', year: 'numeric' });
+        
+        // Calculate weeks for mini calendar
+        var first = new Date(miniCalYear, miniCalMonth - 1, 1);
+        var firstDayIdx = first.getDay(); // 0 is Sunday
+        var daysInMonth = new Date(miniCalYear, miniCalMonth, 0).getDate();
+        var daysInPrevMonth = new Date(miniCalYear, miniCalMonth - 1, 0).getDate();
+        
+        var html = '';
+        
+        // Render weekday titles
+        ['s','m','t','w','t','f','s'].forEach(function(wd) {
+            html += '<div class="mini-cal-day-name">' + wd + '</div>';
+        });
+        
+        // Render preceding month days
+        for (var i = firstDayIdx - 1; i >= 0; i--) {
+            var dayNum = daysInPrevMonth - i;
+            var d = new Date(miniCalYear, miniCalMonth - 2, dayNum);
+            html += getMiniDayHtml(d, true);
+        }
+        
+        // Render current month days
+        for (var dayNum = 1; dayNum <= daysInMonth; dayNum++) {
+            var d = new Date(miniCalYear, miniCalMonth - 1, dayNum);
+            html += getMiniDayHtml(d, false);
+        }
+        
+        // Render subsequent month days (pad to complete the 6-row grid, i.e., 42 items)
+        var totalCells = html.split('mini-cal-day').length - 1;
+        var nextMonthPad = 42 - totalCells;
+        for (var dayNum = 1; dayNum <= nextMonthPad; dayNum++) {
+            var d = new Date(miniCalYear, miniCalMonth, dayNum);
+            html += getMiniDayHtml(d, true);
+        }
+        
+        grid.innerHTML = html;
+    }
+
+    function getMiniDayHtml(d, outMonth) {
+        var classes = 'mini-cal-day';
+        if (outMonth) classes += ' out-month';
+        
+        // Check today
+        var currentT = new Date();
+        if (d.getDate() === currentT.getDate() && d.getMonth() === currentT.getMonth() && d.getFullYear() === currentT.getFullYear()) {
+            classes += ' is-today';
+        }
+        
+        // Check active selection
+        if (d.getDate() === activeDate.getDate() && d.getMonth() === activeDate.getMonth() && d.getFullYear() === activeDate.getFullYear()) {
+            classes += ' is-active';
+        }
+        
+        var dateVal = formatDateISO(d);
+        return '<div class="' + classes + '" data-date="' + dateVal + '" onclick="clickMiniDay(\'' + dateVal + '\')">' + d.getDate() + '</div>';
+    }
+
+    window.clickMiniDay = function (dateVal) {
+        var d = parseDateISO(dateVal);
+        setView('day', true);
+        jumpToDate(d);
+    };
+
+    // ==========================================================
+    // MAIN CALENDAR RENDERING ROUTER
+    // ==========================================================
+    function renderGrid() {
+        var grid = document.getElementById('calGrid');
+        var label = document.getElementById('calCurrentLabel');
+        if (!grid) return;
+        
+        // Filter events
+        var filteredEvents = [];
+        
+        if (filterMeetings) {
+            filteredEvents = filteredEvents.concat(meetings);
+        }
+        if (filterTasks) {
+            filteredEvents = filteredEvents.concat(tasks);
+        }
+        
+        if (activeView === 'month') {
+            label.textContent = activeDate.toLocaleString('default', { month: 'long', year: 'numeric' });
+            renderMonthView(grid, filteredEvents);
+        } else if (activeView === 'week') {
+            // Label shows week bounds: e.g. "Jun 14 - 20, 2026"
+            var start = new Date(activeDate);
+            start.setDate(activeDate.getDate() - activeDate.getDay());
+            var end = new Date(start);
+            end.setDate(start.getDate() + 6);
+            
+            var labelText = start.toLocaleString('default', { month: 'short', day: 'numeric' }) + ' – ';
+            if (start.getFullYear() !== end.getFullYear()) {
+                labelText += start.getFullYear() + ' ';
+            }
+            if (start.getMonth() !== end.getMonth()) {
+                labelText += end.toLocaleString('default', { month: 'short' }) + ' ';
+            }
+            labelText += end.getDate() + ', ' + end.getFullYear();
+            label.textContent = labelText;
+            
+            renderHourlyView(grid, filteredEvents, 7);
+        } else { // day view
+            label.textContent = activeDate.toLocaleString('default', { month: 'long', day: 'numeric', year: 'numeric' });
+            renderHourlyView(grid, filteredEvents, 1);
+        }
+        
+        if (window.lucide) lucide.createIcons();
+    }
+
+    // ==========================================================
+    // RENDER MONTH VIEW
+    // ==========================================================
+    function renderMonthView(grid, events) {
+        // Render standard 7-column grid
+        var html = '<div class="cal-month-view">';
+        
+        // Month headers
+        html += '<div class="cal-month-header">';
+        ['Sun','Mon','Tue','Wed','Thu','Fri','Sat'].forEach(function(wd) {
+            html += '<div class="cal-month-weekday">' + wd + '</div>';
+        });
+        html += '</div>';
+        
+        // Calculate weeks for grid
+        var cal = new pycal_Calendar(0); // Helper class defined below to replicate python's calendar weeks
+        var weeks = cal.monthdatescalendar(currentYear, currentMonth);
+        
+        weeks.forEach(function (week) {
+            html += '<div class="cal-month-grid-row">';
+            week.forEach(function (d) {
+                var isOut = d.getMonth() + 1 !== currentMonth;
+                var isToday = d.getDate() === today.getDate() && d.getMonth() === today.getMonth() && d.getFullYear() === today.getFullYear();
+                
+                var cellClass = 'cal-month-cell';
+                if (isOut) cellClass += ' out-month';
+                if (isToday) cellClass += ' is-today';
+                
+                var isoStr = formatDateISO(d);
+                html += '<div class="' + cellClass + '" data-date="' + isoStr + '" onclick="clickMonthCell(event, \'' + isoStr + '\')">';
+                html += '<span class="cal-month-day-num" onclick="clickDayNumber(event, \'' + isoStr + '\')" style="cursor:pointer;" title="Go to Day View">' + d.getDate() + '</span>';
+                
+                // Render events for this day
+                html += '<div class="cal-month-cell-events">';
+                var dayEvents = events.filter(function(e) {
+                    var ed = e.kind === 'meeting' ? parseDateISO(e.scheduled_for) : parseDateISO(e.deadline);
+                    return ed && ed.getDate() === d.getDate() && ed.getMonth() === d.getMonth() && ed.getFullYear() === d.getFullYear();
+                });
+                
+                // Sort by time/deadline
+                dayEvents.sort(function(a, b) {
+                    var at = a.kind === 'meeting' ? parseDateISO(a.scheduled_for) : (a.time_slot ? parseDateISO(a.deadline + 'T' + a.time_slot) : new Date(a.deadline));
+                    var bt = b.kind === 'meeting' ? parseDateISO(b.scheduled_for) : (b.time_slot ? parseDateISO(b.deadline + 'T' + b.time_slot) : new Date(b.deadline));
+                    return at - bt;
+                });
+                
+                dayEvents.forEach(function(e) {
+                    var color = e.kind === 'meeting' ? e.color : 'var(--success)';
+                    var timeLabel = '';
+                    if (e.kind === 'meeting') {
+                        timeLabel = e.time;
+                    } else if (e.time) {
+                        timeLabel = e.time;
+                    }
+                    
+                    var classes = 'cal-pill-event';
+                    if (e.status === 'Completed') classes += ' is-done';
+                    
+                    html += '<button type="button" class="' + classes + '" style="--event-color: ' + color + '" ';
+                    html += 'onclick="openDetailPopover(event, \'' + e.kind + '\', ' + e.id + ')">';
+                    html += '<span class="cal-pill-event-dot"></span>';
+                    if (timeLabel) {
+                        html += '<span class="cal-pill-event-time">' + timeLabel + '</span>';
+                    }
+                    html += '<span class="cal-event-title">' + esc(e.title) + '</span>';
+                    html += '</button>';
+                });
+                
+                html += '</div>'; // events list
+                html += '</div>'; // cell
+            });
+            html += '</div>'; // row
+        });
+        
+        html += '</div>';
+        grid.innerHTML = html;
+    }
+
+    window.clickMonthCell = function (e, dateIso) {
+        // Verify we didn't click on an event button
+        if (e.target.closest('.cal-pill-event')) return;
+        
+        // Open Create task modal prefilled
+        openCreateTaskModal(dateIso);
+    };
+
+    window.clickDayNumber = function (e, dateIso) {
+        e.stopPropagation();
+        var d = parseDateISO(dateIso);
+        setView('day', true);
+        jumpToDate(d);
+    };
+
+    // ==========================================================
+    // RENDER WEEK AND DAY HOURLY GRIDS
+    // ==========================================================
+    function renderHourlyView(grid, events, columnsCount) {
+        // Calculate days to display
+        var days = [];
+        if (columnsCount === 7) {
+            // Week starts on Sunday
+            var start = new Date(activeDate);
+            start.setDate(activeDate.getDate() - activeDate.getDay());
+            for (var i = 0; i < 7; i++) {
+                var d = new Date(start);
+                d.setDate(start.getDate() + i);
+                days.push(d);
+            }
+        } else {
+            // Day view just has activeDate
+            days.push(new Date(activeDate));
+        }
+        
+        // Filter events for these visible days
+        var allDayEvents = [];
+        var hourlyEvents = [];
+        
+        events.forEach(function(e) {
+            var ed = e.kind === 'meeting' ? parseDateISO(e.scheduled_for) : parseDateISO(e.deadline);
+            if (!ed) return;
+            
+            // Check if matches any visible day
+            var matchingDayIdx = -1;
+            for (var i = 0; i < days.length; i++) {
+                var d = days[i];
+                if (ed.getDate() === d.getDate() && ed.getMonth() === d.getMonth() && ed.getFullYear() === d.getFullYear()) {
+                    matchingDayIdx = i;
+                    break;
+                }
+            }
+            
+            if (matchingDayIdx !== -1) {
+                // If task without time_slot, put in allDayEvents.
+                // Meetings always have time slots.
+                if (e.kind === 'task' && !e.time_slot) {
+                    allDayEvents.push({ event: e, colIdx: matchingDayIdx });
+                } else {
+                    var startMinutes = 0;
+                    var duration = 30;
+                    if (e.kind === 'meeting') {
+                        startMinutes = ed.getHours() * 60 + ed.getMinutes();
+                        duration = e.duration || 30;
+                    } else { // task with time slot
+                        var timeParts = e.time_slot.split(':');
+                        startMinutes = parseInt(timeParts[0]) * 60 + parseInt(timeParts[1]);
+                        duration = 30; // 30 min duration for task blocks
+                    }
+                    hourlyEvents.push({
+                        event: e,
+                        colIdx: matchingDayIdx,
+                        startMinutes: startMinutes,
+                        endMinutes: startMinutes + duration,
+                        duration: duration
+                    });
+                }
+            }
+        });
+        
+        // Layout algorithm: detect overlaps and assign widths/lefts for each column
+        for (var col = 0; col < columnsCount; col++) {
+            var colEvents = hourlyEvents.filter(function(e) { return e.colIdx === col; });
+            layoutColumnEvents(colEvents);
+        }
+        
+        // Build View HTML
+        var html = '<div class="cal-hourly-view" style="--columns-count: ' + columnsCount + '">';
+        
+        // 1. All day section
+        html += '<div class="cal-all-day-row">';
+        html += '<div class="cal-all-day-label">All-day</div>';
+        html += '<div class="cal-all-day-content">';
+        for (var col = 0; col < columnsCount; col++) {
+            html += '<div class="cal-all-day-column">';
+            var colAllDay = allDayEvents.filter(function(e) { return e.colIdx === col; });
+            colAllDay.forEach(function(item) {
+                var e = item.event;
+                var classes = 'cal-pill-event';
+                if (e.status === 'Completed') classes += ' is-done';
+                html += '<button type="button" class="' + classes + '" style="--event-color: var(--success); width:100%;margin:0;" ';
+                html += 'onclick="openDetailPopover(event, \'' + e.kind + '\', ' + e.id + ')">';
+                html += '<span class="cal-pill-event-dot"></span>';
+                html += '<span class="cal-event-title">' + esc(e.title) + '</span>';
+                html += '</button>';
+            });
+            html += '</div>';
+        }
+        html += '</div></div>';
+        
+        // 2. Week headers (e.g. SUN 14)
+        html += '<div class="cal-day-headers">';
+        html += '<div class="cal-day-headers-spacer"></div>';
+        html += '<div class="cal-day-headers-list">';
+        days.forEach(function (d) {
+            var isT = d.getDate() === today.getDate() && d.getMonth() === today.getMonth() && d.getFullYear() === today.getFullYear();
+            var cellClass = 'cal-day-header-cell';
+            if (isT) cellClass += ' is-today';
+            var dayName = d.toLocaleString('default', { weekday: 'short' });
+            html += '<div class="' + cellClass + '">';
+            html += '<span class="cal-day-header-cell-dayname">' + dayName + '</span>';
+            html += '<span class="cal-day-header-cell-daynum">' + d.getDate() + '</span>';
+            html += '</div>';
+        });
+        html += '</div></div>';
+        
+        // 3. Hourly scroll grid
+        html += '<div class="cal-hourly-scroll" id="hourlyScrollWrap">';
+        
+        // Hours column label
+        html += '<div class="cal-hourly-hours-col">';
+        for (var h = 0; h < 24; h++) {
+            var labelText = h === 0 ? '12 AM' : (h < 12 ? h + ' AM' : (h === 12 ? '12 PM' : (h - 12) + ' PM'));
+            html += '<div class="cal-hourly-hour-label">' + labelText + '</div>';
+        }
+        html += '</div>';
+        
+        // Columns grid content
+        html += '<div class="cal-hourly-grid-col">';
+        
+        // Horizontal gridlines background
+        html += '<div class="cal-hourly-rows-background">';
+        for (var h = 0; h < 24; h++) {
+            html += '<div class="cal-hourly-row-line"></div>';
+        }
+        html += '</div>';
+        
+        // Columns list (relative wrapping)
+        for (var col = 0; col < columnsCount; col++) {
+            var colDate = days[col];
+            var colDateVal = formatDateISO(colDate);
+            html += '<div class="cal-hourly-day-column">';
+            
+            // Transparent Clickable overlay grid (30-min intervals)
+            html += '<div class="cal-hourly-click-grid">';
+            for (var halfHour = 0; halfHour < 48; halfHour++) {
+                var hh = Math.floor(halfHour / 2);
+                var mm = (halfHour % 2) === 0 ? '00' : '30';
+                var timeVal = String(hh).padStart(2, '0') + ':' + mm;
+                html += '<div class="cal-hourly-click-cell" onclick="clickHourCell(\'' + colDateVal + '\', \'' + timeVal + '\')" ';
+                html += 'title="Click to schedule at ' + timeVal + '"></div>';
+            }
+            html += '</div>';
+            
+            // Render events for this column
+            var colEvents = hourlyEvents.filter(function(e) { return e.colIdx === col; });
+            colEvents.forEach(function(item) {
+                var e = item.event;
+                var color = e.kind === 'meeting' ? e.color : 'var(--success)';
+                
+                var topPos = item.startMinutes;
+                var heightPos = item.duration;
+                
+                var classes = 'cal-hourly-event';
+                if (e.status === 'Completed') classes += ' is-done';
+                
+                html += '<div class="cal-hourly-event-wrapper" style="';
+                html += 'top: ' + topPos + 'px; ';
+                html += 'height: ' + heightPos + 'px; ';
+                html += 'left: ' + item.left + '%; ';
+                html += 'width: ' + item.width + '%;">';
+                
+                html += '<button type="button" class="' + classes + '" style="--event-color: ' + color + '" ';
+                html += 'onclick="openDetailPopover(event, \'' + e.kind + '\', ' + e.id + ')">';
+                html += '<span class="cal-hourly-event-title">' + esc(e.title) + '</span>';
+                html += '<span class="cal-hourly-event-time">' + e.time + '</span>';
+                html += '</button>';
+                
+                html += '</div>';
+            });
+            
+            // Check if columns includes "today" to add current time marker
+            var isColToday = colDate.getDate() === today.getDate() && colDate.getMonth() === today.getMonth() && colDate.getFullYear() === today.getFullYear();
+            if (isColToday) {
+                html += '<div class="cal-time-line-now" id="calTimeNowLine"></div>';
+            }
+            
+            html += '</div>'; // column
+        }
+        
+        html += '</div>'; // grid-col
+        html += '</div>'; // scroll
+        html += '</div>'; // hourly-view
+        
+        grid.innerHTML = html;
+        
+        // Auto-scroll to 8 AM (480px) on load so scroll isn't stuck at 12 AM
+        var scrollWrap = document.getElementById('hourlyScrollWrap');
+        if (scrollWrap) {
+            scrollWrap.scrollTop = 480;
+        }
+        
+        updateTimeIndicatorLine();
+    }
+
+    // Overlapping partition algorithm: sets event.width and event.left
+    function layoutColumnEvents(colEvents) {
+        if (colEvents.length === 0) return;
+        
+        // Sort by start minutes, then duration (longer first)
+        colEvents.sort(function(a, b) {
+            if (a.startMinutes !== b.startMinutes) return a.startMinutes - b.startMinutes;
+            return b.duration - a.duration;
+        });
+        
+        var columns = []; // Array of columns (each column contains list of events)
+        
+        colEvents.forEach(function(event) {
+            var placed = false;
+            for (var i = 0; i < columns.length; i++) {
+                var col = columns[i];
+                var lastEvent = col[col.length - 1];
+                // Non-overlapping check
+                if (event.startMinutes >= lastEvent.endMinutes) {
+                    col.push(event);
+                    placed = true;
+                    break;
+                }
+            }
+            if (!placed) {
+                columns.push([event]);
+            }
+        });
+        
+        var totalCols = columns.length;
+        columns.forEach(function(col, colIdx) {
+            col.forEach(function(event) {
+                event.width = 100 / totalCols;
+                event.left = colIdx * event.width;
+            });
+        });
+    }
+
+    window.clickHourCell = function (dateVal, timeVal) {
+        // Open Create Task modal prefilled with date and time
+        openCreateTaskModal(dateVal, timeVal);
+    };
+
+    // ==========================================================
+    // GRID CLICKS & DETAILS POPUP CONTROLLERS
+    // ==========================================================
+    
+    // Create Task Modal Prefilling
+    window.openCreateTaskModal = function (dateIso, timeStr) {
+        var modal = document.getElementById('calCreateTaskModal');
+        if (!modal) return;
+        
+        // Fill dates
+        var dateField = document.getElementById('taskDateInput');
+        if (dateField) {
+            dateField.value = dateIso || formatDateISO(activeDate);
+        }
+        
+        var timeField = document.getElementById('taskTimeInput');
+        if (timeField) {
+            timeField.value = timeStr || '';
+        }
+        
+        // Open modal
+        modal.classList.add('open');
+        modal.setAttribute('aria-hidden', 'false');
+        document.body.style.overflow = 'hidden';
+    };
+
+    // Create Meeting Booking Modal
+    window.openBookingModal = function (dateIso) {
+        renderMeetingAttendees();
+        var modal = document.getElementById('calBookingModal');
+        if (!modal) return;
+        
+        var dateField = document.getElementById('calDateInput');
+        if (dateField) {
+            dateField.value = dateIso || formatDateISO(activeDate);
+        }
+        
+        modal.classList.add('open');
+        modal.setAttribute('aria-hidden', 'false');
+        document.body.style.overflow = 'hidden';
+    };
+
+    window.closeModal = function (modalId) {
+        var modal = document.getElementById(modalId);
+        if (!modal) return;
+        
+        modal.classList.remove('open');
+        modal.setAttribute('aria-hidden', 'true');
+        document.body.style.overflow = '';
+        
+        // If it was task details modal, reset edit form state
+        if (modalId === 'calTaskDetailModal') {
+            toggleTaskEditMode(false);
+        }
+    };
+
+    // Open detail bubble based on kind (meeting / task)
+    window.openDetailPopover = function (e, kind, id) {
+        e.stopPropagation(); // prevent grid cell click fires
+        
+        if (kind === 'meeting') {
+            var mtg = meetings.find(function(m) { return m.id === id; });
+            if (!mtg) return;
+            
+            document.getElementById('calMtgTitle').textContent = mtg.title;
+            document.getElementById('calMtgAccent').style.background = mtg.color;
+            document.getElementById('calMtgWhen').textContent = mtg.date_label;
+            document.getElementById('calMtgTime').textContent = mtg.time + ' – ' + mtg.end_time + ' (' + mtg.duration + ' min)';
+            document.getElementById('calMtgTeam').textContent = mtg.team;
+            document.getElementById('calMtgOrganizer').textContent = mtg.organizer;
+            
+            var descWrap = document.getElementById('calMtgDescWrap');
+            if (mtg.description && mtg.description.trim()) {
+                document.getElementById('calMtgDesc').textContent = mtg.description;
+                descWrap.style.display = 'block';
+            } else {
+                descWrap.style.display = 'none';
+            }
+            
+            document.getElementById('calMtgCount').textContent = mtg.attendee_count;
+            var av = document.getElementById('calMtgAvatars');
+            av.innerHTML = '';
+            mtg.attendees.forEach(function (att) {
+                var chip = document.createElement('div');
+                chip.className = 'cal-detail-att';
+                chip.innerHTML = '<span class="cal-detail-att-av" style="background:' + mtg.color + '">' +
+                    esc(att.initial) + '</span><span>' + esc(att.name) + '</span>';
+                av.appendChild(chip);
+            });
+            
+            document.getElementById('calMtgJoinBtn').href = mtg.join_url;
+            
+            var cancelForm = document.getElementById('calMtgCancelForm');
+            if (mtg.can_manage) {
+                cancelForm.action = mtg.cancel_url;
+                cancelForm.style.display = 'block';
+            } else {
+                cancelForm.style.display = 'none';
+            }
+            
+            var modal = document.getElementById('calMeetingDetailModal');
+            modal.classList.add('open');
+            modal.setAttribute('aria-hidden', 'false');
+            document.body.style.overflow = 'hidden';
+            if (window.lucide) lucide.createIcons();
+            
+        } else if (kind === 'task') {
+            var tsk = tasks.find(function(t) { return t.id === id; });
+            if (!tsk) return;
+            
+            // Fill details values
+            document.getElementById('taskDTitle').textContent = tsk.title;
+            
+            var dueLabel = tsk.deadline;
+            if (tsk.time) dueLabel += ' at ' + tsk.time;
+            document.getElementById('taskDDate').textContent = dueLabel;
+            
+            document.getElementById('taskDStatus').textContent = tsk.status;
+            document.getElementById('taskDPriority').textContent = tsk.priority;
+            
+            // Project row
+            var projRow = document.getElementById('taskDProjRow');
+            if (tsk.project_id) {
+                document.getElementById('taskDProject').textContent = tsk.project_name;
+                projRow.style.display = 'flex';
+            } else {
+                projRow.style.display = 'none';
+            }
+            
+            // Assignee row
+            var assignRow = document.getElementById('taskDAssigneeRow');
+            if (tsk.assigned_to) {
+                document.getElementById('taskDAssignee').textContent = tsk.assignee_name;
+                assignRow.style.display = 'flex';
+            } else {
+                assignRow.style.display = 'none';
+            }
+            
+            // Description wrap
+            var descWrap = document.getElementById('taskDDescWrap');
+            if (tsk.description && tsk.description.trim()) {
+                document.getElementById('taskDDesc').textContent = tsk.description;
+                descWrap.style.display = 'block';
+            } else {
+                descWrap.style.display = 'none';
+            }
+            
+            // Status action button label
+            var statusBtn = document.getElementById('taskDStatusBtn');
+            var statusForm = document.getElementById('taskDToggleForm');
+            statusForm.action = tsk.toggle_url;
+            if (tsk.status === 'Pending') {
+                statusBtn.innerHTML = '<i data-lucide="play" style="width:14px;height:14px;"></i> Start Task';
+                statusBtn.style.background = 'var(--accent)';
+            } else if (tsk.status === 'Working') {
+                statusBtn.innerHTML = '<i data-lucide="check" style="width:14px;height:14px;"></i> Mark Completed';
+                statusBtn.style.background = 'var(--success)';
+            } else { // Completed
+                statusBtn.innerHTML = '<i data-lucide="refresh-cw" style="width:14px;height:14px;"></i> Re-open Task';
+                statusBtn.style.background = 'var(--text-muted)';
+            }
+            
+            // Delete action
+            document.getElementById('taskDDeleteForm').action = tsk.delete_url;
+            
+            // Prefill Edit Form inputs
+            document.getElementById('taskEditForm').action = tsk.edit_url;
+            document.getElementById('editTaskTitle').value = tsk.title;
+            document.getElementById('editTaskDesc').value = tsk.description || '';
+            document.getElementById('editTaskPriority').value = tsk.priority;
+            document.getElementById('editTaskDate').value = tsk.deadline || '';
+            document.getElementById('editTaskTime').value = tsk.time_slot || '';
+            document.getElementById('editTaskStatus').value = tsk.status;
+            
+            // Hide edit option if it is project task and user is NOT organizer/admin
+            // (Only personal tasks can be edited dynamically on personal calendar, project tasks from board)
+            var editBtn = document.getElementById('taskDEditBtn');
+            if (tsk.project_id) {
+                // Readonly for project tasks on personal calendar
+                editBtn.style.display = 'none';
+            } else {
+                editBtn.style.display = 'inline-flex';
+            }
+            
+            var modal = document.getElementById('calTaskDetailModal');
+            modal.classList.add('open');
+            modal.setAttribute('aria-hidden', 'false');
+            document.body.style.overflow = 'hidden';
+            if (window.lucide) lucide.createIcons();
+        }
+    };
+
+    window.toggleTaskEditMode = function (isEdit) {
+        var viewPanel = document.getElementById('taskDetailsView');
+        var editForm = document.getElementById('taskEditForm');
+        var headerTitle = document.getElementById('taskDetailHeaderTitle');
+        
+        if (isEdit) {
+            viewPanel.style.display = 'none';
+            editForm.style.display = 'flex';
+            headerTitle.textContent = 'Edit task';
+        } else {
+            viewPanel.style.display = 'block';
+            editForm.style.display = 'none';
+            headerTitle.textContent = 'Task details';
+        }
+        if (window.lucide) lucide.createIcons();
+    };
+
+    // Meeting modal members renderer
+    window.renderMeetingAttendees = function () {
+        var select = document.getElementById('calTeamSelect');
+        if (!select) return;
+        var slug = select.value;
+        var wrap = document.getElementById('calAttendees');
+        if (!wrap) return;
+        var team = teams.find(function (t) { return t.slug === slug; });
+        wrap.innerHTML = '';
+        if (!team) return;
+        var others = team.members.filter(function (m) { return !m.is_self; });
+        if (others.length === 0) {
+            wrap.innerHTML = '<div class="cal-attendees-empty">You\'re the only member of this team yet. Invite teammates from the Teams page.</div>';
+            return;
+        }
+        others.forEach(function (m) {
+            var id = 'att_' + m.id;
+            var label = document.createElement('label');
+            label.className = 'cal-attendee';
+            label.innerHTML =
+                '<input type="checkbox" name="attendees" value="' + m.id + '" id="' + id + '">' +
+                '<span class="cal-attendee-av">' + esc((m.name || 'U')[0].toUpperCase()) + '</span>' +
+                '<span class="cal-attendee-name">' + esc(m.name) + '</span>' +
+                '<span class="cal-attendee-check"><i data-lucide="check"></i></span>';
+            wrap.appendChild(label);
+        });
+        if (window.lucide) lucide.createIcons();
+    };
+
+    // ==========================================================
+    // TIME NOW RED INDICATOR LINE
+    // ==========================================================
+    function initTimeIndicator() {
+        // Redraw indicator line position immediately, and check every minute
+        updateTimeIndicatorLine();
+        setInterval(updateTimeIndicatorLine, 60000);
+    }
+    
+    function updateTimeIndicatorLine() {
+        var nowLine = document.getElementById('calTimeNowLine');
+        if (!nowLine) return;
+        
+        var curDate = new Date();
+        var startMinutes = curDate.getHours() * 60 + curDate.getMinutes();
+        nowLine.style.top = startMinutes + 'px';
+    }
+
+    // ==========================================================
+    // REMINDER NOTIFICATIONS & DIGITAL CHIME
+    // ==========================================================
+    // Track notified/dismissed events in sessionStorage
+    var dismissedReminders = JSON.parse(sessionStorage.getItem('cal_dismissed_reminders') || '[]');
+    
+    function checkReminders() {
+        var now = new Date();
+        
+        // Filter events scheduled for "today"
+        var todayMeetings = meetings.filter(function(m) {
+            var d = parseDateISO(m.scheduled_for);
+            return d && d.getDate() === now.getDate() && d.getMonth() === now.getMonth() && d.getFullYear() === now.getFullYear();
+        });
+        
+        var todayTasks = tasks.filter(function(t) {
+            // Only tasks with time slots can have active time alerts
+            if (!t.time_slot || t.status === 'Completed') return false;
+            var d = parseDateISO(tskFullTimeISO(t));
+            return d && d.getDate() === now.getDate() && d.getMonth() === now.getMonth() && d.getFullYear() === now.getFullYear();
+        });
+        
+        // 1. Process meetings reminders
+        todayMeetings.forEach(function(m) {
+            var d = parseDateISO(m.scheduled_for);
+            var diff = d - now; // diff in ms
+            var minutesLeft = Math.round(diff / 60000);
+            
+            // If starting in <= 10 mins and not past
+            if (minutesLeft >= 0 && minutesLeft <= 10) {
+                triggerReminder('meeting_' + m.id, 'Meeting Starting Soon', esc(m.title) + ' starts in ' + minutesLeft + ' minutes.', m.join_url);
+            }
+        });
+        
+        // 2. Process tasks reminders
+        todayTasks.forEach(function(t) {
+            var d = parseDateISO(tskFullTimeISO(t));
+            var diff = d - now;
+            var minutesLeft = Math.round(diff / 60000);
+            
+            if (minutesLeft >= 0 && minutesLeft <= 10) {
+                triggerReminder('task_' + t.id, 'Task Reminder', esc(tskDescriptionClean(t)) + ' is due in ' + minutesLeft + ' minutes.', null, t.toggle_url);
+            }
+        });
+    }
+    
+    function tskFullTimeISO(t) {
+        return t.deadline + 'T' + t.time_slot + ':00';
+    }
+    
+    function tskDescriptionClean(t) {
+        return t.title;
+    }
+    
+    function triggerReminder(remKey, title, body, joinUrl, toggleUrl) {
+        // If already dismissed, ignore
+        if (dismissedReminders.indexOf(remKey) !== -1) return;
+        
+        // Play Bell sound
+        playDigitalChime();
+        
+        // Push notification in session dismissed tracker to prevent repeat
+        dismissedReminders.push(remKey);
+        sessionStorage.setItem('cal_dismissed_reminders', JSON.stringify(dismissedReminders));
+        
+        // 1. Show HTML slide-in toast
+        var container = document.getElementById('calToastContainer');
+        if (container) {
+            var toast = document.createElement('div');
+            toast.className = 'cal-toast';
+            toast.id = 'toast_' + remKey;
+            
+            var html = '<div class="cal-toast-head">';
+            html += '<i data-lucide="bell"></i>';
+            html += '<span class="cal-toast-title">' + title + '</span>';
+            html += '<button type="button" class="cal-toast-x" onclick="dismissToast(\'' + remKey + '\')"><i data-lucide="x" style="width:12px;height:12px;"></i></button>';
+            html += '</div>';
+            html += '<div class="cal-toast-body">' + body + '</div>';
+            
+            if (joinUrl || toggleUrl) {
+                html += '<div class="cal-toast-foot">';
+                if (joinUrl) {
+                    html += '<a href="' + joinUrl + '" target="_blank" class="cal-toast-btn primary" onclick="dismissToast(\'' + remKey + '\')">Join room</a>';
+                }
+                if (toggleUrl) {
+                    html += '<form method="POST" action="' + toggleUrl + '" style="margin:0;">';
+                    html += '<input type="hidden" name="csrf_token" value="{{ csrf_token() }}">';
+                    html += '<input type="hidden" name="next" value="{{ url_for('calendar.my_calendar', month='%s-%02d'|format(year, month)) }}">';
+                    html += '<button type="submit" class="cal-toast-btn primary" onclick="dismissToast(\'' + remKey + '\')">Done</button>';
+                    html += '</form>';
+                }
+                html += '</div>';
+            }
+            
+            toast.innerHTML = html;
+            container.appendChild(toast);
+            if (window.lucide) lucide.createIcons();
+            
+            // Auto dismiss toast after 30 seconds
+            setTimeout(function() {
+                dismissToast(remKey);
+            }, 30000);
+        }
+        
+        // 2. Show native system notification if supported & permitted
+        if (Notification && Notification.permission === 'granted') {
+            try {
+                var notif = new Notification(title, {
+                    body: body,
+                    icon: '/static/uploads/profiles/default.png' // Fallback logo path
+                });
+                notif.onclick = function() {
+                    window.focus();
+                    if (joinUrl) window.open(joinUrl, '_blank');
+                    this.close();
+                };
+            } catch (e) {
+                console.log('Error creating system notification', e);
+            }
+        }
+    }
+    
+    window.dismissToast = function(remKey) {
+        var toast = document.getElementById('toast_' + remKey);
+        if (toast) {
+            toast.classList.add('hiding');
+            setTimeout(function() {
+                if (toast.parentNode) toast.parentNode.removeChild(toast);
+            }, 300);
+        }
+    };
+    
+    // Synthesize beautiful digital dual-tone chime using Web Audio API
+    function playDigitalChime() {
+        try {
+            var AudioContextClass = window.AudioContext || window.webkitAudioContext;
+            if (!AudioContextClass) return;
+            var ctx = new AudioContextClass();
+            
+            var osc1 = ctx.createOscillator();
+            var osc2 = ctx.createOscillator();
+            var gain = ctx.createGain();
+            
+            osc1.type = 'sine';
+            // D5 note (587.33 Hz) fading to A5 note (880.00 Hz)
+            osc1.frequency.setValueAtTime(587.33, ctx.currentTime);
+            osc1.frequency.exponentialRampToValueAtTime(880.00, ctx.currentTime + 0.15);
+            
+            osc2.type = 'sine';
+            // D6 note (1174.66 Hz) for bright digital ring
+            osc2.frequency.setValueAtTime(1174.66, ctx.currentTime);
+            
+            gain.gain.setValueAtTime(0.25, ctx.currentTime);
+            gain.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + 0.7);
+            
+            osc1.connect(gain);
+            osc2.connect(gain);
+            gain.connect(ctx.destination);
+            
+            osc1.start();
+            osc2.start();
+            osc1.stop(ctx.currentTime + 0.7);
+            osc2.stop(ctx.currentTime + 0.7);
+        } catch (e) {
+            console.log('Audio Context blocker / error', e);
+        }
+    }
+
+    // ==========================================================
+    // REPLICA PYCAL PYTHON CALENDAR ENGINE
+    // ==========================================================
+    // Builds grids of weeks like python's Calendar(firstweekday=6)
+    function pycal_Calendar(firstweekday) {
+        this.firstweekday = firstweekday || 0; // 0 == Sunday, 1 == Monday
+    }
+    
+    pycal_Calendar.prototype.monthdatescalendar = function (year, month) {
+        // month index starts at 0 in JS Date
+        var first = new Date(year, month - 1, 1);
+        var last = new Date(year, month, 0);
+        
+        var start = new Date(first);
+        // Find how many days to subtract to go back to Sunday (6 in python represents Sunday for calendar)
+        // Adjust for Sunday-first (firstweekday=6 or 0)
+        var offset = start.getDay(); // 0 is Sunday
+        start.setDate(first.getDate() - offset);
+        
+        var weeks = [];
+        var current = new Date(start);
+        
+        // Loop weeks until we cover all days in month
+        while (current <= last || current.getDay() !== 0) {
+            var weekRow = [];
+            for (var col = 0; col < 7; col++) {
+                weekRow.push(new Date(current));
+                current.setDate(current.getDate() + 1);
+            }
+            weeks.push(weekRow);
+            
+            // Safety break
+            if (weeks.length > 8) break;
+        }
+        
+        return weeks;
+    };
+
+    // Close modals on Esc press
+    document.addEventListener('keydown', function(e) {
+        if (e.key === 'Escape') {
+            ['calBookingModal', 'calCreateTaskModal', 'calMeetingDetailModal', 'calTaskDetailModal'].forEach(function(mid) {
+                closeModal(mid);
+            });
+        }
+    });
+
+    // Save team filter value to window for redirects
+    window.HFCal_team = "{{ team_filter or '' }}";
+    
+    // Close bookings dropdown if clicking elsewhere
+    window.addEventListener('click', function(e) {
+        // Close modals on overlay clicks
+        ['calBookingModal', 'calCreateTaskModal', 'calMeetingDetailModal', 'calTaskDetailModal'].forEach(function(mid) {
+            var modal = document.getElementById(mid);
+            if (modal && e.target === modal) {
+                closeModal(mid);
+            }
+        });
+    });
+
+})();
+</script>
+{% endblock %}

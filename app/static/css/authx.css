@@ -1,0 +1,77 @@
+/* ============================================================================
+   HiveFlow auth pages — premium split layout (Stripe-style).
+   Shared by login / register / forgot / reset via auth_base.html.
+   ============================================================================ */
+.ax { min-height: 100vh; background: var(--bg); }
+.ax-split { min-height: 100vh; display: grid; grid-template-columns: 1.08fr 1fr; }
+
+/* ----- Showcase ----- */
+.ax-showcase {
+    position: relative; overflow: hidden; color: #fff; padding: 56px;
+    background: linear-gradient(155deg, #5b48e8 0%, #7c3aed 48%, #6366f1 100%);
+    display: flex;
+}
+.ax-glow { position: absolute; border-radius: 50%; filter: blur(80px); opacity: 0.55; pointer-events: none; }
+.ax-glow-1 { width: 420px; height: 420px; top: -120px; right: -80px; background: rgba(255, 255, 255, 0.35); }
+.ax-glow-2 { width: 360px; height: 360px; bottom: -140px; left: -60px; background: rgba(56, 189, 248, 0.45); }
+.ax-showcase-inner { position: relative; z-index: 1; display: flex; flex-direction: column; gap: 34px; justify-content: center; max-width: 460px; margin: auto 0; width: 100%; }
+.ax-brand { display: flex; align-items: center; gap: 11px; font-size: 20px; font-weight: 800; letter-spacing: -0.01em; }
+.ax-brand-mark { display: inline-flex; align-items: center; justify-content: center; width: 40px; height: 40px; border-radius: 11px; background: rgba(255, 255, 255, 0.16); backdrop-filter: blur(8px); }
+.ax-brand-mark i { width: 22px; height: 22px; }
+.ax-brand-mark.sm { width: 30px; height: 30px; border-radius: 8px; background: var(--accent-soft); color: var(--accent); }
+.ax-brand-mark.sm i { width: 17px; height: 17px; }
+.ax-headline { font-size: 42px; line-height: 1.1; font-weight: 800; letter-spacing: -0.025em; }
+.ax-tagline { font-size: 16px; line-height: 1.65; color: rgba(255, 255, 255, 0.86); margin-top: 16px; }
+.ax-features { list-style: none; margin: 22px 0 0; padding: 0; display: flex; flex-direction: column; gap: 14px; }
+.ax-features li { display: flex; align-items: center; gap: 12px; font-size: 15px; font-weight: 500; }
+.ax-feat-ic { display: inline-flex; align-items: center; justify-content: center; width: 30px; height: 30px; border-radius: 9px; background: rgba(255, 255, 255, 0.16); flex-shrink: 0; }
+.ax-feat-ic i { width: 16px; height: 16px; }
+
+/* Floating product preview */
+.ax-preview { background: rgba(255, 255, 255, 0.12); border: 1px solid rgba(255, 255, 255, 0.22); border-radius: 16px; padding: 16px; backdrop-filter: blur(14px); box-shadow: 0 24px 60px -20px rgba(0, 0, 0, 0.5); }
+.ax-preview-head { display: flex; align-items: center; gap: 6px; margin-bottom: 14px; }
+.ax-dot { width: 9px; height: 9px; border-radius: 50%; background: rgba(255, 255, 255, 0.4); }
+.ax-preview-title { margin-left: 10px; font-size: 12px; font-weight: 600; color: rgba(255, 255, 255, 0.8); }
+.ax-row { display: flex; align-items: center; gap: 11px; padding: 9px 0; font-size: 14px; border-top: 1px solid rgba(255, 255, 255, 0.12); }
+.ax-row span:nth-child(2) { flex: 1; }
+.ax-check { width: 18px; height: 18px; border-radius: 6px; border: 1.5px solid rgba(255, 255, 255, 0.5); display: inline-flex; align-items: center; justify-content: center; flex-shrink: 0; }
+.ax-check.done { background: #fff; border-color: #fff; color: #6d5cf5; }
+.ax-check i { width: 12px; height: 12px; }
+.ax-pill { font-size: 11px; font-weight: 600; padding: 2px 9px; border-radius: 999px; background: rgba(255, 255, 255, 0.18); }
+.ax-preview-foot { display: flex; align-items: center; gap: 7px; margin-top: 12px; padding-top: 12px; border-top: 1px solid rgba(255, 255, 255, 0.12); font-size: 12.5px; font-weight: 500; color: rgba(255, 255, 255, 0.9); }
+.ax-preview-foot i { width: 14px; height: 14px; }
+
+/* ----- Form side ----- */
+.ax-form-side { display: flex; align-items: center; justify-content: center; padding: 40px 28px; }
+.ax-form-wrap { width: 100%; max-width: 400px; }
+.ax-form-brand { display: none; align-items: center; gap: 9px; font-weight: 800; font-size: 18px; color: var(--text); margin-bottom: 24px; }
+.ax-form-icon { display: inline-flex; align-items: center; justify-content: center; width: 48px; height: 48px; border-radius: 13px; background: var(--accent-soft); color: var(--accent); margin-bottom: 16px; }
+.ax-form-icon i { width: 24px; height: 24px; }
+.ax-form-title { font-size: 28px; font-weight: 800; color: var(--text); letter-spacing: -0.02em; }
+.ax-form-sub { font-size: 14px; color: var(--text-muted); margin: 6px 0 26px; line-height: 1.55; }
+.ax-form .ui-btn--block { margin-top: 6px; }
+.ax-links { display: flex; flex-direction: column; gap: 9px; align-items: center; margin-top: 22px; font-size: 13px; color: var(--text-muted); }
+.ax-links a { color: var(--accent); text-decoration: none; font-weight: 600; }
+.ax-links a:hover { text-decoration: underline; }
+.ax-resend, .ax-note { margin-top: 18px; padding: 15px; border: 1px solid var(--border); border-radius: var(--radius); text-align: center; background: var(--surface-sunken); }
+.ax-resend p, .ax-note p { font-size: 13px; color: var(--text-muted); margin: 0 0 10px; }
+.ax-note p:last-child { margin: 0; }
+.ax-footnote { display: flex; align-items: center; justify-content: center; gap: 6px; font-size: 12px; color: var(--text-muted); margin-top: 26px; }
+.ax-footnote i { width: 14px; height: 14px; }
+
+/* OTP code inputs */
+.ax-otp { display: flex; gap: 10px; }
+.ax-otp input { flex: 1; min-width: 0; text-align: center; font-size: 22px; font-weight: 700; color: var(--text); padding: 12px 0; background: var(--surface-sunken); border: 1px solid var(--border-strong); border-radius: var(--radius-sm); transition: border-color var(--transition), box-shadow var(--transition); }
+.ax-otp input:focus { outline: none; border-color: var(--accent); box-shadow: var(--shadow-glow); background: var(--surface); }
+
+/* Password strength rules */
+.ax-rules { margin: 9px 2px 0; padding: 0; list-style: none; font-size: 12px; color: var(--text-muted); display: flex; flex-wrap: wrap; gap: 10px; }
+.ax-rules li { display: inline-flex; align-items: center; gap: 4px; transition: color var(--transition); }
+.ax-rules li i { width: 12px; height: 12px; }
+.ax-rules li.ok { color: var(--success); }
+
+@media (max-width: 920px) {
+    .ax-split { grid-template-columns: 1fr; }
+    .ax-showcase { display: none; }
+    .ax-form-brand { display: flex; }
+}

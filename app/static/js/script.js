@@ -13,36 +13,6 @@ document.addEventListener('DOMContentLoaded', () => {
         }, 5000);
     });
 
-    // Add ripple effect to buttons
-    document.querySelectorAll('.btn, .btn-small').forEach(btn => {
-        btn.addEventListener('click', function (e) {
-            const ripple = document.createElement('span');
-            const rect = this.getBoundingClientRect();
-            const size = Math.max(rect.width, rect.height);
-            const x = e.clientX - rect.left - size / 2;
-            const y = e.clientY - rect.top - size / 2;
-
-            ripple.style.cssText = `
-                position: absolute;
-                width: ${size}px;
-                height: ${size}px;
-                left: ${x}px;
-                top: ${y}px;
-                background: rgba(255,255,255,0.15);
-                border-radius: 50%;
-                transform: scale(0);
-                animation: rippleEffect 0.6s ease-out;
-                pointer-events: none;
-            `;
-
-            this.style.position = 'relative';
-            this.style.overflow = 'hidden';
-            this.appendChild(ripple);
-
-            setTimeout(() => ripple.remove(), 600);
-        });
-    });
-
     // Smooth scroll reveal for task-box
     const observer = new IntersectionObserver((entries) => {
         entries.forEach(entry => {
@@ -85,15 +55,6 @@ document.addEventListener('DOMContentLoaded', () => {
         el.setAttribute('title', d.toLocaleString());
     });
 });
-
-// Ripple animation keyframe (injected once)
-const rippleStyle = document.createElement('style');
-rippleStyle.textContent = `
-    @keyframes rippleEffect {
-        to { transform: scale(3); opacity: 0; }
-    }
-`;
-document.head.appendChild(rippleStyle);
 
 // In-app confirmation modal (replaces native confirm() calls)
 // Any <form> with a data-confirm="message" attribute will auto-trigger this.
@@ -154,6 +115,20 @@ document.addEventListener('submit', function (e) {
         form.submit();
     });
 });
+
+// Premium submit feedback — swap the clicked submit button for a spinner.
+// Skips GET forms and data-confirm forms that haven't been confirmed yet.
+document.addEventListener('submit', function (e) {
+    var form = e.target;
+    if (!(form instanceof HTMLFormElement)) return;
+    if ((form.getAttribute('method') || 'get').toLowerCase() !== 'post') return;
+    if (form.matches('[data-confirm]') && form.dataset.confirmed !== 'true') return;
+    var btn = e.submitter || form.querySelector('button[type="submit"]');
+    if (btn && btn.classList.contains('ui-btn') && !btn.classList.contains('is-loading')) {
+        btn.classList.add('is-loading');
+        btn.innerHTML = '<span class="ui-spinner"></span>';
+    }
+}, false);
 
 // In-app toast (replaces native alert() calls)
 window.showToast = function (message, type) {

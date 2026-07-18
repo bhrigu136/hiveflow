@@ -1,0 +1,110 @@
+{# ============================================================================
+   HiveFlow UI component macros (clean & minimal).
+   Import what you need:  {% from 'components/ui.html' import button, card, field %}
+   `attrs` params take developer-authored HTML (Alpine/data-* directives) only —
+   never user data (everything else is auto-escaped).
+   ============================================================================ #}
+
+{% macro button(label, variant='primary', size='md', icon=None, href=None, type='button', attrs='') -%}
+{%- set sz = '' if size == 'md' else ' ui-btn--' ~ size -%}
+{%- if href -%}
+<a href="{{ href }}" class="ui-btn ui-btn--{{ variant }}{{ sz }}" {{ attrs|safe }}>{% if icon %}<i data-lucide="{{ icon }}"></i>{% endif %}{{ label }}</a>
+{%- else -%}
+<button type="{{ type }}" class="ui-btn ui-btn--{{ variant }}{{ sz }}" {{ attrs|safe }}>{% if icon %}<i data-lucide="{{ icon }}"></i>{% endif %}{{ label }}</button>
+{%- endif -%}
+{%- endmacro %}
+
+{% macro icon_button(icon, variant='', size='md', title='', type='button', href=None, attrs='') -%}
+{%- set vc = ' ui-icon-btn--' ~ variant if variant else '' -%}
+{%- set sc = ' ui-icon-btn--sm' if size == 'sm' else '' -%}
+{%- if href -%}
+<a href="{{ href }}" class="ui-icon-btn{{ vc }}{{ sc }}" title="{{ title }}" {{ attrs|safe }}><i data-lucide="{{ icon }}"></i></a>
+{%- else -%}
+<button type="{{ type }}" class="ui-icon-btn{{ vc }}{{ sc }}" title="{{ title }}" {{ attrs|safe }}><i data-lucide="{{ icon }}"></i></button>
+{%- endif -%}
+{%- endmacro %}
+
+{% macro card(link=False, padding='md', attrs='') -%}
+{%- set p = '' if padding == 'md' else ' ui-card--' ~ padding -%}
+<div class="ui-card{{ ' ui-card--link' if link else '' }}{{ p }}" {{ attrs|safe }}>{{ caller() }}</div>
+{%- endmacro %}
+
+{% macro badge(text, variant='', icon=None) -%}
+<span class="ui-badge{{ ' ui-badge--' ~ variant if variant else '' }}">{% if icon %}<i data-lucide="{{ icon }}"></i>{% endif %}{{ text }}</span>
+{%- endmacro %}
+
+{% macro field(label, name, type='text', value='', placeholder='', required=False, error=None, icon=None, autocomplete=None, attrs='') -%}
+<div class="ui-field">
+  {% if label %}<label class="ui-field-label" for="{{ name }}">{{ label }}</label>{% endif %}
+  <div class="ui-field-control{{ ' has-icon' if icon else '' }}">
+    {% if icon %}<i data-lucide="{{ icon }}"></i>{% endif %}
+    <input class="ui-input" type="{{ type }}" id="{{ name }}" name="{{ name }}" value="{{ value }}" placeholder="{{ placeholder }}"{{ ' required' if required else '' }}{% if autocomplete %} autocomplete="{{ autocomplete }}"{% endif %} {{ attrs|safe }}>
+  </div>
+  {% if error %}<span class="ui-field-error">{{ error }}</span>{% endif %}
+</div>
+{%- endmacro %}
+
+{% macro textarea_field(label, name, value='', rows=3, placeholder='', required=False, attrs='') -%}
+<div class="ui-field">
+  {% if label %}<label class="ui-field-label" for="{{ name }}">{{ label }}</label>{% endif %}
+  <textarea class="ui-textarea" id="{{ name }}" name="{{ name }}" rows="{{ rows }}" placeholder="{{ placeholder }}"{{ ' required' if required else '' }} {{ attrs|safe }}>{{ value }}</textarea>
+</div>
+{%- endmacro %}
+
+{% macro select_field(label, name, options, selected=None, required=False, attrs='') -%}
+<div class="ui-field">
+  {% if label %}<label class="ui-field-label" for="{{ name }}">{{ label }}</label>{% endif %}
+  <select class="ui-select" id="{{ name }}" name="{{ name }}"{{ ' required' if required else '' }} {{ attrs|safe }}>
+    {% for val, lbl in options %}<option value="{{ val }}"{{ ' selected' if selected is not none and selected|string == val|string else '' }}>{{ lbl }}</option>{% endfor %}
+  </select>
+</div>
+{%- endmacro %}
+
+{% macro page_header(title, subtitle='') -%}
+<div class="ui-page-header">
+  <div>
+    <h1>{{ title }}</h1>
+    {% if subtitle %}<p class="ui-page-subtitle">{{ subtitle }}</p>{% endif %}
+  </div>
+  {% if caller %}<div class="ui-page-header-actions">{{ caller() }}</div>{% endif %}
+</div>
+{%- endmacro %}
+
+{% macro empty_state(icon, title, text='') -%}
+<div class="ui-empty">
+  <i data-lucide="{{ icon }}"></i>
+  <h3>{{ title }}</h3>
+  {% if text %}<p>{{ text }}</p>{% endif %}
+  {% if caller %}{{ caller() }}{% endif %}
+</div>
+{%- endmacro %}
+
+{% macro avatar(user, size='md') -%}
+<span class="ui-avatar ui-avatar--{{ size }}">
+  {%- if user and user.profile_picture and user.profile_picture != 'default.png' -%}
+    <img src="{{ user.profile_picture if '://' in user.profile_picture else url_for('static', filename='uploads/profiles/' ~ user.profile_picture) }}" alt="">
+  {%- else -%}
+    {{ (user.name[0] if user and user.name else (user.username[0] if user and user.username else '?'))|upper }}
+  {%- endif -%}
+</span>
+{%- endmacro %}
+
+{% macro stat_card(label, value, icon=None, pct=None) -%}
+<div class="ui-stat">
+  <div class="ui-stat-top">
+    <span class="ui-stat-label">{{ label }}</span>
+    {% if icon %}<span class="ui-stat-icon"><i data-lucide="{{ icon }}"></i></span>{% endif %}
+  </div>
+  <div class="ui-stat-value">{{ value }}</div>
+  {% if pct is not none %}<div class="ui-stat-bar"><div class="ui-stat-bar-fill" style="width: {{ pct }}%;"></div></div>{% endif %}
+</div>
+{%- endmacro %}
+
+{% macro modal(state, title='', size='md') -%}
+<div class="ui-modal-overlay" x-show="{{ state }}" x-cloak @keydown.escape.window="{{ state }} = false" x-transition.opacity style="display:none;">
+  <div class="ui-modal{{ ' ui-modal--' ~ size if size != 'md' else '' }}" @click.outside="{{ state }} = false" x-transition>
+    {% if title %}<div class="ui-modal-head"><h3>{{ title }}</h3><button type="button" class="ui-icon-btn" @click="{{ state }} = false"><i data-lucide="x"></i></button></div>{% endif %}
+    <div class="ui-modal-body">{{ caller() }}</div>
+  </div>
+</div>
+{%- endmacro %}

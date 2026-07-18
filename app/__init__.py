@@ -93,6 +93,32 @@ def create_app():
             )
         return response
 
+    # ── Login-Session Tracking (Security / Your Devices) ───────────
+    @app.before_request
+    def _track_login_session():
+        from flask import request as req, redirect, url_for, flash
+        # Static assets don't need session tracking
+        if req.endpoint == 'static':
+            return None
+        from app.security_utils import track_request
+        try:
+            still_logged_in = track_request()
+        except Exception:
+            db.session.rollback()
+            return None
+        if not still_logged_in:
+            # This device was logged out remotely from another session.
+            if req.endpoint not in ('auth.login', 'auth.register'):
+                flash('Your session was ended from another device. Please sign in again.', 'warning')
+                return redirect(url_for('auth.login'))
+        return None
+
+    @app.after_request
+    def _log_activity(response):
+        from app.security_utils import log_activity
+        log_activity(response)
+        return response
+
     # ── Custom Error Pages ─────────────────────────────────────────
     @app.errorhandler(404)
     def page_not_found(e):
@@ -120,6 +146,9 @@ def create_app():
     from app.routes.files import files_bp
     from app.routes.meetings import meetings_bp
     from app.routes.tracker import tracker_bp
+    from app.routes.calendar import calendar_bp
+    from app.routes.meeting_intel import meeting_intel_bp
+    from app.routes.docs import docs_bp
 
     app.register_blueprint(auth_bp)
     app.register_blueprint(tasks_bp)
@@ -131,6 +160,9 @@ def create_app():
     app.register_blueprint(files_bp)
     app.register_blueprint(meetings_bp)
     app.register_blueprint(tracker_bp)
+    app.register_blueprint(calendar_bp)
+    app.register_blueprint(meeting_intel_bp)
+    app.register_blueprint(docs_bp)
 
     # Serve robots.txt from the static folder at the root path
     from flask import send_from_directory

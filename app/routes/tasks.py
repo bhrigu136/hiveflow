@@ -2,7 +2,7 @@
 
 from flask import Blueprint, render_template, request, redirect, url_for, flash, Response, abort
 from flask_login import login_required, current_user
-from datetime import datetime, time, timedelta, date
+from datetime import datetime, time, timedelta, date, timezone
 from sqlalchemy import or_
 from app.extensions import db
 from app.models import Task, Project, OrgMember
@@ -351,7 +351,7 @@ def edit_task(task_id):
     # Project-task fields — only meaningful when this is a project task
     if task.project_id:
         if status in ('Pending', 'Working', 'Completed'):
-            task.status = status
+            _set_status(task, status)
         if assigned_to_raw is not None:
             assigned_to_raw = assigned_to_raw.strip()
             if assigned_to_raw == '':
@@ -446,6 +446,17 @@ def edit_task(task_id):
 
 
 
+def _set_status(task, new_status):
+    """Set a task's status and keep `completed_at` in sync (set on first
+    completion, cleared if the task is reopened)."""
+    task.status = new_status
+    if new_status == 'Completed':
+        if task.completed_at is None:
+            task.completed_at = datetime.now(timezone.utc)
+    else:
+        task.completed_at = None
+
+
 # TOGGLE TASK STATUS
 @tasks_bp.route('/toggle/<int:task_id>', methods=['POST'])
 @login_required
@@ -453,11 +464,11 @@ def toggle_status(task_id):
     task = _authorize_task(task_id, 'status')
 
     if task.status == 'Pending':
-        task.status = 'Working'
+        _set_status(task, 'Working')
     elif task.status == 'Working':
-        task.status = 'Completed'
+        _set_status(task, 'Completed')
     else:
-        task.status = 'Pending'
+        _set_status(task, 'Pending')
 
     # Notify the task creator and assignee (excluding the person doing the toggle).
     # Only fires for project tasks — personal tasks have no audience.

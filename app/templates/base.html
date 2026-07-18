@@ -8,8 +8,15 @@
         content="A modern task manager with Google Calendar integration. Organize your life beautifully.">
     <title>{% block title %}HiveFlow{% endblock %}</title>
 
+    <!-- Favicon — inline SVG hex "hive" mark in brand violet -->
+    <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='8' fill='%238b5cf6'/%3E%3Cpath d='M16 7l7 4v8l-7 4-7-4v-8z' fill='none' stroke='%23fff' stroke-width='2.2' stroke-linejoin='round'/%3E%3Ccircle cx='16' cy='15' r='2.4' fill='%23fff'/%3E%3C/svg%3E">
+    <link rel="apple-touch-icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='8' fill='%238b5cf6'/%3E%3Cpath d='M16 7l7 4v8l-7 4-7-4v-8z' fill='none' stroke='%23fff' stroke-width='2.2' stroke-linejoin='round'/%3E%3C/svg%3E">
+
     <!-- Main CSS -->
     <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
+    <!-- Design tokens + component layer (clean-minimal). Loaded after style.css so they win. -->
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/tokens.css') }}">
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/components.css') }}">
 
     <!-- Google Fonts — Inter -->
     <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -18,7 +25,10 @@
 
     <!-- Lucide Icons CDN -->
     <script src="https://unpkg.com/lucide@latest/dist/umd/lucide.js"></script>
-    
+
+    <!-- Alpine.js — declarative interactivity (no build) -->
+    <script defer src="https://unpkg.com/alpinejs@3.x.x/dist/cdn.min.js"></script>
+
     <!-- Theme Loader Script - Run before rendering to prevent flashing -->
     <script>
         (function() {
@@ -91,6 +101,21 @@
                 <i data-lucide="check-square"></i>
                 <span>My Tasks</span>
             </a>
+            <a href="{{ url_for('calendar.my_calendar') }}"
+               class="sidebar-link {% if request.endpoint and (request.endpoint.startswith('calendar.') or request.endpoint == 'meetings.meeting_room') %}active{% endif %}">
+                <i data-lucide="calendar-days"></i>
+                <span>Calendar</span>
+            </a>
+            <a href="{{ url_for('meeting_intel.notes_index') }}"
+               class="sidebar-link {% if request.endpoint and request.endpoint.startswith('meeting_intel.') %}active{% endif %}">
+                <i data-lucide="file-text"></i>
+                <span>Meeting Notes</span>
+            </a>
+            <a href="{{ url_for('docs.hub') }}"
+               class="sidebar-link {% if request.endpoint and request.endpoint.startswith('docs.') %}active{% endif %}">
+                <i data-lucide="book-open"></i>
+                <span>Docs</span>
+            </a>
             <a href="{{ url_for('tracker.plans_list') }}"
                class="sidebar-link {% if request.endpoint and request.endpoint.startswith('tracker.') %}active{% endif %}">
                 <i data-lucide="bar-chart-2"></i>
@@ -104,7 +129,8 @@
 
             <!-- Notification Bell -->
             {% set unread_count = current_user.notifications.filter_by(is_read=False).count() %}
-            <div class="notif-wrapper sidebar-link" style="cursor:pointer;" onclick="toggleNotifications(event);">
+            <div class="notif-wrapper sidebar-link" style="cursor:pointer;"
+                 x-data="{ notifOpen: false }" @click="notifOpen = !notifOpen" @click.outside="notifOpen = false">
                 <i data-lucide="bell"></i>
                 <span>Notifications</span>
                 {% if unread_count > 0 %}
@@ -112,7 +138,7 @@
                 {% endif %}
 
                 <!-- Notification Dropdown -->
-                <div id="notificationsDropdown" class="notif-dropdown" onclick="event.stopPropagation();">
+                <div id="notificationsDropdown" class="notif-dropdown" :class="{ 'open': notifOpen }" @click.stop>
                     <div class="notif-dropdown-header">
                         <h4>
                             <i data-lucide="bell" style="width:14px;height:14px;"></i>
@@ -238,26 +264,6 @@
 
     <script src="{{ url_for('static', filename='js/script.js') }}"></script>
     <script>lucide.createIcons();</script>
-    {% if current_user.is_authenticated %}
-    <script>
-    
-    function toggleNotifications(e) {
-        if(e) e.preventDefault();
-        const dropdown = document.getElementById('notificationsDropdown');
-        if (!dropdown) return;
-        dropdown.classList.toggle('open');
-    }
-
-    document.addEventListener('click', function(e) {
-        const notifDropdown = document.getElementById('notificationsDropdown');
-        const notifTrigger = e.target.closest('[onclick*="toggleNotifications"]');
-
-        if (notifDropdown && notifDropdown.classList.contains('open') && !notifDropdown.contains(e.target) && !notifTrigger) {
-            notifDropdown.classList.remove('open');
-        }
-    });
-    </script>
-    {% endif %}
 </body>
 
 </html>

@@ -4,17 +4,20 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>500 — Server Error | HiveFlow</title>
+    <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='8' fill='%238b5cf6'/%3E%3Cpath d='M16 7l7 4v8l-7 4-7-4v-8z' fill='none' stroke='%23fff' stroke-width='2.2' stroke-linejoin='round'/%3E%3Ccircle cx='16' cy='15' r='2.4' fill='%23fff'/%3E%3C/svg%3E">
     <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/tokens.css') }}">
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+    <script>(function(){var p=localStorage.getItem('theme')||'light';if(p==='system')p=(window.matchMedia&&matchMedia('(prefers-color-scheme: dark)').matches)?'dark':'light';if(!['light','dark'].includes(p))p='light';document.documentElement.setAttribute('data-theme',p);})();</script>
     <style>
         body { font-family: 'Inter', sans-serif; background: var(--bg); color: var(--text); display: flex; align-items: center; justify-content: center; min-height: 100vh; margin: 0; }
         .error-box { text-align: center; padding: 48px 32px; max-width: 480px; }
-        .error-code { font-size: 120px; font-weight: 800; line-height: 1; background: linear-gradient(135deg, #e53e3e, #ed8936); -webkit-background-clip: text; -webkit-text-fill-color: transparent; margin: 0; }
+        .error-code { font-size: 120px; font-weight: 800; line-height: 1; background: linear-gradient(135deg, var(--danger), var(--warning)); -webkit-background-clip: text; background-clip: text; -webkit-text-fill-color: transparent; margin: 0; }
         .error-title { font-size: 24px; font-weight: 700; margin: 16px 0 8px; }
         .error-sub { color: var(--text-muted); font-size: 15px; margin-bottom: 32px; }
-        .btn-home { display: inline-block; background: linear-gradient(135deg, #4361ee, #7c3aed); color: var(--on-accent); padding: 12px 28px; border-radius: 10px; text-decoration: none; font-weight: 600; font-size: 15px; transition: opacity .2s; }
-        .btn-home:hover { opacity: .85; }
+        .btn-home { display: inline-block; background: var(--accent); color: var(--on-accent); padding: 12px 28px; border-radius: 10px; text-decoration: none; font-weight: 600; font-size: 15px; transition: background .2s, transform .2s; }
+        .btn-home:hover { background: var(--accent-hover); transform: translateY(-1px); }
     </style>
 </head>
 <body>

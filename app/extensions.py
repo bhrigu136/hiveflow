@@ -2,6 +2,9 @@ from flask_sqlalchemy import SQLAlchemy
 from sqlalchemy import MetaData
 from flask_login import LoginManager
 import os
+
+os.environ.setdefault('TZ', 'UTC')
+
 from flask_wtf.csrf import CSRFProtect
 from flask_migrate import Migrate
 from flask_limiter import Limiter

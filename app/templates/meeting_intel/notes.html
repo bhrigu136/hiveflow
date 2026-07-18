@@ -1,0 +1,136 @@
+{% extends "base.html" %}
+{% block title %}Notes: {{ meeting.title }} — HiveFlow{% endblock %}
+
+{% block content %}
+<div style="max-width: 900px; margin: 0 auto; padding: 20px;">
+
+    <div style="margin-bottom: 8px;">
+        <a href="{{ url_for('meeting_intel.notes_index') }}"
+           style="color: var(--text-muted); text-decoration: none; font-size: 14px; display:inline-flex; align-items:center; gap:4px;">
+            <i data-lucide="arrow-left" style="width:14px;height:14px;"></i> All meeting notes
+        </a>
+    </div>
+
+    <h2 style="margin:0 0 4px; font-size:24px; color:var(--text); display:flex; align-items:center; gap:10px;">
+        <i data-lucide="file-text" style="color:var(--accent);"></i> {{ meeting.title }}
+    </h2>
+    <p style="margin:0 0 24px; color:var(--text-muted); font-size:14px;">
+        {{ org.name if org }} · {{ meeting.scheduled_for.strftime('%A, %b %d, %Y · %I:%M %p').replace(' 0', ' ') }}
+    </p>
+
+    {% if meeting.intel_status != 'ready' %}
+    <div style="background:var(--surface-solid); border:1px solid var(--glass-border); border-radius:14px; padding:24px; text-align:center;">
+        <p style="margin:0 0 14px; color:var(--text-muted); font-size:14px;">
+            {% if meeting.intel_status == 'recording' %}
+                This meeting is being captured. Generate the notes once it's done.
+            {% elif meeting.intel_status == 'processing' %}
+                Notes are being generated…
+            {% elif meeting.intel_status == 'error' %}
+                Something went wrong generating notes. You can try again.
+            {% else %}
+                No notes have been generated for this meeting yet.
+            {% endif %}
+        </p>
+        {% if can_manage %}
+        <button id="genNotesBtn" data-url="{{ url_for('meeting_intel.finalize', meeting_id=meeting.id) }}"
+                style="padding:10px 20px; border:none; border-radius:10px; cursor:pointer; font-weight:600;
+                       background:linear-gradient(135deg,#4361ee,#7c3aed); color:#fff;">
+            Generate notes
+        </button>
+        <div id="genNotesMsg" style="margin-top:10px; font-size:13px; color:var(--text-muted);"></div>
+        {% endif %}
+    </div>
+    {% else %}
+
+    <!-- Summary -->
+    <div style="background:var(--surface-solid); border:1px solid var(--glass-border); border-radius:14px; padding:20px; margin-bottom:18px;">
+        <div style="display:flex; align-items:center; justify-content:space-between; gap:10px; margin-bottom:10px;">
+            <h3 style="margin:0; font-size:16px; color:var(--text);">Summary</h3>
+            {% if can_manage %}
+            <a href="{{ url_for('meeting_intel.review', meeting_id=meeting.id) }}"
+               style="font-size:13px; color:var(--accent); text-decoration:none;">Review &amp; create tasks →</a>
+            {% endif %}
+        </div>
+        <p style="margin:0; color:var(--text); line-height:1.6; white-space:pre-wrap;">{{ meeting.summary or 'No transcript was captured for this meeting.' }}</p>
+    </div>
+
+    {% if meeting.decisions %}
+    <div style="background:var(--surface-solid); border:1px solid var(--glass-border); border-radius:14px; padding:20px; margin-bottom:18px;">
+        <h3 style="margin:0 0 10px; font-size:16px; color:var(--text);">Decisions</h3>
+        <ul style="margin:0; padding-left:18px; color:var(--text); line-height:1.7;">
+            {% for d in meeting.decisions %}<li>{{ d }}</li>{% endfor %}
+        </ul>
+    </div>
+    {% endif %}
+
+    {% if meeting.action_items %}
+    <div style="background:var(--surface-solid); border:1px solid var(--glass-border); border-radius:14px; padding:20px; margin-bottom:18px;">
+        <h3 style="margin:0 0 12px; font-size:16px; color:var(--text);">Action Items</h3>
+        {% for item in meeting.action_items %}
+        <div style="padding:10px 0; border-top:1px solid var(--glass-border); display:flex; gap:10px; align-items:flex-start;">
+            <i data-lucide="{{ 'check-circle' if item.task_id else 'circle' }}"
+               style="width:16px;height:16px;margin-top:3px;color:{{ '#16a34a' if item.task_id else 'var(--text-muted)' }};"></i>
+            <div style="flex:1;">
+                <div style="color:var(--text); font-size:14px;">{{ item.text }}</div>
+                <div style="font-size:12px; color:var(--text-muted); margin-top:2px;">
+                    {% if item.suggested_assignee_name %}{{ item.suggested_assignee_name }}{% endif %}
+                    {% if item.due_label %} · due {{ item.due_label }}{% endif %}
+                    {% if item.task_id %} · <span style="color:#16a34a;">task created</span>{% endif %}
+                </div>
+            </div>
+        </div>
+        {% endfor %}
+    </div>
+    {% endif %}
+
+    {% if source_tasks %}
+    <div style="background:var(--surface-solid); border:1px solid var(--glass-border); border-radius:14px; padding:20px; margin-bottom:18px;">
+        <h3 style="margin:0 0 12px; font-size:16px; color:var(--text);">Tasks created from this meeting</h3>
+        {% for t in source_tasks %}
+        <div style="padding:8px 0; border-top:1px solid var(--glass-border); display:flex; gap:8px; align-items:center;">
+            <span style="font-size:12px; padding:2px 8px; border-radius:10px; background:rgba(148,163,184,0.15); color:var(--text-muted);">{{ t.status }}</span>
+            {% if t.project_id %}
+            <a href="{{ url_for('projects.dashboard', project_id=t.project_id) }}" style="color:var(--text); text-decoration:none; font-size:14px;">{{ t.title }}</a>
+            {% else %}
+            <span style="color:var(--text); font-size:14px;">{{ t.title }}</span>
+            {% endif %}
+            {% if t.assignee %}<span style="font-size:12px; color:var(--text-muted);">· {{ t.assignee.name or t.assignee.username }}</span>{% endif %}
+        </div>
+        {% endfor %}
+    </div>
+    {% endif %}
+
+    {% if meeting.transcript_full %}
+    <details style="background:var(--surface-solid); border:1px solid var(--glass-border); border-radius:14px; padding:16px 20px;">
+        <summary style="cursor:pointer; font-weight:600; color:var(--text);">Full transcript</summary>
+        <pre style="margin:14px 0 0; white-space:pre-wrap; word-wrap:break-word; font-family:inherit; font-size:13px; color:var(--text-muted); line-height:1.6;">{{ meeting.transcript_full }}</pre>
+    </details>
+    {% endif %}
+
+    {% endif %}
+</div>
+
+<script>
+(function () {
+    var btn = document.getElementById('genNotesBtn');
+    if (!btn) return;
+    var msg = document.getElementById('genNotesMsg');
+    btn.addEventListener('click', function () {
+        btn.disabled = true;
+        var original = btn.textContent;
+        btn.textContent = 'Generating…';
+        fetch(btn.getAttribute('data-url'), {
+            method: 'POST',
+            credentials: 'same-origin',
+            headers: { 'Content-Type': 'application/json', 'X-CSRFToken': "{{ csrf_token() }}" },
+            body: '{}'
+        }).then(function (r) { return r.json().catch(function () { return {}; }); })
+          .then(function (d) {
+              if (d && d.redirect) { window.location.href = d.redirect; }
+              else if (d && d.status === 'ready') { window.location.reload(); }
+              else { btn.disabled = false; btn.textContent = original; if (msg) msg.textContent = (d && d.error) || 'Could not generate notes.'; }
+          }).catch(function () { btn.disabled = false; btn.textContent = original; if (msg) msg.textContent = 'Network error.'; });
+    });
+})();
+</script>
+{% endblock %}

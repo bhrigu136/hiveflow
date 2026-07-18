@@ -1,173 +1,64 @@
-<!DOCTYPE html>
-<html lang="en">
+{% extends "auth_base.html" %}
+{% from 'components/ui.html' import field %}
+{% block auth_title %}Create Account — HiveFlow{% endblock %}
 
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <meta name="description" content="Create a HiveFlow account to organize your tasks and calendar.">
-    <title>Create Account — HiveFlow</title>
-    <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
-    <link rel="stylesheet" href="{{ url_for('static', filename='css/auth.css') }}">
-    <link rel="preconnect" href="https://fonts.googleapis.com">
-    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
-    <script src="https://unpkg.com/lucide@latest/dist/umd/lucide.js"></script>
-</head>
+{% block auth_form %}
+<h2 class="ax-form-title">Create your account</h2>
+<p class="ax-form-sub">Start turning meetings into momentum — free to begin.</p>
 
-<body class="auth-page">
+<form method="POST" id="register-form" class="ax-form"
+      x-data="{ pw: '', showPw: false, showCpw: false,
+                get hasLen() { return this.pw.length >= 8 },
+                get hasUpper() { return /[A-Z]/.test(this.pw) },
+                get hasDigit() { return /[0-9]/.test(this.pw) } }">
+    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}" />
 
-    <!-- Animated background shapes -->
-    <div class="auth-layout-split">
-        <!-- Left Side: Showcase -->
-        <div class="auth-showcase">
-            <div class="auth-showcase-content">
-                <div class="logo">
-                    <i data-lucide="layers" style="width:32px;height:32px;color:var(--accent-light);"></i>
-                    <span>HiveFlow</span>
-                </div>
-                <h1>Start your journey<br>to better productivity.</h1>
-                <p>Join thousands of professionals who use HiveFlow to bring order to their chaotic workdays.</p>
-                
-                <div class="feature-pills">
-                    <div class="feature-pill"><i data-lucide="check-circle-2"></i> Smart Tasks</div>
-                    <div class="feature-pill"><i data-lucide="calendar"></i> Calendar Sync</div>
-                    <div class="feature-pill"><i data-lucide="users"></i> Team Projects</div>
-                </div>
-            </div>
-            
-            <div class="abstract-art">
-                <div class="orb orb-1"></div>
-                <div class="orb orb-2"></div>
-                <div class="glass-pane"></div>
-            </div>
+    {{ field('Full name', 'name', type='text', placeholder='Jane Doe', icon='user', required=True, attrs='autofocus') }}
+    {{ field('Email address', 'email', type='email', placeholder='you@company.com', icon='mail', required=True) }}
+
+    <div class="ui-field" style="margin-bottom:8px;">
+        <label class="ui-field-label" for="password">Password</label>
+        <div class="ui-field-control has-icon">
+            <i data-lucide="lock"></i>
+            <input class="ui-input" :type="showPw ? 'text' : 'password'" id="password" name="password" x-model="pw"
+                   placeholder="Create a password" required minlength="8">
+            <button type="button" class="ui-field-toggle" @click="showPw = !showPw">
+                <span x-show="!showPw"><i data-lucide="eye"></i></span>
+                <span x-show="showPw" x-cloak><i data-lucide="eye-off"></i></span>
+            </button>
         </div>
+        <ul class="ax-rules">
+            <li :class="{ ok: hasLen }"><i data-lucide="check-circle-2"></i> 8+ characters</li>
+            <li :class="{ ok: hasUpper }"><i data-lucide="check-circle-2"></i> 1 uppercase</li>
+            <li :class="{ ok: hasDigit }"><i data-lucide="check-circle-2"></i> 1 number</li>
+        </ul>
+    </div>
 
-        <!-- Right Side: Auth Form -->
-        <div class="auth-form-side">
-            <!-- Flash Messages -->
-            {% with messages = get_flashed_messages(with_categories=true) %}
-            {% if messages %}
-            {% for category, message in messages %}
-            <div class="flash {{ category }}">{{ message }}</div>
-            {% endfor %}
-            {% endif %}
-            {% endwith %}
-
-            <div class="auth-card">
-                <div class="auth-hero" style="margin-bottom:24px;">
-                    <div class="auth-hero-icon blue">
-                        <i data-lucide="user-plus" style="width:28px;height:28px;"></i>
-                    </div>
-                    <h2>Create Account</h2>
-                    <p>Fill in your details to create your account</p>
-                </div>
-
-                <form method="POST" id="register-form">
-                    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}"/>
-                    
-                    <div class="auth-form-group">
-                        <div class="auth-input-wrapper">
-                            <input type="text" id="name" name="name" placeholder=" " required autofocus>
-                            <label for="name" class="floating-label">Full Name</label>
-                            <span class="auth-input-icon"><i data-lucide="user" style="width:18px;height:18px;"></i></span>
-                        </div>
-                    </div>
-
-                    <div class="auth-form-group">
-                        <div class="auth-input-wrapper">
-                            <input type="email" id="email" name="email" placeholder=" " required>
-                            <label for="email" class="floating-label">Email Address</label>
-                            <span class="auth-input-icon"><i data-lucide="mail" style="width:18px;height:18px;"></i></span>
-                        </div>
-                    </div>
-
-                    <div class="auth-form-group">
-                        <div class="auth-input-wrapper">
-                            <input type="password" id="password" name="password" placeholder=" " required minlength="8"
-                                   pattern="(?=.*[A-Z])(?=.*\d).{8,}"
-                                   title="At least 8 characters, including one uppercase letter and one number">
-                            <label for="password" class="floating-label">Password</label>
-                            <span class="auth-input-icon"><i data-lucide="lock" style="width:18px;height:18px;"></i></span>
-                            <button type="button" class="auth-password-toggle" onclick="togglePassword('password', this)">
-                                <i data-lucide="eye" style="width:18px;height:18px;"></i>
-                            </button>
-                        </div>
-                        <ul id="password-rules" style="margin:8px 4px 0;padding:0;list-style:none;font-size:12px;color:var(--text-muted);display:flex;flex-wrap:wrap;gap:10px;">
-                            <li data-rule="length"><i data-lucide="circle" style="width:11px;height:11px;vertical-align:middle;margin-right:3px;"></i>8+ characters</li>
-                            <li data-rule="upper"><i data-lucide="circle" style="width:11px;height:11px;vertical-align:middle;margin-right:3px;"></i>1 uppercase</li>
-                            <li data-rule="digit"><i data-lucide="circle" style="width:11px;height:11px;vertical-align:middle;margin-right:3px;"></i>1 number</li>
-                        </ul>
-                    </div>
-
-                    <div class="auth-form-group">
-                        <div class="auth-input-wrapper">
-                            <input type="password" id="confirm_password" name="confirm_password" placeholder=" " required>
-                            <label for="confirm_password" class="floating-label">Confirm Password</label>
-                            <span class="auth-input-icon"><i data-lucide="lock" style="width:18px;height:18px;"></i></span>
-                            <button type="button" class="auth-password-toggle" onclick="togglePassword('confirm_password', this)">
-                                <i data-lucide="eye" style="width:18px;height:18px;"></i>
-                            </button>
-                        </div>
-                    </div>
-
-                    <button type="submit" class="auth-btn blue">
-                        Create Account
-                        <i data-lucide="arrow-right" style="width:16px;height:16px;"></i>
-                    </button>
-                </form>
-
-                <div class="auth-links">
-                    <p>Already have an account? <a href="{{ url_for('auth.login') }}">Sign in</a></p>
-                </div>
-            </div>
-            
-            <div class="auth-footer">
-                By creating an account, you agree to our
-                <a href="{{ url_for('auth.terms') }}" style="color:var(--accent-light);">Terms of Service</a> and
-                <a href="{{ url_for('auth.privacy') }}" style="color:var(--accent-light);">Privacy Policy</a>.
-            </div>
+    <div class="ui-field">
+        <label class="ui-field-label" for="confirm_password">Confirm password</label>
+        <div class="ui-field-control has-icon">
+            <i data-lucide="lock"></i>
+            <input class="ui-input" :type="showCpw ? 'text' : 'password'" id="confirm_password" name="confirm_password"
+                   placeholder="Re-enter your password" required>
+            <button type="button" class="ui-field-toggle" @click="showCpw = !showCpw">
+                <span x-show="!showCpw"><i data-lucide="eye"></i></span>
+                <span x-show="showCpw" x-cloak><i data-lucide="eye-off"></i></span>
+            </button>
         </div>
     </div>
 
-    <script>
-        function togglePassword(fieldId, btn) {
-            const input = document.getElementById(fieldId);
-            const icon = btn.querySelector('[data-lucide]');
-            if (input.type === 'password') {
-                input.type = 'text';
-                icon.setAttribute('data-lucide', 'eye-off');
-            } else {
-                input.type = 'password';
-                icon.setAttribute('data-lucide', 'eye');
-            }
-            lucide.createIcons();
-        }
+    <button type="submit" class="ui-btn ui-btn--primary ui-btn--lg ui-btn--block">
+        Create account <i data-lucide="arrow-right"></i>
+    </button>
+</form>
 
-        // Live password-rule indicator
-        (function () {
-            const pw = document.getElementById('password');
-            const rules = document.getElementById('password-rules');
-            if (!pw || !rules) return;
-            const checks = {
-                length: v => v.length >= 8,
-                upper:  v => /[A-Z]/.test(v),
-                digit:  v => /[0-9]/.test(v),
-            };
-            pw.addEventListener('input', () => {
-                const v = pw.value;
-                rules.querySelectorAll('li').forEach(li => {
-                    const ok = checks[li.dataset.rule](v);
-                    li.style.color = ok ? '#6ee7b7' : 'var(--text-muted)';
-                    const icon = li.querySelector('[data-lucide]');
-                    if (icon) {
-                        icon.setAttribute('data-lucide', ok ? 'check-circle-2' : 'circle');
-                    }
-                });
-                if (typeof lucide !== 'undefined') lucide.createIcons();
-            });
-        })();
-    </script>
-    <script>lucide.createIcons();</script>
-</body>
+<div class="ax-links">
+    <span>Already have an account? <a href="{{ url_for('auth.login') }}">Sign in</a></span>
+</div>
 
-</html>
+<p class="ax-footnote">
+    By creating an account you agree to our
+    <a href="{{ url_for('auth.terms') }}" style="color:var(--accent);">Terms</a> &amp;
+    <a href="{{ url_for('auth.privacy') }}" style="color:var(--accent);">Privacy</a>.
+</p>
+{% endblock %}

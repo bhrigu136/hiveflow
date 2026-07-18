@@ -1,646 +1,314 @@
 {% extends "base.html" %}
+{% from 'components/ui.html' import stat_card, badge, icon_button, modal, empty_state %}
 {% block title %}Your Tasks — HiveFlow{% endblock %}
 
 {% block content %}
-
-<style>
-@keyframes spin { 100% { transform: rotate(360deg); } }
-.spin { animation: spin 1s linear infinite; }
-</style>
-
-{# ─── WELCOME BANNER (greeting + date) ─── #}
 {% set _user_name = current_user.name or current_user.username or 'there' %}
 {% set _open_count = pending_count + working_count %}
-<div class="welcome-banner-premium animate-slide-up">
-    <div class="welcome-banner-inner">
-        <div>
-            <h2 class="welcome-greeting" id="greeting-text" data-name="{{ _user_name }}">
-                <span class="wave">👋</span>
-                Hello, {{ _user_name }}!
-            </h2>
-            <p class="welcome-sub">
-                {% if total_count == 0 %}
-                    {% if show_all %}
-                        No tasks yet — add one below to get started.
-                    {% elif is_today %}
-                        A fresh start awaits — add your first task below.
-                    {% else %}
-                        Nothing scheduled for {{ day_label }}.
-                    {% endif %}
-                {% elif completed_count == total_count %}
-                    Amazing — every task done. Treat yourself! 🎉
-                {% else %}
-                    {% if show_all %}
-                        <strong>{{ _open_count }}</strong>
-                        open task{{ '' if _open_count == 1 else 's' }} across all dates.
-                    {% elif is_today %}
-                        You have <strong>{{ _open_count }}</strong>
-                        task{{ '' if _open_count == 1 else 's' }} left to tackle today.
-                    {% else %}
-                        <strong>{{ _open_count }}</strong>
-                        open task{{ '' if _open_count == 1 else 's' }} for {{ day_label }}.
-                    {% endif %}
-                {% endif %}
-            </p>
-        </div>
-        <div class="welcome-date-pill">
-            <i data-lucide="calendar-days"></i>
-            <span id="welcome-date"></span>
-        </div>
+
+<!-- Header -->
+<div class="tasks-head">
+    <div>
+        <h1 id="greeting-text" data-name="{{ _user_name }}" style="font-size:var(--fs-2xl);font-weight:var(--fw-bold);color:var(--text);letter-spacing:-0.01em;">Hello, {{ _user_name }}!</h1>
+        <p style="color:var(--text-muted);font-size:var(--fs-base);margin-top:4px;">
+            {% if total_count == 0 %}
+                {% if show_all %}No tasks yet — add one below to get started.
+                {% elif is_today %}A fresh start awaits — add your first task below.
+                {% else %}Nothing scheduled for {{ day_label }}.{% endif %}
+            {% elif completed_count == total_count %}Every task done. Nice work. 🎉
+            {% else %}
+                {% if show_all %}<strong>{{ _open_count }}</strong> open task{{ '' if _open_count == 1 else 's' }} across all dates.
+                {% elif is_today %}<strong>{{ _open_count }}</strong> task{{ '' if _open_count == 1 else 's' }} left today.
+                {% else %}<strong>{{ _open_count }}</strong> open task{{ '' if _open_count == 1 else 's' }} for {{ day_label }}.{% endif %}
+            {% endif %}
+        </p>
     </div>
+    <span class="ui-badge"><i data-lucide="calendar-days"></i> <span id="welcome-date"></span></span>
 </div>
 
-{# ─── STATS DASHBOARD ─── #}
-<div class="premium-stats-grid animate-slide-up">
-    <div class="premium-stat-card">
-        <div class="premium-stat-card-row">
-            <div>
-                <div class="premium-stat-value">{{ total_count }}</div>
-                <div class="premium-stat-label">Total</div>
-            </div>
-            <div class="premium-stat-icon stat-icon-total">
-                <i data-lucide="layers"></i>
-            </div>
-        </div>
-        <div class="premium-stat-progress">
-            <div class="premium-stat-progress-fill fill-total" data-pct="{{ completion_pct }}"></div>
-        </div>
-    </div>
-    
-    <div class="premium-stat-card">
-        <div class="premium-stat-card-row">
-            <div>
-                <div class="premium-stat-value">{{ pending_count }}</div>
-                <div class="premium-stat-label">Pending</div>
-            </div>
-            <div class="premium-stat-icon stat-icon-pending">
-                <i data-lucide="circle"></i>
-            </div>
-        </div>
-        <div class="premium-stat-progress">
-            <div class="premium-stat-progress-fill fill-pending" data-pct="{{ ((pending_count / total_count) * 100) | round | int if total_count else 0 }}"></div>
-        </div>
-    </div>
-    
-    <div class="premium-stat-card">
-        <div class="premium-stat-card-row">
-            <div>
-                <div class="premium-stat-value">{{ working_count }}</div>
-                <div class="premium-stat-label">In Progress</div>
-            </div>
-            <div class="premium-stat-icon stat-icon-working">
-                <i data-lucide="zap"></i>
-            </div>
-        </div>
-        <div class="premium-stat-progress">
-            <div class="premium-stat-progress-fill fill-working" data-pct="{{ ((working_count / total_count) * 100) | round | int if total_count else 0 }}"></div>
-        </div>
-    </div>
-    
-    <div class="premium-stat-card">
-        <div class="premium-stat-card-row">
-            <div>
-                <div class="premium-stat-value">{{ completed_count }}</div>
-                <div class="premium-stat-label">Completed</div>
-            </div>
-            <div class="premium-stat-icon stat-icon-done">
-                <i data-lucide="check-circle-2"></i>
-            </div>
-        </div>
-        <div class="premium-stat-progress">
-            <div class="premium-stat-progress-fill fill-done" data-pct="{{ completion_pct }}"></div>
-        </div>
-    </div>
+<!-- Stats -->
+{% set pending_pct = ((pending_count / total_count) * 100) | round | int if total_count else 0 %}
+{% set working_pct = ((working_count / total_count) * 100) | round | int if total_count else 0 %}
+<div class="task-stats-grid">
+    {{ stat_card('Total', total_count, icon='layers', pct=completion_pct) }}
+    {{ stat_card('Pending', pending_count, icon='circle', pct=pending_pct) }}
+    {{ stat_card('In Progress', working_count, icon='zap', pct=working_pct) }}
+    {{ stat_card('Completed', completed_count, icon='check-circle-2', pct=completion_pct) }}
 </div>
 
-<div class="task-box animate-slide-up">
+<div class="ui-card" x-data="taskEditor()">
 
-    <!--  HEADER  -->
-    <div class="task-header">
-        <h2 class="tasks-workspace-title">Workspace Tasks</h2>
-
-        {# Google Calendar connection status #}
+    <!-- Workspace header -->
+    <div class="tasks-head" style="margin-bottom:var(--space-4);">
+        <h2 style="font-size:var(--fs-lg);font-weight:var(--fw-semibold);color:var(--text);">Workspace Tasks</h2>
         {% if current_user.google_access_token %}
-        <div class="google-status-wrapper" id="google-status-wrapper">
-            <button type="button" class="btn-small" onclick="toggleGoogleMenu()" id="google-status-btn">
-                <span class="google-status-dot"></span>
-                Google Connected ▾
+        <div class="ui-dropdown" x-data="{ open: false }">
+            <button type="button" class="ui-btn ui-btn--secondary ui-btn--sm" @click="open=!open" @click.outside="open=false">
+                <span style="width:8px;height:8px;border-radius:50%;background:var(--success);display:inline-block;"></span>
+                Google Connected <i data-lucide="chevron-down"></i>
             </button>
-            <div class="google-dropdown" id="google-dropdown">
+            <div class="ui-dropdown-menu" x-show="open" x-cloak>
                 <form action="{{ url_for('google.disconnect_google') }}" method="POST"
-                      data-confirm="Disconnect Google Calendar? Existing task events will stay on your calendar, but new tasks won't sync until you reconnect.">
+                      data-confirm="Disconnect Google Calendar? Existing events stay, but new tasks won't sync until you reconnect.">
                     <input type="hidden" name="csrf_token" value="{{ csrf_token() }}"/>
-                    <button type="submit" class="btn-clear-text">
-                        <i data-lucide="unplug"></i>
-                        Disconnect Google
-                    </button>
+                    <button type="submit" class="ui-dropdown-item danger"><i data-lucide="unplug"></i> Disconnect Google</button>
                 </form>
             </div>
         </div>
         {% else %}
-        <a href="{{ url_for('google.connect_google') }}" class="btn-small btn-small-link">
-            <span class="google-connect-prefix">G</span> Connect Google
+        <a href="{{ url_for('google.connect_google') }}" class="ui-btn ui-btn--secondary ui-btn--sm">
+            <i data-lucide="calendar"></i> Connect Google
         </a>
         {% endif %}
     </div>
 
-    <!--  ADD TASK OMNIBAR  -->
-    <form action="{{ url_for('tasks.add_task') }}" method="POST" class="omnibar-form" id="omnibar-form" onsubmit="if(this.dataset.submitting) return false; this.dataset.submitting = true; const btn = this.querySelector('button[type=submit]'); btn.style.opacity = '0.7'; btn.innerHTML = '<i data-lucide=\'loader\' class=\'spin loader-icon-spin\'></i>Adding...'; if(typeof lucide !== 'undefined') lucide.createIcons(); return true;">
+    <!-- Add task omnibar -->
+    <form action="{{ url_for('tasks.add_task') }}" method="POST" class="ui-card ui-card--sm omni"
+          x-data="{ expanded: false }" @click.outside="if (!$refs.omniTitle.value.trim()) expanded=false">
         <input type="hidden" name="csrf_token" value="{{ csrf_token() }}"/>
-        
-        <div class="omnibar-input-wrapper">
-            <i data-lucide="plus" class="omnibar-icon"></i>
-            <input type="text" name="title" id="omnibar-title" placeholder="What needs to be done?" required maxlength="100" autocomplete="off" onfocus="expandOmnibar()">
+        <div class="omni-top">
+            <i data-lucide="plus"></i>
+            <input type="text" name="title" x-ref="omniTitle" placeholder="What needs to be done?" required maxlength="100" autocomplete="off" @focus="expanded=true">
+            <button type="submit" class="ui-btn ui-btn--primary ui-btn--sm" x-show="expanded" x-cloak>Add task</button>
         </div>
-        
-        <div class="omnibar-details" id="omnibar-details">
-            <div class="omnibar-options">
-                <div class="omnibar-field omnibar-field-full">
-                    <label>Description</label>
-                    <textarea name="description" rows="2" placeholder="Add details or notes..." class="omnibar-textarea"></textarea>
-                </div>
-                <div class="omnibar-row">
-                    <div class="omnibar-field">
-                        <label>Priority</label>
-                        <select name="priority">
-                            <option value="Low">Low</option>
-                            <option value="Medium" selected>Medium</option>
-                            <option value="High">High</option>
-                        </select>
-                    </div>
-                    <div class="omnibar-field">
-                        <label>Date</label>
-                        <input type="date" name="deadline">
-                    </div>
-                    <div class="omnibar-field">
-                        <label>Time</label>
-                        <input type="time" name="time_slot">
-                    </div>
-                    <button type="submit" class="btn omnibar-submit">
-                        <i data-lucide="arrow-up" class="loader-icon-spin"></i>
-                        Add
-                    </button>
-                </div>
+        <div class="omni-more" x-show="expanded" x-cloak>
+            <textarea class="ui-textarea" name="description" rows="2" placeholder="Add details or notes…"></textarea>
+            <div class="omni-row">
+                <select class="ui-select" name="priority" style="max-width:140px;">
+                    <option value="Low">Low</option>
+                    <option value="Medium" selected>Medium</option>
+                    <option value="High">High</option>
+                </select>
+                <input class="ui-input" type="date" name="deadline" style="max-width:170px;">
+                <input class="ui-input" type="time" name="time_slot" style="max-width:140px;">
             </div>
         </div>
     </form>
 
-    <div class="divider-y"></div>
-
-    <!--  VIEW CONTROLS  -->
-    <div class="view-controls">
-        <div class="view-controls-top">
-            <!-- Day Navigation -->
-            <div class="day-nav-group">
-                {% if not show_all %}
-                <a href="{{ url_for('tasks.view_tasks', date=prev_date, **nav_args) }}" class="icon-btn" title="Previous Day">
-                    <i data-lucide="chevron-left"></i>
-                </a>
-                {% endif %}
-                
-                <div class="current-day-display">
-                    <i data-lucide="calendar"></i>
-                    <span class="day-label">{{ day_label }}</span>
-                </div>
-                
-                {% if not show_all %}
-                <a href="{{ url_for('tasks.view_tasks', date=next_date, **nav_args) }}" class="icon-btn" title="Next Day">
-                    <i data-lucide="chevron-right"></i>
-                </a>
-                {% endif %}
-                
-                <div class="day-nav-actions">
-                    <form method="GET" action="{{ url_for('tasks.view_tasks') }}" class="inline-form">
-                        {% for k, v in nav_args.items() %}
-                        <input type="hidden" name="{{ k }}" value="{{ v }}">
-                        {% endfor %}
-                        <label class="icon-btn jump-date-btn" title="Jump to Date">
-                            <i data-lucide="calendar-days"></i>
-                            <input type="date" name="date" value="{{ date_filter or '' }}" onchange="this.form.submit()" class="datepicker-overlay-input">
-                        </label>
-                    </form>
-                    
-                    {% if not is_today %}
-                    <a href="{{ url_for('tasks.view_tasks', **nav_args) }}" class="btn-small btn-small-link">Today</a>
-                    {% endif %}
-                    
-                    {% if show_all %}
-                    <a href="{{ url_for('tasks.view_tasks', **nav_args) }}" class="btn-small btn-small-link">Exit All</a>
-                    {% else %}
-                    <a href="{{ url_for('tasks.view_tasks', date='all', **nav_args) }}" class="btn-small btn-small-link">Show All</a>
-                    {% endif %}
-                </div>
-            </div>
-
-            <!-- Filters Toggle & Export -->
-            <div class="view-actions-group">
-                <button type="button" class="btn-small" onclick="document.getElementById('filter-panel').classList.toggle('open')">
-                    <i data-lucide="filter"></i> Filters
-                </button>
-                
-                {% if tasks %}
-                <button type="button" class="btn-small btn-export" onclick="toggleExportPanel()">
-                    <i data-lucide="download"></i> Export
-                </button>
-                {% endif %}
-            </div>
+    <!-- View controls -->
+    <div class="task-controls" x-data="{ filters: false, exportOpen: false, custom: false }">
+        <div class="task-controls-left">
+            {% if not show_all %}
+            {{ icon_button('chevron-left', href=url_for('tasks.view_tasks', date=prev_date, **nav_args), title='Previous day') }}
+            {% endif %}
+            <span class="cur-day"><i data-lucide="calendar"></i> {{ day_label }}</span>
+            {% if not show_all %}
+            {{ icon_button('chevron-right', href=url_for('tasks.view_tasks', date=next_date, **nav_args), title='Next day') }}
+            {% endif %}
+            <form method="GET" action="{{ url_for('tasks.view_tasks') }}" style="margin:0;">
+                {% for k, v in nav_args.items() %}<input type="hidden" name="{{ k }}" value="{{ v }}">{% endfor %}
+                <label class="ui-icon-btn" title="Jump to date" style="position:relative;overflow:hidden;">
+                    <i data-lucide="calendar-days"></i>
+                    <input type="date" name="date" value="{{ date_filter or '' }}" onchange="this.form.submit()" style="position:absolute;inset:0;opacity:0;cursor:pointer;">
+                </label>
+            </form>
+            {% if not is_today %}<a href="{{ url_for('tasks.view_tasks', **nav_args) }}" class="ui-btn ui-btn--ghost ui-btn--sm">Today</a>{% endif %}
+            {% if show_all %}<a href="{{ url_for('tasks.view_tasks', **nav_args) }}" class="ui-btn ui-btn--ghost ui-btn--sm">Exit All</a>
+            {% else %}<a href="{{ url_for('tasks.view_tasks', date='all', **nav_args) }}" class="ui-btn ui-btn--ghost ui-btn--sm">Show All</a>{% endif %}
+        </div>
+        <div class="task-controls-right">
+            <button type="button" class="ui-btn ui-btn--secondary ui-btn--sm" @click="filters=!filters"><i data-lucide="filter"></i> Filters</button>
+            {% if tasks %}
+            <button type="button" class="ui-btn ui-btn--secondary ui-btn--sm" @click="exportOpen=!exportOpen"><i data-lucide="download"></i> Export</button>
+            {% endif %}
         </div>
 
-        <!-- Collapsible Filter Panel -->
-        <div class="filter-panel" id="filter-panel">
-            <form method="GET" action="{{ url_for('tasks.view_tasks') }}" class="filter-form-inner">
-                <input type="text" name="q" placeholder="🔍 Search tasks..." value="{{ search or '' }}">
-                <select name="status">
-                    <option value="all">All Status</option>
+        <!-- Filter panel -->
+        <div class="filter-row" x-show="filters" x-cloak style="width:100%;">
+            <form method="GET" action="{{ url_for('tasks.view_tasks') }}" class="filter-row" style="margin:0;border:none;padding:0;width:100%;">
+                <input class="ui-input" type="text" name="q" placeholder="Search tasks…" value="{{ search or '' }}" style="max-width:240px;">
+                <select class="ui-select" name="status" style="max-width:150px;">
+                    <option value="all">All status</option>
                     <option value="Pending" {% if status_filter=='Pending' %}selected{% endif %}>Pending</option>
                     <option value="Working" {% if status_filter=='Working' %}selected{% endif %}>Working</option>
                     <option value="Completed" {% if status_filter=='Completed' %}selected{% endif %}>Completed</option>
                 </select>
-                <select name="priority">
-                    <option value="all">All Priority</option>
+                <select class="ui-select" name="priority" style="max-width:150px;">
+                    <option value="all">All priority</option>
                     <option value="Low" {% if priority_filter=='Low' %}selected{% endif %}>Low</option>
                     <option value="Medium" {% if priority_filter=='Medium' %}selected{% endif %}>Medium</option>
                     <option value="High" {% if priority_filter=='High' %}selected{% endif %}>High</option>
                 </select>
                 <input type="hidden" name="date" value="{{ date_filter if not show_all else 'all' }}">
-                <button type="submit" class="btn-small">Apply</button>
+                <button type="submit" class="ui-btn ui-btn--primary ui-btn--sm">Apply</button>
                 {% if search or status_filter != 'all' or priority_filter != 'all' %}
-                <a href="{{ url_for('tasks.view_tasks') }}" class="btn-small btn-small-danger">Reset</a>
+                <a href="{{ url_for('tasks.view_tasks') }}" class="ui-btn ui-btn--danger ui-btn--sm">Reset</a>
                 {% endif %}
             </form>
         </div>
+
+        <!-- Export panel -->
+        {% if tasks %}
+        <div class="export-row" x-show="exportOpen" x-cloak style="width:100%;">
+            <span style="font-size:var(--fs-sm);color:var(--text-muted);">Export:</span>
+            <a href="{{ url_for('tasks.export_csv', range='7') }}" class="ui-btn ui-btn--ghost ui-btn--sm">Last 7 days</a>
+            <a href="{{ url_for('tasks.export_csv', range='15') }}" class="ui-btn ui-btn--ghost ui-btn--sm">Last 15 days</a>
+            <a href="{{ url_for('tasks.export_csv', range='30') }}" class="ui-btn ui-btn--ghost ui-btn--sm">1 month</a>
+            <a href="{{ url_for('tasks.export_csv', range='all') }}" class="ui-btn ui-btn--ghost ui-btn--sm">All tasks</a>
+            <button type="button" class="ui-btn ui-btn--secondary ui-btn--sm" @click="custom=!custom">Custom range</button>
+            <span x-show="custom" x-cloak style="display:inline-flex;align-items:center;gap:8px;">
+                <input class="ui-input" type="date" id="export-start" style="max-width:160px;">
+                <span style="color:var(--text-muted);font-size:var(--fs-sm);">to</span>
+                <input class="ui-input" type="date" id="export-end" style="max-width:160px;">
+                <button type="button" class="ui-btn ui-btn--primary ui-btn--sm" onclick="exportCustomCSV()"><i data-lucide="download"></i> Download</button>
+            </span>
+        </div>
+        {% endif %}
     </div>
 
-    <!-- Action Bar (Task Count & Clear) -->
+    <!-- Action bar -->
     {% if tasks %}
-    <div class="action-bar-minimal">
-        <span class="task-count">{{ tasks|length }} tasks</span>
-        <form method="POST" action="{{ url_for('tasks.clear_tasks') }}" class="inline-form"
-              data-confirm="Clear ALL your personal tasks? This deletes every personal task at once and cannot be undone.">
+    <div style="display:flex;align-items:center;justify-content:space-between;margin:var(--space-4) 0 var(--space-3);">
+        <span style="font-size:var(--fs-sm);color:var(--text-muted);">{{ tasks|length }} task{{ '' if tasks|length == 1 else 's' }}</span>
+        <form method="POST" action="{{ url_for('tasks.clear_tasks') }}" style="margin:0;"
+              data-confirm="Clear ALL your personal tasks? This deletes every personal task and cannot be undone.">
             <input type="hidden" name="csrf_token" value="{{ csrf_token() }}"/>
-            <button type="submit" class="btn-clear-text" title="Clear all tasks">
-                <i data-lucide="trash-2"></i> Clear All
-            </button>
+            <button type="submit" class="ui-btn ui-btn--danger ui-btn--sm"><i data-lucide="trash-2"></i> Clear all</button>
         </form>
     </div>
 
-    <!--  EXPORT CSV PANEL  -->
-    <div class="export-section" id="export-section">
-        <div class="export-panel" id="export-panel">
-            <p class="export-label">Select date range</p>
-            <div class="export-options">
-                <a href="{{ url_for('tasks.export_csv', range='7') }}" class="btn-small btn-small-link">Last 7 Days</a>
-                <a href="{{ url_for('tasks.export_csv', range='15') }}" class="btn-small btn-small-link">Last 15 Days</a>
-                <a href="{{ url_for('tasks.export_csv', range='30') }}" class="btn-small btn-small-link">1 Month</a>
-                <a href="{{ url_for('tasks.export_csv', range='all') }}" class="btn-small btn-small-link">All Tasks</a>
-                <button type="button" class="btn-small" onclick="toggleCustomRange()">Custom Range</button>
-            </div>
-            <div class="custom-range" id="custom-range">
-                <input type="date" id="export-start" class="export-date-input">
-                <span class="export-to-text">to</span>
-                <input type="date" id="export-end" class="export-date-input">
-                <button type="button" class="btn-small" onclick="exportCustomCSV()">
-                    <i data-lucide="download"></i>Download
-                </button>
-            </div>
-        </div>
-    </div>
-    {% endif %}
-
-    <!--  TASK LIST  -->
-    {% if tasks %}
-    <div class="task-list">
+    <!-- Task list -->
+    <div class="tasklist">
         {% for task in tasks %}
-        <div class="task-card prio-{{ task.priority|lower }} status-{{ task.status|lower }}">
-            <div class="task-card-main edit-task-btn" data-id="{{ task.id }}" data-title="{{ task.title }}" data-description="{{ task.description or '' }}" data-priority="{{ task.priority }}" data-deadline="{{ task.deadline or '' }}" data-time="{{ task.time_slot or '' }}" title="View & Edit Details">
-                <div class="task-card-header">
-                    <h4 class="task-title">{{ task.title }}</h4>
-                </div>
-                <div class="task-card-meta">
-                    {% if show_all and task.deadline %}
-                    <span class="task-deadline-badge">
-                        <i data-lucide="calendar"></i>{{ task.deadline.strftime('%b %d, %Y') }}
+        <div class="task-row {{ 'done' if task.status == 'Completed' else '' }}">
+            <div class="task-row-main" data-id="{{ task.id }}" data-title="{{ task.title }}" data-description="{{ task.description or '' }}" data-priority="{{ task.priority }}" data-deadline="{{ task.deadline or '' }}" data-time="{{ task.time_slot or '' }}" @click="openEdit($event.currentTarget.dataset)" title="View & edit">
+                <div class="task-row-title">{{ task.title }}</div>
+                <div class="task-row-meta">
+                    {% if show_all and task.deadline %}<span class="m"><i data-lucide="calendar"></i>{{ task.deadline.strftime('%b %d, %Y') }}</span>{% endif %}
+                    {% if task.time_slot %}<span class="m"><i data-lucide="clock"></i>{{ task.time_slot.strftime('%I:%M %p') }}</span>{% endif %}
+                    <span class="task-row-badges">
+                        {% if task.status == 'Pending' %}{{ badge('Pending') }}
+                        {% elif task.status == 'Working' %}{{ badge('Working', 'info') }}
+                        {% else %}{{ badge('Completed', 'success') }}{% endif %}
+                        {% if task.priority == 'Low' %}{{ badge('Low') }}
+                        {% elif task.priority == 'Medium' %}{{ badge('Medium', 'warning') }}
+                        {% else %}{{ badge('High', 'danger') }}{% endif %}
                     </span>
-                    {% endif %}
-                    {% if task.time_slot %}
-                    <span class="task-time"><i data-lucide="clock"></i>{{ task.time_slot.strftime('%I:%M %p') }}</span>
-                    {% endif %}
-                    
-                    <div class="task-card-badges">
-                        {% if task.status == 'Pending' %}
-                        <span class="badge badge-pending">● Pending</span>
-                        {% elif task.status == 'Working' %}
-                        <span class="badge badge-working">◉ Working</span>
-                        {% else %}
-                        <span class="badge badge-done">✓ Completed</span>
-                        {% endif %}
-
-                        {% if task.priority == 'Low' %}
-                        <span class="badge badge-low">↓ Low</span>
-                        {% elif task.priority == 'Medium' %}
-                        <span class="badge badge-medium">→ Medium</span>
-                        {% else %}
-                        <span class="badge badge-high">↑ High</span>
-                        {% endif %}
-                    </div>
                 </div>
             </div>
-
-            <div class="task-card-actions">
-                <form action="{{ url_for('tasks.toggle_status', task_id=task.id) }}" method="POST" class="inline-form">
+            <div class="task-row-actions">
+                <form action="{{ url_for('tasks.toggle_status', task_id=task.id) }}" method="POST" style="margin:0;">
                     <input type="hidden" name="csrf_token" value="{{ csrf_token() }}"/>
                     <input type="hidden" name="next" value="{{ request.url }}"/>
-                    <button class="action-btn advance-btn" type="submit" title="Advance Status">
-                        <i data-lucide="arrow-right"></i>
-                    </button>
+                    {{ icon_button('arrow-right', type='submit', title='Advance status') }}
                 </form>
-
-                <form action="{{ url_for('tasks.delete_task', task_id=task.id) }}" method="POST" class="inline-form"
+                <form action="{{ url_for('tasks.delete_task', task_id=task.id) }}" method="POST" style="margin:0;"
                       data-confirm="Delete this task? This cannot be undone.">
                     <input type="hidden" name="csrf_token" value="{{ csrf_token() }}"/>
                     <input type="hidden" name="next" value="{{ request.url }}"/>
-                    <button class="action-btn delete-btn" type="submit" title="Delete Task">
-                        <i data-lucide="trash-2"></i>
-                    </button>
+                    {{ icon_button('trash-2', variant='danger', type='submit', title='Delete task') }}
                 </form>
             </div>
         </div>
         {% endfor %}
     </div>
-
     {% else %}
-    <!--  EMPTY STATE  -->
-    <div class="empty-state">
-        <div class="empty-state-icon">
-            <i data-lucide="check-circle-2"></i>
-            <div class="empty-state-glow"></div>
-        </div>
-        <h3>You're all caught up!</h3>
-        <p>Enjoy your free time, or add a new task above to get started.</p>
-    </div>
+    {% call empty_state('check-circle-2', "You're all caught up!", 'Enjoy your free time, or add a new task above to get started.') %}{% endcall %}
     {% endif %}
 
-</div>
-
-
-<!-- ========================================================
-     EDIT TASK MODAL
-     ======================================================== -->
-<div class="modal-overlay" id="edit-modal-overlay" onclick="closeEditModal(event)">
-    <div class="modal" onclick="event.stopPropagation()">
-
-        <!-- Modal header -->
-        <div class="modal-header">
-            <h3>
-                <i data-lucide="pencil-line" class="modal-header-icon"></i>
-                Edit Task
-            </h3>
-            <button type="button" class="modal-close" onclick="closeEditModal()">
-                <i data-lucide="x"></i>
-            </button>
+    <!-- Edit modal -->
+    {% call modal('open', 'Edit task') %}
+    <form method="POST" :action="action">
+        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}"/>
+        <input type="hidden" name="next" value="{{ request.url }}"/>
+        <div class="ui-field">
+            <label class="ui-field-label" for="edit-title">Title</label>
+            <input class="ui-input" type="text" id="edit-title" name="title" x-model="title" required maxlength="100">
         </div>
-
-        <!-- Modal body -->
-        <form id="edit-modal-form" method="POST" action="">
-            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}"/>
-            <input type="hidden" name="next" value="{{ request.url }}"/>
-            <div class="modal-body">
-
-                <div class="form-group">
-                    <label for="edit-title">Task Title</label>
-                    <input type="text" id="edit-title" name="title" required maxlength="100" placeholder="What needs to be done?">
-                </div>
-
-                <div class="form-group">
-                    <label for="edit-description">Description</label>
-                    <textarea id="edit-description" name="description" rows="3" placeholder="Add details or notes..." class="modal-textarea"></textarea>
-                </div>
-
-                <div class="modal-row">
-                    <div class="form-group">
-                        <label for="edit-priority">Priority</label>
-                        <select id="edit-priority" name="priority">
-                            <option value="Low">Low</option>
-                            <option value="Medium">Medium</option>
-                            <option value="High">High</option>
-                        </select>
-                    </div>
-
-                    <div class="form-group">
-                        <label for="edit-deadline">Deadline</label>
-                        <input type="date" id="edit-deadline" name="deadline">
-                    </div>
-
-                    <div class="form-group">
-                        <label for="edit-time">Time</label>
-                        <input type="time" id="edit-time" name="time_slot">
-                    </div>
-                </div>
-
+        <div class="ui-field">
+            <label class="ui-field-label" for="edit-description">Description</label>
+            <textarea class="ui-textarea" id="edit-description" name="description" rows="3" x-model="description"></textarea>
+        </div>
+        <div class="omni-row">
+            <div class="ui-field" style="flex:1;">
+                <label class="ui-field-label">Priority</label>
+                <select class="ui-select" name="priority" x-model="priority">
+                    <option value="Low">Low</option><option value="Medium">Medium</option><option value="High">High</option>
+                </select>
             </div>
-
-            <!-- Modal footer -->
-            <div class="modal-footer">
-                <button type="button" class="btn-small" onclick="closeEditModal()">
-                    Cancel
-                </button>
-                <button type="submit" class="btn modal-save-btn">
-                    <i data-lucide="check"></i>
-                    Save Changes
-                </button>
+            <div class="ui-field" style="flex:1;">
+                <label class="ui-field-label">Deadline</label>
+                <input class="ui-input" type="date" name="deadline" x-model="deadline">
             </div>
-        </form>
-
-    </div>
+            <div class="ui-field" style="flex:1;">
+                <label class="ui-field-label">Time</label>
+                <input class="ui-input" type="time" name="time_slot" x-model="time">
+            </div>
+        </div>
+        <div style="display:flex;justify-content:flex-end;gap:var(--space-2);margin-top:var(--space-2);">
+            <button type="button" class="ui-btn ui-btn--ghost" @click="open=false">Cancel</button>
+            <button type="submit" class="ui-btn ui-btn--primary"><i data-lucide="check"></i> Save changes</button>
+        </div>
+    </form>
+    {% endcall %}
 </div>
 
+<style>
+@keyframes spin { 100% { transform: rotate(360deg); } }
+.spin { animation: spin 1s linear infinite; }
+.tasks-head { display:flex; align-items:flex-start; justify-content:space-between; gap:var(--space-3); margin-bottom:var(--space-5); flex-wrap:wrap; }
+.task-stats-grid { display:grid; grid-template-columns:repeat(4,1fr); gap:var(--space-4); margin-bottom:var(--space-6); }
+.omni { margin-bottom:var(--space-5); }
+.omni-top { display:flex; align-items:center; gap:var(--space-3); }
+.omni-top > i { width:18px; height:18px; color:var(--text-muted); flex-shrink:0; }
+.omni-top input[name=title] { flex:1; min-width:0; border:none; background:none; color:var(--text); font-size:var(--fs-md); outline:none; padding:6px 0; }
+.omni-more { margin-top:var(--space-4); display:flex; flex-direction:column; gap:var(--space-3); }
+.omni-row { display:flex; gap:var(--space-3); flex-wrap:wrap; align-items:flex-end; }
+.task-controls { display:flex; align-items:center; justify-content:space-between; gap:var(--space-3); flex-wrap:wrap; }
+.task-controls-left, .task-controls-right { display:flex; align-items:center; gap:var(--space-2); flex-wrap:wrap; }
+.cur-day { display:inline-flex; align-items:center; gap:6px; font-weight:var(--fw-semibold); color:var(--text); font-size:var(--fs-sm); padding:0 var(--space-2); }
+.cur-day i { width:15px; height:15px; }
+.filter-row, .export-row { display:flex; gap:var(--space-2); flex-wrap:wrap; align-items:center; margin-top:var(--space-3); padding-top:var(--space-3); border-top:1px solid var(--border); }
+.tasklist { display:flex; flex-direction:column; gap:var(--space-2); margin-top:var(--space-2); }
+.task-row { display:flex; align-items:center; gap:var(--space-3); padding:var(--space-3) var(--space-4); border:1px solid var(--border); border-radius:var(--radius); background:var(--surface); transition:border-color var(--transition); }
+.task-row:hover { border-color:var(--border-strong); }
+.task-row.done .task-row-title { color:var(--text-muted); text-decoration:line-through; }
+.task-row-main { flex:1; min-width:0; cursor:pointer; }
+.task-row-title { font-weight:var(--fw-semibold); color:var(--text); font-size:var(--fs-md); }
+.task-row-meta { display:flex; align-items:center; gap:var(--space-3); margin-top:5px; flex-wrap:wrap; }
+.task-row-meta .m { display:inline-flex; align-items:center; gap:4px; font-size:var(--fs-xs); color:var(--text-muted); }
+.task-row-meta .m i { width:13px; height:13px; }
+.task-row-badges { display:flex; align-items:center; gap:6px; }
+.task-row-actions { display:flex; align-items:center; gap:4px; flex-shrink:0; }
+@media (max-width:720px) { .task-stats-grid { grid-template-columns:repeat(2,1fr); } }
+</style>
 
 <script>
-    /* ---- Edit Modal (data-attribute driven) ---- */
-    document.addEventListener('click', function (e) {
-        const btn = e.target.closest('.edit-task-btn');
-        if (!btn) return;
-
-        const overlay = document.getElementById('edit-modal-overlay');
-        const form = document.getElementById('edit-modal-form');
-
-        // Read from data-attributes (safe from quote/escaping issues)
-        const taskId = btn.dataset.id;
-        const title = btn.dataset.title;
-        const description = btn.dataset.description;
-        const priority = btn.dataset.priority;
-        const deadline = btn.dataset.deadline;
-        const timeSlot = btn.dataset.time;
-
-        // Set form action
-        form.action = `/edit/${taskId}`;
-
-        // Populate fields
-        document.getElementById('edit-title').value = title;
-        document.getElementById('edit-description').value = description;
-        document.getElementById('edit-priority').value = priority;
-        document.getElementById('edit-deadline').value = deadline;
-        document.getElementById('edit-time').value = timeSlot;
-
-        // Show modal
-        overlay.classList.add('open');
-        document.body.style.overflow = 'hidden';
-
-        // Focus title after animation
-        setTimeout(() => {
-            document.getElementById('edit-title').focus();
-            document.getElementById('edit-title').select();
-        }, 200);
-
-        // Re-render Lucide icons inside modal
-        if (typeof lucide !== 'undefined') lucide.createIcons();
-    });
-
-    function closeEditModal(event) {
-        // If called from overlay click, only close if clicking the overlay itself
-        if (event && event.target !== event.currentTarget) return;
-
-        const overlay = document.getElementById('edit-modal-overlay');
-        overlay.classList.remove('open');
-        document.body.style.overflow = '';
-    }
-
-    // Close on Escape key
-    document.addEventListener('keydown', function (e) {
-        if (e.key === 'Escape') closeEditModal();
-    });
-
-
-    /* ---- Google status dropdown ---- */
-    function toggleGoogleMenu() {
-        const dd = document.getElementById('google-dropdown');
-        if (dd) dd.classList.toggle('open');
-    }
-
-    // Close dropdown when clicking outside
-    document.addEventListener('click', function (e) {
-        const wrapper = document.getElementById('google-status-wrapper');
-        const dd = document.getElementById('google-dropdown');
-        if (wrapper && dd && !wrapper.contains(e.target)) {
-            dd.classList.remove('open');
-        }
-    });
-
-    /* ---- Export CSV panel ---- */
-    function toggleExportPanel() {
-        const section = document.getElementById('export-section');
-        if (section) {
-            const isHidden = section.style.display === 'none';
-            section.style.display = isHidden ? 'block' : 'none';
-        }
-    }
-
-    function toggleCustomRange() {
-        const cr = document.getElementById('custom-range');
-        if (cr) {
-            cr.style.display = cr.style.display === 'none' ? 'flex' : 'none';
-        }
+    function taskEditor() {
+        return {
+            open: false, action: '', title: '', description: '', priority: 'Medium', deadline: '', time: '',
+            openEdit(ds) {
+                this.action = '/edit/' + ds.id;
+                this.title = ds.title || '';
+                this.description = ds.description || '';
+                this.priority = ds.priority || 'Medium';
+                this.deadline = ds.deadline || '';
+                this.time = ds.time || '';
+                this.open = true;
+            }
+        };
     }
 
     function exportCustomCSV() {
-        const start = document.getElementById('export-start').value;
-        const end = document.getElementById('export-end').value;
-
-        if (!start && !end) {
-            showToast('Please select at least a start or end date', 'error');
-            return;
-        }
-
-        let url = "{{ url_for('tasks.export_csv') }}?range=custom";
-        if (start) url += `&start=${start}`;
-        if (end) url += `&end=${end}`;
-
+        var start = document.getElementById('export-start').value;
+        var end = document.getElementById('export-end').value;
+        if (!start && !end) { showToast('Please select at least a start or end date', 'error'); return; }
+        var url = "{{ url_for('tasks.export_csv') }}?range=custom";
+        if (start) url += '&start=' + start;
+        if (end) url += '&end=' + end;
         window.location.href = url;
     }
 
-    /* ---- Omnibar scripts ---- */
-    function expandOmnibar() {
-        document.getElementById('omnibar-form').classList.add('expanded');
-    }
-
-    // Click outside to collapse
-    document.addEventListener('click', function(e) {
-        const form = document.getElementById('omnibar-form');
-        if (form && form.classList.contains('expanded') && !form.contains(e.target)) {
-            const title = document.getElementById('omnibar-title').value.trim();
-            if (title === '') {
-                form.classList.remove('expanded');
-            }
-        }
-    });
-
-    /* ---- Welcome banner: dynamic greeting + date ---- */
+    /* Dynamic greeting + date */
     (function () {
-        const greeting = document.getElementById('greeting-text');
-        const dateEl = document.getElementById('welcome-date');
-
+        var greeting = document.getElementById('greeting-text');
+        var dateEl = document.getElementById('welcome-date');
         if (greeting) {
-            const hour = new Date().getHours();
-            let timeWord = 'Hello';
-            if (hour < 12)      timeWord = 'Good morning';
-            else if (hour < 18) timeWord = 'Good afternoon';
-            else                timeWord = 'Good evening';
-
-            const userName = (greeting.dataset.name || '').trim() || 'there';
-            greeting.innerHTML =
-                '<span class="wave">👋</span> ' +
-                timeWord + ', ' + userName + '!';
+            var hour = new Date().getHours();
+            var word = hour < 12 ? 'Good morning' : (hour < 18 ? 'Good afternoon' : 'Good evening');
+            greeting.textContent = word + ', ' + ((greeting.dataset.name || '').trim() || 'there') + '!';
         }
-
-        if (dateEl) {
-            const now = new Date();
-            dateEl.textContent = now.toLocaleDateString(undefined, {
-                weekday: 'long', month: 'short', day: 'numeric'
-            });
-        }
-
-        /* Animate stat progress bars from data-pct */
-        document.querySelectorAll('.premium-stat-progress-fill, .stat-progress-fill').forEach(function (el) {
-            const pct = parseInt(el.getAttribute('data-pct') || '0', 10);
-            requestAnimationFrame(function () { el.style.width = pct + '%'; });
-        });
+        if (dateEl) dateEl.textContent = new Date().toLocaleDateString(undefined, { weekday: 'long', month: 'short', day: 'numeric' });
     })();
-
-    /* ---- Micro-interactions ---- */
-    document.addEventListener('submit', function(e) {
-        // e.submitter is the button that was clicked
-        const submitBtn = e.submitter;
-        const form = e.target;
-        
-        if (submitBtn && submitBtn.classList.contains('advance-btn')) {
-            e.preventDefault();
-            submitBtn.disabled = true;
-            submitBtn.style.opacity = '0.5';
-            const icon = submitBtn.querySelector('i');
-            if(icon) {
-                icon.setAttribute('data-lucide', 'loader');
-                icon.classList.add('spin');
-                lucide.createIcons();
-            }
-            form.submit();
-        }
-        else if (submitBtn && submitBtn.classList.contains('delete-btn')) {
-            // If the form is guarded by data-confirm, let the global confirm handler
-            // manage the flow — otherwise we'd queue a delayed form.submit() that
-            // fires even if the user cancels in the modal.
-            if (form.dataset.confirm && form.dataset.confirmed !== 'true') return;
-            e.preventDefault();
-            const card = form.closest('.task-card');
-            if (card) {
-                card.classList.add('task-deleting');
-                setTimeout(() => {
-                    form.submit();
-                }, 350); // Wait for animation
-            } else {
-                form.submit();
-            }
-        }
-    });
 </script>
-
 {% endblock %}

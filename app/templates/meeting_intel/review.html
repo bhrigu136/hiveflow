@@ -1,0 +1,160 @@
+{% extends "base.html" %}
+{% block title %}Review notes: {{ meeting.title }} — HiveFlow{% endblock %}
+
+{% block content %}
+<div style="max-width: 980px; margin: 0 auto; padding: 20px;">
+
+    <div style="margin-bottom: 8px;">
+        <a href="{{ url_for('meeting_intel.notes', meeting_id=meeting.id) }}"
+           style="color: var(--text-muted); text-decoration: none; font-size: 14px; display:inline-flex; align-items:center; gap:4px;">
+            <i data-lucide="arrow-left" style="width:14px;height:14px;"></i> Meeting notes
+        </a>
+    </div>
+
+    <h2 style="margin:0 0 4px; font-size:24px; color:var(--text); display:flex; align-items:center; gap:10px;">
+        <i data-lucide="sparkles" style="color:var(--accent);"></i> Review AI Notes
+    </h2>
+    <p style="margin:0 0 24px; color:var(--text-muted); font-size:14px;">
+        {{ meeting.title }} · {{ meeting.scheduled_for.strftime('%b %d, %Y · %I:%M %p').replace(' 0', ' ') }}
+        {% if meeting.summarizer_engine %}<span style="opacity:.7;"> · engine: {{ meeting.summarizer_engine }}</span>{% endif %}
+    </p>
+
+    <!-- Summary -->
+    <div style="background:var(--surface-solid); border:1px solid var(--glass-border); border-radius:14px; padding:20px; margin-bottom:18px;">
+        <h3 style="margin:0 0 10px; font-size:16px; color:var(--text);">Summary</h3>
+        <p style="margin:0; color:var(--text); line-height:1.6; white-space:pre-wrap;">{{ meeting.summary or 'No summary was generated.' }}</p>
+    </div>
+
+    <!-- Decisions -->
+    {% if meeting.decisions %}
+    <div style="background:var(--surface-solid); border:1px solid var(--glass-border); border-radius:14px; padding:20px; margin-bottom:18px;">
+        <h3 style="margin:0 0 10px; font-size:16px; color:var(--text);">Decisions</h3>
+        <ul style="margin:0; padding-left:18px; color:var(--text); line-height:1.7;">
+            {% for d in meeting.decisions %}<li>{{ d }}</li>{% endfor %}
+        </ul>
+    </div>
+    {% endif %}
+
+    <!-- Action items -->
+    <div style="background:var(--surface-solid); border:1px solid var(--glass-border); border-radius:14px; padding:20px;">
+        <h3 style="margin:0 0 4px; font-size:16px; color:var(--text);">Action Items</h3>
+        <p style="margin:0 0 16px; color:var(--text-muted); font-size:13px;">
+            Edit anything, pick who owns it, and turn it into a task on the board.
+        </p>
+
+        {% if not projects %}
+        <div style="padding:14px; border-radius:10px; background:rgba(248,113,113,0.1); color:#ef4444; font-size:14px;">
+            This team has no projects yet. Create a project first to turn action items into tasks.
+        </div>
+        {% elif not action_items %}
+        <div style="color:var(--text-muted); font-size:14px;">No action items were detected in this meeting.</div>
+        {% else %}
+
+        {% for item in action_items %}
+        <div class="ai-item" id="item-{{ item.id }}"
+             data-convert-url="{{ url_for('meeting_intel.convert_action_item', meeting_id=meeting.id, item_id=item.id) }}">
+            <div style="display:flex; flex-direction:column; gap:10px;">
+                <input type="text" class="ai-input ai-title" value="{{ item.text }}" maxlength="100"
+                       placeholder="Task title" {% if item.task_id %}disabled{% endif %}>
+
+                {% if item.source_quote %}
+                <div style="font-size:12px; color:var(--text-muted); font-style:italic;">“{{ item.source_quote }}”</div>
+                {% endif %}
+
+                <div style="display:flex; gap:10px; flex-wrap:wrap; align-items:center;">
+                    <select class="ai-input ai-assignee" {% if item.task_id %}disabled{% endif %}>
+                        <option value="">Unassigned</option>
+                        {% for m in members %}
+                        <option value="{{ m.id }}" {% if m.id == item.suggested_assignee_id %}selected{% endif %}>{{ m.name }}</option>
+                        {% endfor %}
+                    </select>
+
+                    <select class="ai-input ai-project" {% if item.task_id %}disabled{% endif %}>
+                        {% for p in projects %}
+                        <option value="{{ p.id }}" {% if p.id == meeting.project_id %}selected{% endif %}>{{ p.name }}</option>
+                        {% endfor %}
+                    </select>
+
+                    <input type="date" class="ai-input ai-deadline" value="{{ item.due_hint or '' }}"
+                           {% if item.task_id %}disabled{% endif %}>
+
+                    <select class="ai-input ai-priority" {% if item.task_id %}disabled{% endif %}>
+                        <option value="Low">Low</option>
+                        <option value="Medium" selected>Medium</option>
+                        <option value="High">High</option>
+                    </select>
+
+                    <span style="flex:1;"></span>
+
+                    <button type="button" class="ai-create-btn"
+                            {% if item.task_id %}disabled{% endif %}>
+                        {% if item.task_id %}✓ Task created{% else %}Create Task{% endif %}
+                    </button>
+                </div>
+                <div class="ai-result" style="font-size:13px;"></div>
+            </div>
+        </div>
+        {% endfor %}
+        {% endif %}
+    </div>
+</div>
+
+<style>
+.ai-item { padding:16px 0; border-top:1px solid var(--glass-border); }
+.ai-item:first-of-type { border-top:none; }
+.ai-input { padding:8px 10px; border:1px solid var(--glass-border); border-radius:8px; background:var(--surface); color:var(--text); font-size:14px; font-family:inherit; }
+.ai-title { width:100%; font-weight:600; }
+.ai-create-btn { padding:8px 16px; border:none; border-radius:8px; cursor:pointer; font-weight:600; font-size:14px;
+    background:linear-gradient(135deg,#4361ee,#7c3aed); color:#fff; }
+.ai-create-btn:disabled { background:rgba(34,197,94,0.18); color:#16a34a; cursor:default; }
+.ai-result.ok { color:#16a34a; }
+.ai-result.err { color:#ef4444; }
+</style>
+
+<script>
+(function () {
+    var CSRF = "{{ csrf_token() }}";
+    document.querySelectorAll('.ai-item').forEach(function (row) {
+        var btn = row.querySelector('.ai-create-btn');
+        if (!btn || btn.disabled) return;
+        btn.addEventListener('click', function () {
+            var title = (row.querySelector('.ai-title').value || '').trim();
+            var assigned = row.querySelector('.ai-assignee').value;
+            var project = row.querySelector('.ai-project').value;
+            var deadline = row.querySelector('.ai-deadline').value;
+            var priority = row.querySelector('.ai-priority').value;
+            var result = row.querySelector('.ai-result');
+            if (!title) { result.className = 'ai-result err'; result.textContent = 'Add a title first.'; return; }
+
+            btn.disabled = true;
+            btn.textContent = 'Creating…';
+            fetch(row.getAttribute('data-convert-url'), {
+                method: 'POST',
+                credentials: 'same-origin',
+                headers: { 'Content-Type': 'application/json', 'X-CSRFToken': CSRF },
+                body: JSON.stringify({ title: title, assigned_to: assigned, project_id: project, deadline: deadline, priority: priority })
+            }).then(function (r) { return r.json().then(function (d) { return { ok: r.ok, d: d }; }); })
+              .then(function (res) {
+                  if (res.ok && res.d.ok) {
+                      btn.textContent = '✓ Task created';
+                      row.querySelectorAll('.ai-input').forEach(function (i) { i.disabled = true; });
+                      result.className = 'ai-result ok';
+                      result.innerHTML = 'Added to the board — <a href="' + res.d.dashboard_url + '" style="color:#16a34a;text-decoration:underline;">view task</a>.';
+                  } else {
+                      btn.disabled = false;
+                      btn.textContent = 'Create Task';
+                      result.className = 'ai-result err';
+                      result.textContent = (res.d && res.d.error) || 'Could not create task.';
+                  }
+              }).catch(function () {
+                  btn.disabled = false;
+                  btn.textContent = 'Create Task';
+                  result.className = 'ai-result err';
+                  result.textContent = 'Network error. Try again.';
+              });
+        });
+    });
+    if (window.lucide) { window.lucide.createIcons(); }
+})();
+</script>
+{% endblock %}

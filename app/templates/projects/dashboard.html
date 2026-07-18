@@ -1,385 +1,184 @@
 {% extends "base.html" %}
+{% from 'components/ui.html' import button, icon_button, modal, empty_state %}
 {% block title %}{{ project.name }} — HiveFlow{% endblock %}
 
 {% block content %}
-<style>
-.btn-join-call:hover {
-    border-color: #22c55e !important;
-    background: rgba(34, 197, 94, 0.05) !important;
-}
-.live-dot-glow {
-    width: 6px;
-    height: 6px;
-    background: #22c55e;
-    border-radius: 50%;
-    display: inline-block;
-    box-shadow: 0 0 8px #22c55e;
-    animation: livePulse 2s ease-in-out infinite;
-}
-@keyframes livePulse {
-    0%, 100% { opacity: 0.4; }
-    50% { opacity: 1; }
-}
-</style>
-
-<div id="boardUpdateBanner" class="update-banner" style="display:none;">
-    <span class="update-banner-msg">
-        <i data-lucide="refresh-cw" style="width:14px;height:14px;"></i>
-        The board changed — refreshing in <span id="boardUpdateCountdown">3</span>s
-    </span>
-    <button type="button" id="boardUpdateNow" class="update-banner-btn">Refresh now</button>
+<div id="boardUpdateBanner" class="kb-update-banner" style="display:none;">
+    <span><i data-lucide="refresh-cw"></i> The board changed — refreshing in <span id="boardUpdateCountdown">3</span>s</span>
+    <button type="button" id="boardUpdateNow" class="ui-btn ui-btn--sm ui-btn--secondary">Refresh now</button>
 </div>
 
-<div class="page-header">
-    <div class="breadcrumb">
-        <a href="{{ url_for('orgs.list_orgs') }}">Teams</a>
-        <span class="breadcrumb-sep">/</span>
-        <a href="{{ url_for('orgs.dashboard', slug=org.slug) }}">{{ org.name }}</a>
-        <span class="breadcrumb-sep">/</span>
-        <span>{{ project.name }}</span>
-    </div>
+<div x-data="kanban()">
+    <!-- Header -->
+    <nav class="kb-breadcrumb">
+        <a href="{{ url_for('orgs.list_orgs') }}">Teams</a> <span>/</span>
+        <a href="{{ url_for('orgs.dashboard', slug=org.slug) }}">{{ org.name }}</a> <span>/</span>
+        <strong>{{ project.name }}</strong>
+    </nav>
 
-    <div class="page-header-row">
+    <div class="ui-page-header">
         <div>
-            <h1 class="page-title">{{ project.name }}</h1>
-            {% if project.description %}
-            <p class="page-subtitle">{{ project.description }}</p>
-            {% endif %}
+            <h1>{{ project.name }}</h1>
+            {% if project.description %}<p class="ui-page-subtitle">{{ project.description }}</p>{% endif %}
         </div>
-
-        <div class="page-header-actions">
+        <div class="ui-page-header-actions">
             {% if org_members %}
-            <div class="avatar-stack" title="Team members">
+            <div class="kb-avatars" title="Team members">
                 {% for m in org_members[:4] %}
                 {% if m.user.profile_picture and m.user.profile_picture != 'default.png' %}
-                    {% if m.user.profile_picture.startswith('http://') or m.user.profile_picture.startswith('https://') %}
-                        <img src="{{ m.user.profile_picture }}" alt="{{ m.user.name or m.user.username }}" title="{{ m.user.name or m.user.username }}">
-                    {% else %}
-                        <img src="{{ url_for('static', filename='uploads/profiles/' + m.user.profile_picture) }}" alt="{{ m.user.name or m.user.username }}" title="{{ m.user.name or m.user.username }}">
-                    {% endif %}
+                    <img src="{{ m.user.profile_picture if '://' in m.user.profile_picture else url_for('static', filename='uploads/profiles/' + m.user.profile_picture) }}" alt="" title="{{ m.user.name or m.user.username }}">
                 {% else %}
                 <span title="{{ m.user.name or m.user.username }}">{{ (m.user.name or m.user.username or 'U')[0]|upper }}</span>
                 {% endif %}
                 {% endfor %}
-                {% if org_members|length > 4 %}
-                <span class="avatar-more">+{{ org_members|length - 4 }}</span>
-                {% endif %}
+                {% if org_members|length > 4 %}<span class="kb-avatars-more">+{{ org_members|length - 4 }}</span>{% endif %}
             </div>
             {% endif %}
-            <a href="{{ url_for('meetings.project_meeting', project_id=project.id) }}" class="btn-secondary btn-join-call" style="display: inline-flex; align-items: center; gap: 8px;">
-                <span class="live-dot-glow"></span>
-                <i data-lucide="video" style="width:16px;height:16px; color: #22c55e;"></i> Join Call
-            </a>
-            <a href="{{ url_for('discussions.list_discussions', project_id=project.id) }}" class="btn-secondary">
-                <i data-lucide="message-square" style="width:16px;height:16px;"></i> Discussions
-            </a>
-            
-            {% if is_admin %}
-            <a href="{{ url_for('projects.analytics', project_id=project.id) }}" class="btn-secondary" style="background: rgba(139, 92, 246, 0.1); border-color: rgba(139, 92, 246, 0.3); color: var(--accent-light);">
-                <i data-lucide="pie-chart" style="width:16px;height:16px;"></i> Analytics
-            </a>
-            {% endif %}
-            <button onclick="document.getElementById('newTaskModal').style.display='flex'" class="btn-primary">
-                <i data-lucide="plus" style="width:16px;height:16px;"></i> Add Task
-            </button>
+            <a href="{{ url_for('meetings.project_meeting', project_id=project.id) }}" class="ui-btn ui-btn--secondary ui-btn--sm kb-join"><span class="kb-live-dot"></span> Join call</a>
+            {{ button('Discussions', variant='secondary', size='sm', icon='message-square', href=url_for('discussions.list_discussions', project_id=project.id)) }}
+            {% if is_admin %}{{ button('Analytics', variant='soft', size='sm', icon='pie-chart', href=url_for('projects.analytics', project_id=project.id)) }}{% endif %}
+            <button type="button" class="ui-btn ui-btn--primary ui-btn--sm" @click="newTask=true"><i data-lucide="plus"></i> Add task</button>
         </div>
     </div>
+
+    <!-- Board -->
+    <div class="kb-board">
+        {% set cols = [('Pending','circle',pending_tasks,'Nothing here yet. Add a task to get started.'),
+                       ('In Progress','zap',working_tasks,'Pick up a pending task to get rolling.'),
+                       ('Completed','check-circle-2',completed_tasks,'Wins land here. Keep going!')] %}
+        {% for label, icon, items, empty in cols %}
+        <div class="kb-col">
+            <div class="kb-col-head">
+                <span class="kb-col-title"><i data-lucide="{{ icon }}"></i> {{ label }}</span>
+                <span class="ui-badge">{{ items|length }}</span>
+            </div>
+            <div class="kb-col-body">
+                {% for task in items %}{% include 'projects/_task_card.html' %}
+                {% else %}<div class="kb-empty"><i data-lucide="inbox"></i><span>{{ empty }}</span></div>{% endfor %}
+            </div>
+        </div>
+        {% endfor %}
+    </div>
+
+    <!-- New task modal -->
+    {% call modal('newTask', 'Add task') %}
+    <form method="POST" action="{{ url_for('projects.add_task', project_id=project.id) }}">
+        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+        <div class="ui-field"><label class="ui-field-label">Title</label><input class="ui-input" type="text" name="title" required placeholder="What needs to be done?"></div>
+        <div class="ui-field"><label class="ui-field-label">Description</label><textarea class="ui-textarea" name="description" rows="3" placeholder="Add details or notes…"></textarea></div>
+        <div style="display:flex;gap:var(--space-3);">
+            <div class="ui-field" style="flex:1;"><label class="ui-field-label">Priority</label><select class="ui-select" name="priority"><option>Low</option><option selected>Medium</option><option>High</option></select></div>
+            <div class="ui-field" style="flex:1;"><label class="ui-field-label">Assign to</label><select class="ui-select" name="assigned_to"><option value="">Unassigned</option>{% for member in org_members %}<option value="{{ member.user.id }}">{{ member.user.name if member.user.name else member.user.username }}</option>{% endfor %}</select></div>
+        </div>
+        <div style="display:flex;justify-content:flex-end;gap:var(--space-2);margin-top:var(--space-2);">
+            <button type="button" class="ui-btn ui-btn--ghost" @click="newTask=false">Cancel</button>
+            <button type="submit" class="ui-btn ui-btn--primary">Create task</button>
+        </div>
+    </form>
+    {% endcall %}
+
+    {% if is_admin %}
+    <!-- Edit task modal -->
+    {% call modal('editTask', 'Edit task') %}
+    <form method="POST" :action="'/edit/' + edit.id">
+        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+        <input type="hidden" name="next" value="{{ request.url }}">
+        <div class="ui-field"><label class="ui-field-label">Title</label><input class="ui-input" type="text" name="title" x-model="edit.title" required></div>
+        <div class="ui-field"><label class="ui-field-label">Description</label><textarea class="ui-textarea" name="description" rows="3" x-model="edit.description"></textarea></div>
+        <div style="display:flex;gap:var(--space-3);">
+            <div class="ui-field" style="flex:1;"><label class="ui-field-label">Priority</label><select class="ui-select" name="priority" x-model="edit.priority"><option>Low</option><option>Medium</option><option>High</option></select></div>
+            <div class="ui-field" style="flex:1;"><label class="ui-field-label">Status</label><select class="ui-select" name="status" x-model="edit.status"><option value="Pending">Pending</option><option value="Working">In Progress</option><option value="Completed">Completed</option></select></div>
+        </div>
+        <div class="ui-field"><label class="ui-field-label">Assign to</label><select class="ui-select" name="assigned_to" x-model="edit.assigned"><option value="">Unassigned</option>{% for member in org_members %}<option value="{{ member.user.id }}">{{ member.user.name if member.user.name else member.user.username }}</option>{% endfor %}</select></div>
+        <div style="display:flex;justify-content:flex-end;gap:var(--space-2);margin-top:var(--space-2);">
+            <button type="button" class="ui-btn ui-btn--ghost" @click="editTask=false">Cancel</button>
+            <button type="submit" class="ui-btn ui-btn--primary">Save changes</button>
+        </div>
+    </form>
+    {% endcall %}
+    {% endif %}
 </div>
 
-<!-- Kanban Board -->
-<div class="kanban-board">
-
-    <!-- Pending Column -->
-    <div class="kanban-column col-pending">
-        <div class="kanban-column-header">
-            <h3 class="kanban-column-title">
-                <i data-lucide="circle" style="width:14px;height:14px;"></i> Pending
-            </h3>
-            <span class="kanban-count-pill">{{ pending_tasks|length }}</span>
-        </div>
-
-        <div class="task-list">
-            {% for task in pending_tasks %}
-            {% include 'projects/_task_card.html' %}
-            {% else %}
-            <div class="kanban-empty">
-                <i data-lucide="inbox" style="width:24px;height:24px;"></i>
-                Nothing here. Add a task to get started.
-            </div>
-            {% endfor %}
-        </div>
-    </div>
-
-    <!-- Working Column -->
-    <div class="kanban-column col-working">
-        <div class="kanban-column-header">
-            <h3 class="kanban-column-title">
-                <i data-lucide="zap" style="width:14px;height:14px;"></i> In Progress
-            </h3>
-            <span class="kanban-count-pill">{{ working_tasks|length }}</span>
-        </div>
-
-        <div class="task-list">
-            {% for task in working_tasks %}
-            {% include 'projects/_task_card.html' %}
-            {% else %}
-            <div class="kanban-empty">
-                <i data-lucide="play-circle" style="width:24px;height:24px;"></i>
-                Pick up a pending task to get rolling.
-            </div>
-            {% endfor %}
-        </div>
-    </div>
-
-    <!-- Completed Column -->
-    <div class="kanban-column col-done">
-        <div class="kanban-column-header">
-            <h3 class="kanban-column-title">
-                <i data-lucide="check-circle-2" style="width:14px;height:14px;"></i> Completed
-            </h3>
-            <span class="kanban-count-pill">{{ completed_tasks|length }}</span>
-        </div>
-
-        <div class="task-list">
-            {% for task in completed_tasks %}
-            {% include 'projects/_task_card.html' %}
-            {% else %}
-            <div class="kanban-empty">
-                <i data-lucide="trophy" style="width:24px;height:24px;"></i>
-                Wins land here. Keep going!
-            </div>
-            {% endfor %}
-        </div>
-    </div>
-</div>
-
-<!-- New Task Modal -->
-<div id="newTaskModal" style="display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: var(--overlay); z-index: 1000; align-items: center; justify-content: center; backdrop-filter: blur(4px);">
-    <div style="background: var(--surface-solid); border: 1px solid var(--glass-border); border-radius: 16px; padding: 30px; width: 100%; max-width: 500px; box-shadow: var(--shadow-md);">
-        <h3 style="margin-top: 0; margin-bottom: 20px; display: flex; justify-content: space-between; align-items: center;">
-            Add New Task
-            <button onclick="document.getElementById('newTaskModal').style.display='none'" style="background: none; border: none; color: var(--text-muted); cursor: pointer;"><i data-lucide="x"></i></button>
-        </h3>
-        
-        <form method="POST" action="{{ url_for('projects.add_task', project_id=project.id) }}" onsubmit="if(this.dataset.submitting) return false; this.dataset.submitting = true; const btn = this.querySelector('button[type=submit]'); btn.style.opacity = '0.7'; btn.innerHTML = 'Creating...'; return true;">
-            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
-            
-            <div style="margin-bottom: 15px;">
-                <label style="display: block; margin-bottom: 5px; font-size: 14px;">Task Title</label>
-                <input type="text" name="title" required placeholder="What needs to be done?" style="width: 100%; padding: 10px; border-radius: 8px; border: 1px solid var(--glass-border); background: var(--surface); color: var(--text); box-sizing: border-box;">
-            </div>
-
-            <div style="margin-bottom: 15px;">
-                <label style="display: block; margin-bottom: 5px; font-size: 14px;">Description</label>
-                <textarea name="description" rows="3" placeholder="Add details or notes..." style="width: 100%; padding: 10px; border-radius: 8px; border: 1px solid var(--glass-border); background: var(--surface); color: var(--text); resize: vertical; box-sizing: border-box;"></textarea>
-            </div>
-            
-            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 15px; margin-bottom: 20px;">
-                <div>
-                    <label style="display: block; margin-bottom: 5px; font-size: 14px;">Priority</label>
-                    <select name="priority" style="width: 100%; padding: 10px; border-radius: 8px; border: 1px solid var(--glass-border); background: var(--surface); color: var(--text); box-sizing: border-box; appearance: none;">
-                        <option value="Low" style="color: var(--text); background: var(--surface-solid);">Low</option>
-                        <option value="Medium" selected style="color: var(--text); background: var(--surface-solid);">Medium</option>
-                        <option value="High" style="color: var(--text); background: var(--surface-solid);">High</option>
-                    </select>
-                </div>
-                
-                <div>
-                    <label style="display: block; margin-bottom: 5px; font-size: 14px;">Assign To</label>
-                    <select name="assigned_to" style="width: 100%; padding: 10px; border-radius: 8px; border: 1px solid var(--glass-border); background: var(--surface); color: var(--text); box-sizing: border-box; appearance: none;">
-                        <option value="" style="color: var(--text); background: var(--surface-solid);">Unassigned</option>
-                        {% for member in org_members %}
-                        <option value="{{ member.user.id }}" style="color: var(--text); background: var(--surface-solid);">{{ member.user.name if member.user.name else member.user.username }}</option>
-                        {% endfor %}
-                    </select>
-                </div>
-            </div>
-            
-            <div style="display: flex; justify-content: flex-end; gap: 10px;">
-                <button type="button" onclick="document.getElementById('newTaskModal').style.display='none'" class="btn" style="background: transparent; border: 1px solid var(--glass-border);">Cancel</button>
-                <button type="submit" class="btn primary">Create Task</button>
-            </div>
-        </form>
-    </div>
-</div>
+<style>
+.kb-update-banner { display:flex; align-items:center; justify-content:space-between; gap:var(--space-3); background:var(--accent-soft); color:var(--accent); border:1px solid transparent; border-radius:var(--radius); padding:10px 16px; margin-bottom:var(--space-4); font-size:var(--fs-sm); font-weight:var(--fw-medium); }
+.kb-update-banner span { display:inline-flex; align-items:center; gap:7px; }
+.kb-update-banner i { width:15px; height:15px; }
+.kb-breadcrumb { font-size:var(--fs-sm); color:var(--text-muted); margin-bottom:var(--space-4); }
+.kb-breadcrumb a { color:var(--text-muted); text-decoration:none; }
+.kb-breadcrumb a:hover { color:var(--text); }
+.kb-breadcrumb strong { color:var(--text); }
+.kb-breadcrumb span { margin:0 6px; opacity:0.5; }
+.kb-avatars { display:flex; align-items:center; }
+.kb-avatars img, .kb-avatars > span { width:32px; height:32px; border-radius:50%; border:2px solid var(--surface); margin-left:-8px; object-fit:cover; display:inline-flex; align-items:center; justify-content:center; font-size:12px; font-weight:600; background-image:var(--accent-grad); color:#fff; }
+.kb-avatars img:first-child, .kb-avatars > span:first-child { margin-left:0; }
+.kb-avatars-more { background:var(--surface-hover) !important; color:var(--text-secondary) !important; }
+.kb-join { color:var(--success) !important; }
+.kb-live-dot { width:7px; height:7px; border-radius:50%; background:var(--success); box-shadow:0 0 8px var(--success); animation:kbPulse 2s ease-in-out infinite; }
+@keyframes kbPulse { 0%,100%{opacity:0.4;} 50%{opacity:1;} }
+.kb-board { display:grid; grid-template-columns:repeat(3,1fr); gap:var(--space-4); align-items:start; }
+.kb-col { background:var(--surface-sunken); border:1px solid var(--border); border-radius:var(--radius-lg); padding:var(--space-3); }
+.kb-col-head { display:flex; align-items:center; justify-content:space-between; padding:6px 8px var(--space-3); }
+.kb-col-title { display:inline-flex; align-items:center; gap:7px; font-size:var(--fs-sm); font-weight:var(--fw-semibold); color:var(--text); }
+.kb-col-title i { width:15px; height:15px; color:var(--text-muted); }
+.kb-col-body { display:flex; flex-direction:column; gap:var(--space-3); min-height:40px; }
+.kb-card { background:var(--surface); border:1px solid var(--border); border-radius:var(--radius); padding:var(--space-4); box-shadow:var(--shadow-sm); transition:transform .18s var(--ease-out), box-shadow var(--transition), border-color var(--transition); }
+.kb-card:hover { transform:translateY(-2px); box-shadow:var(--shadow); border-color:var(--border-strong); }
+.kb-card-top { display:flex; justify-content:space-between; align-items:flex-start; gap:10px; }
+.kb-title { font-size:var(--fs-base); font-weight:var(--fw-semibold); color:var(--text); line-height:1.4; }
+.kb-desc { font-size:var(--fs-sm); color:var(--text-muted); margin-top:6px; line-height:1.5; }
+.kb-card-bottom { display:flex; align-items:center; justify-content:space-between; gap:var(--space-2); margin-top:var(--space-3); }
+.kb-assignee { display:flex; align-items:center; gap:7px; font-size:var(--fs-xs); color:var(--text-secondary); min-width:0; }
+.kb-assignee span { overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+.kb-avatar-none { width:24px; height:24px; border-radius:50%; background:var(--surface-hover); color:var(--text-muted); display:inline-flex; align-items:center; justify-content:center; }
+.kb-avatar-none i { width:12px; height:12px; }
+.kb-actions { display:flex; align-items:center; gap:2px; flex-shrink:0; }
+.kb-empty { display:flex; flex-direction:column; align-items:center; gap:8px; text-align:center; color:var(--text-muted); font-size:var(--fs-sm); padding:var(--space-6) var(--space-3); border:1px dashed var(--border); border-radius:var(--radius); }
+.kb-empty i { width:22px; height:22px; opacity:0.6; }
+.kb-comments { margin-top:var(--space-3); border-top:1px solid var(--border); padding-top:var(--space-2); }
+.kb-comments summary { display:flex; align-items:center; gap:6px; font-size:var(--fs-xs); color:var(--text-muted); cursor:pointer; font-weight:var(--fw-medium); }
+.kb-comments summary i { width:13px; height:13px; }
+.kb-comments-body { display:flex; flex-direction:column; gap:8px; margin-top:var(--space-3); }
+.kb-comment { background:var(--surface-sunken); border:1px solid var(--border); border-radius:var(--radius-sm); padding:8px 10px; }
+.kb-comment-head { display:flex; justify-content:space-between; gap:8px; font-size:var(--fs-xs); margin-bottom:3px; }
+.kb-comment-head strong { color:var(--text); }
+.kb-comment-head time { color:var(--text-muted); }
+.kb-comment-body { font-size:var(--fs-sm); color:var(--text-secondary); }
+.kb-comment-form { display:flex; gap:6px; align-items:center; }
+.kb-comment-form .ui-input { padding:7px 10px; font-size:var(--fs-sm); }
+@media (max-width:900px) { .kb-board { grid-template-columns:1fr; } }
+</style>
 
 <script>
-(function() {
-    // Poll the project state every 6s; if the fingerprint diverges from
-    // the one captured at page load, soft-refresh so everyone sees task
-    // moves, assignments, status changes, new comments, etc.
+function kanban() {
+    return {
+        newTask: false, editTask: false,
+        edit: { id: '', title: '', description: '', priority: 'Medium', status: 'Pending', assigned: '' },
+        openEdit(ds) {
+            this.edit = { id: ds.id, title: ds.title || '', description: ds.description || '', priority: ds.priority || 'Medium', status: ds.status || 'Pending', assigned: ds.assigned || '' };
+            this.editTask = true;
+        },
+        init() { this.$watch('newTask', v => window.HF_MODAL_OPEN = v || this.editTask); this.$watch('editTask', v => window.HF_MODAL_OPEN = v || this.newTask); }
+    };
+}
+(function () {
     var projectId = {{ project.id }};
-    var initialFingerprint = null;
+    var initialFingerprint = null, refreshTimer = null;
     var banner = document.getElementById('boardUpdateBanner');
     var countdownEl = document.getElementById('boardUpdateCountdown');
-    var refreshNowBtn = document.getElementById('boardUpdateNow');
-    var refreshTimer = null;
-    var pollFailures = 0;
-
-    function softReload() {
-        // Preserve scroll position roughly by saving to sessionStorage
-        try {
-            sessionStorage.setItem('hf_scroll_' + projectId, String(window.scrollY));
-        } catch (e) {}
-        window.location.reload();
-    }
-
-    // Restore scroll position from a previous soft-reload
-    try {
-        var prev = sessionStorage.getItem('hf_scroll_' + projectId);
-        if (prev) {
-            sessionStorage.removeItem('hf_scroll_' + projectId);
-            window.requestAnimationFrame(function() {
-                window.scrollTo(0, parseInt(prev, 10) || 0);
-            });
-        }
-    } catch (e) {}
-
-    function startCountdown() {
-        if (refreshTimer) return;
-        banner.style.display = 'flex';
-        var seconds = 3;
-        countdownEl.textContent = seconds;
-        refreshTimer = setInterval(function() {
-            seconds--;
-            countdownEl.textContent = seconds;
-            if (seconds <= 0) {
-                clearInterval(refreshTimer);
-                softReload();
-            }
-        }, 1000);
-    }
-
-    if (refreshNowBtn) {
-        refreshNowBtn.addEventListener('click', softReload);
-    }
-
+    function softReload() { try { sessionStorage.setItem('hf_scroll_' + projectId, String(window.scrollY)); } catch (e) {} window.location.reload(); }
+    try { var prev = sessionStorage.getItem('hf_scroll_' + projectId); if (prev) { sessionStorage.removeItem('hf_scroll_' + projectId); requestAnimationFrame(function () { window.scrollTo(0, parseInt(prev, 10) || 0); }); } } catch (e) {}
+    function startCountdown() { if (refreshTimer) return; banner.style.display = 'flex'; var s = 3; countdownEl.textContent = s; refreshTimer = setInterval(function () { s--; countdownEl.textContent = s; if (s <= 0) { clearInterval(refreshTimer); softReload(); } }, 1000); }
+    var btn = document.getElementById('boardUpdateNow'); if (btn) btn.addEventListener('click', softReload);
     function poll() {
-        // Don't poll while the user is in the middle of editing a task.
-        var editOpen = document.getElementById('editTaskModal');
-        var addOpen = document.getElementById('newTaskModal');
-        if ((editOpen && editOpen.style.display === 'flex') ||
-            (addOpen && addOpen.style.display === 'flex')) {
-            return;
-        }
-        fetch('/api/projects/' + projectId + '/state', {
-            credentials: 'same-origin',
-            headers: { 'Accept': 'application/json' }
-        })
-        .then(function(r) {
-            if (!r.ok) throw new Error('HTTP ' + r.status);
-            return r.json();
-        })
-        .then(function(data) {
-            pollFailures = 0;
-            if (initialFingerprint === null) {
-                initialFingerprint = data.fingerprint;
-                return;
-            }
-            if (data.fingerprint !== initialFingerprint) {
-                startCountdown();
-            }
-        })
-        .catch(function() {
-            pollFailures++;
-            // Silent failure — try again next tick.
-        });
+        if (window.HF_MODAL_OPEN) return;
+        fetch('/api/projects/' + projectId + '/state', { credentials: 'same-origin', headers: { 'Accept': 'application/json' } })
+            .then(function (r) { if (!r.ok) throw 0; return r.json(); })
+            .then(function (data) { if (initialFingerprint === null) { initialFingerprint = data.fingerprint; return; } if (data.fingerprint !== initialFingerprint) startCountdown(); })
+            .catch(function () {});
     }
-
-    // Prime initial fingerprint immediately, then poll on a cadence.
     poll();
-    var visibleInterval = 6000;
-    var hiddenInterval = 20000;
-    var timer = setInterval(poll, visibleInterval);
-    document.addEventListener('visibilitychange', function() {
-        clearInterval(timer);
-        if (document.hidden) {
-            timer = setInterval(poll, hiddenInterval);
-        } else {
-            poll();
-            timer = setInterval(poll, visibleInterval);
-        }
-    });
+    var timer = setInterval(poll, 6000);
+    document.addEventListener('visibilitychange', function () { clearInterval(timer); timer = setInterval(poll, document.hidden ? 20000 : 6000); if (!document.hidden) poll(); });
 })();
 </script>
-
-{% if is_admin %}
-<!-- Edit Task Modal (admin only) -->
-<div id="editTaskModal" style="display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: var(--overlay); z-index: 1000; align-items: center; justify-content: center; backdrop-filter: blur(4px);">
-    <div style="background: var(--surface-solid); border: 1px solid var(--glass-border); border-radius: 16px; padding: 30px; width: 100%; max-width: 500px; box-shadow: var(--shadow-md);">
-        <h3 style="margin-top: 0; margin-bottom: 20px; display: flex; justify-content: space-between; align-items: center;">
-            Edit Task
-            <button type="button" onclick="document.getElementById('editTaskModal').style.display='none'" style="background: none; border: none; color: var(--text-muted); cursor: pointer;"><i data-lucide="x"></i></button>
-        </h3>
-
-        <form id="editTaskForm" method="POST" onsubmit="if(this.dataset.submitting) return false; this.dataset.submitting = true; const btn = this.querySelector('button[type=submit]'); btn.style.opacity = '0.7'; btn.innerHTML = 'Saving...'; return true;">
-            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
-            <input type="hidden" name="next" value="{{ request.url }}">
-
-            <div style="margin-bottom: 15px;">
-                <label style="display: block; margin-bottom: 5px; font-size: 14px;">Task Title</label>
-                <input type="text" name="title" id="editTaskTitle" required style="width: 100%; padding: 10px; border-radius: 8px; border: 1px solid var(--glass-border); background: var(--surface); color: var(--text); box-sizing: border-box;">
-            </div>
-
-            <div style="margin-bottom: 15px;">
-                <label style="display: block; margin-bottom: 5px; font-size: 14px;">Description</label>
-                <textarea name="description" id="editTaskDescription" rows="3" placeholder="Add details or notes..." style="width: 100%; padding: 10px; border-radius: 8px; border: 1px solid var(--glass-border); background: var(--surface); color: var(--text); resize: vertical; box-sizing: border-box;"></textarea>
-            </div>
-
-            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 15px; margin-bottom: 15px;">
-                <div>
-                    <label style="display: block; margin-bottom: 5px; font-size: 14px;">Priority</label>
-                    <select name="priority" id="editTaskPriority" style="width: 100%; padding: 10px; border-radius: 8px; border: 1px solid var(--glass-border); background: var(--surface); color: var(--text); box-sizing: border-box; appearance: none;">
-                        <option value="Low" style="color: var(--text); background: var(--surface-solid);">Low</option>
-                        <option value="Medium" style="color: var(--text); background: var(--surface-solid);">Medium</option>
-                        <option value="High" style="color: var(--text); background: var(--surface-solid);">High</option>
-                    </select>
-                </div>
-
-                <div>
-                    <label style="display: block; margin-bottom: 5px; font-size: 14px;">Status</label>
-                    <select name="status" id="editTaskStatus" style="width: 100%; padding: 10px; border-radius: 8px; border: 1px solid var(--glass-border); background: var(--surface); color: var(--text); box-sizing: border-box; appearance: none;">
-                        <option value="Pending" style="color: var(--text); background: var(--surface-solid);">Pending</option>
-                        <option value="Working" style="color: var(--text); background: var(--surface-solid);">In Progress</option>
-                        <option value="Completed" style="color: var(--text); background: var(--surface-solid);">Completed</option>
-                    </select>
-                </div>
-            </div>
-
-            <div style="margin-bottom: 20px;">
-                <label style="display: block; margin-bottom: 5px; font-size: 14px;">Assign To</label>
-                <select name="assigned_to" id="editTaskAssigned" style="width: 100%; padding: 10px; border-radius: 8px; border: 1px solid var(--glass-border); background: var(--surface); color: var(--text); box-sizing: border-box; appearance: none;">
-                    <option value="" style="color: var(--text); background: var(--surface-solid);">Unassigned</option>
-                    {% for member in org_members %}
-                    <option value="{{ member.user.id }}" style="color: var(--text); background: var(--surface-solid);">{{ member.user.name if member.user.name else member.user.username }}</option>
-                    {% endfor %}
-                </select>
-            </div>
-
-            <div style="display: flex; justify-content: flex-end; gap: 10px;">
-                <button type="button" onclick="document.getElementById('editTaskModal').style.display='none'" class="btn" style="background: transparent; border: 1px solid var(--glass-border);">Cancel</button>
-                <button type="submit" class="btn primary">Save Changes</button>
-            </div>
-        </form>
-    </div>
-</div>
-
-<script>
-(function() {
-    document.addEventListener('click', function(e) {
-        var btn = e.target.closest('.task-edit-btn');
-        if (!btn) return;
-        var taskId = btn.dataset.taskId;
-        var form = document.getElementById('editTaskForm');
-        form.action = '/edit/' + taskId;
-        document.getElementById('editTaskTitle').value = btn.dataset.taskTitle || '';
-        document.getElementById('editTaskDescription').value = btn.dataset.taskDescription || '';
-        document.getElementById('editTaskPriority').value = btn.dataset.taskPriority || 'Medium';
-        document.getElementById('editTaskStatus').value = btn.dataset.taskStatus || 'Pending';
-        document.getElementById('editTaskAssigned').value = btn.dataset.taskAssigned || '';
-        document.getElementById('editTaskModal').style.display = 'flex';
-    });
-})();
-</script>
-{% endif %}
 {% endblock %}

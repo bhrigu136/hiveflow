@@ -1,0 +1,181 @@
+{% extends "base.html" %}
+{% block title %}Security & Devices — HiveFlow{% endblock %}
+
+{% block extra_head %}
+<style>
+    .sec-wrap { max-width: 860px; margin: 0 auto; }
+    .sec-header { margin-bottom: 24px; }
+    .sec-header h2 { display:flex; align-items:center; gap:10px; margin:0 0 6px; }
+    .sec-header p { color: var(--text-secondary, #888); margin:0; font-size:14px; }
+
+    .sec-section-title {
+        display:flex; align-items:center; gap:8px;
+        font-size: 15px; font-weight: 700; margin: 28px 0 12px;
+        text-transform: uppercase; letter-spacing: .5px;
+        color: var(--text-secondary, #888);
+    }
+
+    .device-card {
+        display:flex; align-items:flex-start; gap:16px;
+        padding:18px 20px; border-radius:14px; margin-bottom:14px;
+        background: var(--card-bg, #fff);
+        border:1px solid var(--border-color, #e5e7eb);
+        transition: box-shadow .2s ease;
+    }
+    .device-card.is-current {
+        border-color: var(--accent-light, #8b5cf6);
+        box-shadow: 0 0 0 1px var(--accent-light, #8b5cf6);
+    }
+    .device-icon {
+        flex-shrink:0; width:46px; height:46px; border-radius:12px;
+        display:flex; align-items:center; justify-content:center;
+        background: color-mix(in srgb, var(--accent-light, #8b5cf6) 14%, transparent);
+        color: var(--accent-light, #8b5cf6);
+    }
+    .device-icon i { width:22px; height:22px; }
+    .device-body { flex:1; min-width:0; }
+    .device-title { display:flex; align-items:center; gap:8px; flex-wrap:wrap; font-weight:700; font-size:15px; }
+    .device-meta { margin-top:6px; font-size:13px; color: var(--text-secondary, #888); line-height:1.7; }
+    .device-meta b { color: var(--text-primary, #222); font-weight:600; }
+
+    .badge-current {
+        font-size:11px; font-weight:700; letter-spacing:.4px;
+        padding:3px 9px; border-radius:999px;
+        background: var(--accent-light, #8b5cf6); color:#fff;
+    }
+    .badge-time { font-size:12px; color: var(--text-secondary, #888); }
+    .badge-active { color:#16a34a; font-weight:600; }
+
+    .device-action { flex-shrink:0; }
+    .btn-revoke {
+        background: transparent; cursor:pointer;
+        border:1px solid var(--danger, #ef4444); color: var(--danger, #ef4444);
+        font-size:13px; font-weight:600; padding:8px 14px; border-radius:9px;
+        display:inline-flex; align-items:center; gap:6px;
+    }
+    .btn-revoke:hover { background: var(--danger, #ef4444); color:#fff; }
+    .btn-revoke i { width:15px; height:15px; }
+
+    .revoke-all-row { display:flex; justify-content:flex-end; margin-bottom:8px; }
+    .btn-revoke-all {
+        background: transparent; cursor:pointer;
+        border:1px solid var(--border-color, #e5e7eb); color: var(--text-secondary, #888);
+        font-size:13px; font-weight:600; padding:8px 14px; border-radius:9px;
+    }
+    .btn-revoke-all:hover { border-color: var(--danger, #ef4444); color: var(--danger, #ef4444); }
+
+    /* Activity log */
+    .activity-list { border:1px solid var(--border-color, #e5e7eb); border-radius:14px; overflow:hidden; }
+    .activity-row {
+        display:flex; align-items:center; gap:12px; padding:11px 18px;
+        font-size:13px; border-bottom:1px solid var(--border-color, #e5e7eb);
+    }
+    .activity-row:last-child { border-bottom:none; }
+    .activity-row .act-action { font-weight:600; flex:1; min-width:0; }
+    .activity-row .act-ip { color: var(--text-secondary, #888); font-variant-numeric: tabular-nums; }
+    .activity-row .act-time { color: var(--text-secondary, #888); white-space:nowrap; font-size:12px; }
+    .act-method {
+        font-size:10px; font-weight:800; padding:2px 7px; border-radius:6px; letter-spacing:.5px;
+        background: color-mix(in srgb, var(--accent-light, #8b5cf6) 16%, transparent);
+        color: var(--accent-light, #8b5cf6);
+    }
+    .act-method.post { background: rgba(245,158,11,.18); color:#d97706; }
+
+    .sec-empty { padding:28px; text-align:center; color: var(--text-secondary, #888); font-size:14px; }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="sec-wrap animate-slide-up">
+
+    <div class="sec-header">
+        <h2><i data-lucide="shield-check" style="color: var(--accent-light, #8b5cf6);"></i> Security &amp; Devices</h2>
+        <p>Everywhere your account is signed in. If you don't recognise a device or location, log it out and change your password.</p>
+    </div>
+
+    <!-- ── Active Devices ─────────────────────────────────── -->
+    <div class="sec-section-title">
+        <i data-lucide="monitor-smartphone" style="width:16px;height:16px;"></i>
+        Active devices ({{ sessions|length }})
+    </div>
+
+    {% if sessions|length > 1 %}
+    <div class="revoke-all-row">
+        <form method="POST" action="{{ url_for('auth.revoke_other_sessions') }}">
+            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+            <button type="submit" class="btn-revoke-all">Log out all other devices</button>
+        </form>
+    </div>
+    {% endif %}
+
+    {% for s in sessions %}
+    {% set is_current = (s.session_token == current_token) %}
+    <div class="device-card {{ 'is-current' if is_current }}">
+        <div class="device-icon">
+            {% if s.device == 'Mobile' %}
+                <i data-lucide="smartphone"></i>
+            {% elif s.device == 'Tablet' %}
+                <i data-lucide="tablet"></i>
+            {% else %}
+                <i data-lucide="monitor"></i>
+            {% endif %}
+        </div>
+        <div class="device-body">
+            <div class="device-title">
+                {{ s.device_label }}
+                {% if is_current %}<span class="badge-current">THIS DEVICE</span>{% endif %}
+            </div>
+            <div class="device-meta">
+                <span><i data-lucide="map-pin" style="width:13px;height:13px;vertical-align:-2px;"></i>
+                    <b>{{ s.location or 'Unknown location' }}</b> · {{ s.ip_address or 'unknown IP' }}</span><br>
+                <span>
+                    {% set delta = (now - s.last_seen).total_seconds() if s.last_seen else 999999 %}
+                    {% if delta < 300 %}
+                        <span class="badge-active">● Active now</span>
+                    {% else %}
+                        <span class="badge-time">Last active {{ s.last_seen.strftime('%b %d, %Y · %I:%M %p') }} UTC</span>
+                    {% endif %}
+                    · Signed in {{ s.created_at.strftime('%b %d, %Y') if s.created_at else '—' }}
+                </span>
+            </div>
+        </div>
+        <div class="device-action">
+            <form method="POST" action="{{ url_for('auth.revoke_session', session_id=s.id) }}">
+                <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                <button type="submit" class="btn-revoke">
+                    <i data-lucide="log-out"></i>
+                    {{ 'Sign out' if is_current else 'Log out' }}
+                </button>
+            </form>
+        </div>
+    </div>
+    {% else %}
+    <div class="sec-empty">No active devices recorded yet.</div>
+    {% endfor %}
+
+    <!-- ── Recent Activity ───────────────────────────────── -->
+    <div class="sec-section-title">
+        <i data-lucide="activity" style="width:16px;height:16px;"></i>
+        Recent activity
+    </div>
+    <p style="font-size:13px;color:var(--text-secondary,#888);margin:-4px 0 12px;">
+        The last {{ activities|length }} actions on your account — what was done, from which IP, and when.
+    </p>
+
+    {% if activities %}
+    <div class="activity-list">
+        {% for a in activities %}
+        <div class="activity-row">
+            <span class="act-method {{ 'post' if a.method != 'GET' }}">{{ a.method or '—' }}</span>
+            <span class="act-action">{{ a.action }}</span>
+            <span class="act-ip">{{ a.ip_address or '' }}</span>
+            <span class="act-time">{{ a.created_at.strftime('%b %d · %I:%M %p') if a.created_at else '' }}</span>
+        </div>
+        {% endfor %}
+    </div>
+    {% else %}
+    <div class="sec-empty">No activity recorded yet.</div>
+    {% endif %}
+
+</div>
+{% endblock %}

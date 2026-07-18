@@ -1,6 +1,10 @@
 {% extends "base.html" %}
 {% block title %}Project Analytics - {{ project.name }} — HiveFlow{% endblock %}
 
+{% block extra_head %}
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
+{% endblock %}
+
 {% block content %}
 <div class="org-back-link-container animate-fade-down">
     <a href="{{ url_for('projects.dashboard', project_id=project.id) }}" class="back-link">
@@ -14,6 +18,10 @@
     </h2>
     <p class="profile-subtitle">Track individual team member contributions specifically for the <strong>{{ project.name }}</strong> project.</p>
 </div>
+
+{% set export_url = url_for('projects.analytics_export', project_id=project.id) %}
+{% set show_meetings = false %}
+{% include '_analytics_dashboard.html' %}
 
 <div class="members-premium-list animate-slide-up" style="display: flex; flex-direction: column; gap: 20px;">
     {% for data in members_data %}

@@ -1,0 +1,49 @@
+{% extends "base.html" %}
+{% block title %}Meeting Notes — HiveFlow{% endblock %}
+
+{% block content %}
+<div style="max-width: 900px; margin: 0 auto; padding: 20px;">
+
+    <h2 style="margin:0 0 4px; font-size:24px; color:var(--text); display:flex; align-items:center; gap:10px;">
+        <i data-lucide="file-text" style="color:var(--accent);"></i> Meeting Notes
+    </h2>
+    <p style="margin:0 0 24px; color:var(--text-muted); font-size:14px;">
+        AI-written summaries and action items from your team's meetings.
+    </p>
+
+    {% if not meetings %}
+    <div style="background:var(--surface-solid); border:1px solid var(--glass-border); border-radius:14px; padding:32px; text-align:center; color:var(--text-muted);">
+        <i data-lucide="calendar-x" style="width:28px;height:28px;opacity:.6;"></i>
+        <p style="margin:12px 0 0; font-size:14px;">No meetings yet. Book one from the
+            <a href="{{ url_for('calendar.my_calendar') }}" style="color:var(--accent); text-decoration:none;">calendar</a>,
+            join the room, and HiveFlow will write the notes for you.</p>
+    </div>
+    {% else %}
+
+    <div style="display:flex; flex-direction:column; gap:10px;">
+        {% for m in meetings %}
+        <a href="{{ url_for('meeting_intel.notes', meeting_id=m.id) }}"
+           style="text-decoration:none; background:var(--surface-solid); border:1px solid var(--glass-border); border-radius:12px; padding:16px 18px; display:flex; align-items:center; justify-content:space-between; gap:12px;">
+            <div>
+                <div style="color:var(--text); font-weight:600; font-size:15px;">{{ m.title }}</div>
+                <div style="color:var(--text-muted); font-size:13px; margin-top:2px;">
+                    {{ m.organization.name }} · {{ m.scheduled_for.strftime('%b %d, %Y · %I:%M %p').replace(' 0', ' ') }}
+                </div>
+            </div>
+            <div>
+                {% if m.intel_status == 'ready' %}
+                <span style="font-size:12px; padding:3px 10px; border-radius:12px; background:rgba(34,197,94,0.15); color:#16a34a;">Notes ready</span>
+                {% elif m.intel_status == 'recording' %}
+                <span style="font-size:12px; padding:3px 10px; border-radius:12px; background:rgba(59,130,246,0.15); color:#3b82f6;">Captured</span>
+                {% elif m.intel_status == 'processing' %}
+                <span style="font-size:12px; padding:3px 10px; border-radius:12px; background:rgba(234,179,8,0.15); color:#ca8a04;">Processing</span>
+                {% else %}
+                <span style="font-size:12px; padding:3px 10px; border-radius:12px; background:rgba(148,163,184,0.15); color:var(--text-muted);">No notes</span>
+                {% endif %}
+            </div>
+        </a>
+        {% endfor %}
+    </div>
+    {% endif %}
+</div>
+{% endblock %}

@@ -1,66 +1,60 @@
 {% extends "base.html" %}
+{% from 'components/ui.html' import button, empty_state %}
 {% block title %}Your Teams — HiveFlow{% endblock %}
 
 {% block content %}
-<div class="header-action-row animate-fade-down">
-    <h2 class="header-action-title">Your Teams</h2>
-    <a href="{{ url_for('orgs.create_org') }}" class="profile-save-btn btn-create-team">
-        <i data-lucide="plus"></i> Create Team
-    </a>
+<div class="ui-page-header">
+    <div><h1>Your teams</h1><p class="ui-page-subtitle">Workspaces you create or join.</p></div>
+    <div class="ui-page-header-actions">
+        {{ button('Create team', variant='primary', icon='plus', href=url_for('orgs.create_org')) }}
+    </div>
 </div>
 
-<div class="teams-grid animate-slide-up">
+<div class="teams-grid">
     {% for org in orgs %}
-    <a href="{{ url_for('orgs.dashboard', slug=org.slug) }}" class="team-card">
-        <!-- Top row: Avatar & Members count -->
-        <div class="team-card-header">
-            <div class="team-card-avatar">
-                {{ org.name[0].upper() }}
-            </div>
-            <div class="team-card-members-badge">
-                <i data-lucide="users"></i>
-                {{ org.members.count() }} Members
-            </div>
+    <a href="{{ url_for('orgs.dashboard', slug=org.slug) }}" class="ui-card ui-card--link team-card">
+        <div class="team-card-top">
+            <span class="ui-avatar ui-avatar--lg" style="border-radius:14px;">{{ org.name[0]|upper }}</span>
+            <span class="ui-badge"><i data-lucide="users"></i> {{ org.members.count() }}</span>
         </div>
-
-        <!-- Title & Description -->
-        <h3 class="team-card-title">{{ org.name }}</h3>
-        <p class="team-card-desc">
-            {{ org.description if org.description else "No description provided. Click to manage your team." }}
-        </p>
-
-        <!-- Hover glow effect element -->
-        <div class="team-card-glow"></div>
+        <h3 class="team-card-name">{{ org.name }}</h3>
+        <p class="team-card-desc">{{ org.description if org.description else "No description provided." }}</p>
     </a>
     {% else %}
-    <div class="empty-state empty-state-grid-span">
-        <div class="empty-state-avatar-icon">
-            <i data-lucide="users"></i>
-        </div>
-        <h3 class="empty-state-title-custom">You haven't joined any teams yet</h3>
-        <p class="empty-state-desc-custom">Create a new team to start collaborating, or paste an invite code below to join an existing workspace.</p>
-    </div>
+    {% call empty_state('users', "No teams yet", 'Create a workspace to start collaborating, or join one with an invite code below.') %}
+        {{ button('Create team', variant='primary', icon='plus', href=url_for('orgs.create_org')) }}
+    {% endcall %}
     {% endfor %}
 </div>
 
-<div class="join-team-card animate-slide-up">
-    <div class="join-team-header">
-        <div class="join-team-icon-wrapper">
-            <i data-lucide="link-2"></i>
+<div class="ui-card join-card">
+    <div class="join-card-head">
+        <span class="ui-stat-icon"><i data-lucide="link-2"></i></span>
+        <div>
+            <h3>Join an existing team</h3>
+            <p>Got an invite code? Paste it to join.</p>
         </div>
-        <h3 class="join-team-title">Join an Existing Team</h3>
-        <p class="join-team-desc">Got an invite code? Paste it below to join.</p>
     </div>
-    
-    <form action="{{ url_for('orgs.join_org') }}" method="POST" class="join-team-form">
+    <form action="{{ url_for('orgs.join_org') }}" method="POST" class="join-card-form">
         <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
-        <div class="invite-input-wrapper">
-            <span class="invite-input-icon"><i data-lucide="key"></i></span>
-            <input type="text" name="invite_code" placeholder="e.g. X7K9-P2M4" required maxlength="20" autocomplete="off" autocapitalize="off" spellcheck="false" class="invite-input-field">
+        <div class="ui-field-control has-icon" style="flex:1;">
+            <i data-lucide="key"></i>
+            <input class="ui-input" type="text" name="invite_code" placeholder="e.g. X7K9-P2M4" required maxlength="20" autocomplete="off" autocapitalize="off" spellcheck="false">
         </div>
-        <button type="submit" class="join-team-submit-btn">
-            Join Team
-        </button>
+        <button type="submit" class="ui-btn ui-btn--primary">Join team</button>
     </form>
 </div>
+
+<style>
+.teams-grid { display:grid; grid-template-columns:repeat(auto-fill, minmax(260px,1fr)); gap:var(--space-4); margin-bottom:var(--space-7); }
+.team-card { display:flex; flex-direction:column; gap:var(--space-3); }
+.team-card-top { display:flex; align-items:flex-start; justify-content:space-between; }
+.team-card-name { font-size:var(--fs-lg); font-weight:var(--fw-semibold); color:var(--text); }
+.team-card-desc { font-size:var(--fs-sm); color:var(--text-muted); line-height:1.5; }
+.join-card { max-width:620px; }
+.join-card-head { display:flex; align-items:center; gap:var(--space-3); margin-bottom:var(--space-4); }
+.join-card-head h3 { font-size:var(--fs-md); font-weight:var(--fw-semibold); color:var(--text); }
+.join-card-head p { font-size:var(--fs-sm); color:var(--text-muted); }
+.join-card-form { display:flex; gap:var(--space-3); align-items:center; flex-wrap:wrap; }
+</style>
 {% endblock %}

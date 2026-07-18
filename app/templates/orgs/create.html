@@ -1,68 +1,30 @@
 {% extends "base.html" %}
+{% from 'components/ui.html' import field, textarea_field %}
 {% block title %}Create Team — HiveFlow{% endblock %}
 
 {% block content %}
-<div style="max-width: 540px; margin: 40px auto 0; animation: fadeDown 0.5s ease;">
-    <a href="{{ url_for('orgs.list_orgs') }}" style="color: var(--text-secondary); text-decoration: none; display: inline-flex; align-items: center; font-size: 14px; font-weight: 500; transition: color 0.2s ease;" class="back-link">
-        <i data-lucide="arrow-left" style="width: 16px; height: 16px; margin-right: 6px;"></i> Back to Teams
-    </a>
-</div>
-
-<div class="auth-container" style="max-width: 540px; margin: 20px auto 60px; animation: slideUpFade 0.6s cubic-bezier(0.2, 0.8, 0.2, 1) both;">
-    <div class="premium-card" style="background: var(--surface-solid); border: 1px solid var(--glass-border); border-radius: 20px; padding: 48px; box-shadow: var(--shadow-lg); backdrop-filter: blur(20px);">
-        <div class="auth-header" style="text-align: center; margin-bottom: 36px;">
-            <div style="width: 64px; height: 64px; border-radius: 16px; background: linear-gradient(135deg, var(--accent-light), var(--accent)); display: flex; align-items: center; justify-content: center; margin: 0 auto 24px; box-shadow: 0 8px 24px var(--accent-glow);">
-                <i data-lucide="users" style="color: var(--on-accent); width: 32px; height: 32px;"></i>
-            </div>
-            <h2 style="margin: 0; font-size: 28px; font-weight: 800; color: var(--text);">Create a New Team</h2>
-            <p style="color: var(--text-secondary); margin-top: 12px; font-size: 15px;">Set up a shared workspace and start collaborating on projects together.</p>
+<div class="form-page">
+    <a href="{{ url_for('orgs.list_orgs') }}" class="ui-btn ui-btn--ghost ui-btn--sm" style="margin-bottom:var(--space-4);"><i data-lucide="arrow-left"></i> Teams</a>
+    <div class="ui-card">
+        <div class="form-page-head">
+            <span class="ui-stat-icon" style="width:56px;height:56px;border-radius:14px;"><i data-lucide="users" style="width:26px;height:26px;"></i></span>
+            <h1>Create a team</h1>
+            <p>Set up a shared workspace and start collaborating on projects together.</p>
         </div>
-
-        <form method="POST" action="{{ url_for('orgs.create_org') }}" style="display: flex; flex-direction: column; gap: 24px;">
+        <form method="POST" action="{{ url_for('orgs.create_org') }}">
             <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
-            
-            <div class="form-group" style="position: relative;">
-                <label for="name" style="display: block; margin-bottom: 8px; font-weight: 600; font-size: 13px; color: var(--text-secondary); text-transform: uppercase; letter-spacing: 0.5px;">Team Name</label>
-                <div style="position: relative;">
-                    <i data-lucide="briefcase" style="position: absolute; left: 16px; top: 50%; transform: translateY(-50%); width: 18px; height: 18px; color: var(--text-muted);"></i>
-                    <input type="text" id="name" name="name" required placeholder="E.g., Engineering Team" class="premium-input" style="width: 100%; padding: 14px 16px 14px 44px; border-radius: 12px; border: 1px solid var(--glass-border); background: var(--surface); color: var(--text); font-size: 15px; transition: all 0.3s ease;">
-                </div>
-            </div>
-
-            <div class="form-group">
-                <label for="description" style="display: block; margin-bottom: 8px; font-weight: 600; font-size: 13px; color: var(--text-secondary); text-transform: uppercase; letter-spacing: 0.5px;">Description (Optional)</label>
-                <textarea id="description" name="description" rows="3" placeholder="What is the purpose of this team?" class="premium-input" style="width: 100%; padding: 14px; border-radius: 12px; border: 1px solid var(--glass-border); background: var(--surface); color: var(--text); font-size: 15px; transition: all 0.3s ease; resize: vertical; font-family: inherit;"></textarea>
-            </div>
-
-            <button type="submit" class="btn primary" style="width: 100%; padding: 16px; background: linear-gradient(135deg, var(--accent), #6366f1); color: var(--on-accent); border: none; border-radius: 12px; font-weight: 600; font-size: 16px; cursor: pointer; display: flex; align-items: center; justify-content: center; gap: 8px; box-shadow: 0 4px 15px var(--accent-glow); transition: all 0.3s ease; margin-top: 8px;">
-                Create Team <i data-lucide="arrow-right" style="width: 18px; height: 18px;"></i>
-            </button>
+            {{ field('Team name', 'name', placeholder='e.g. Engineering', icon='briefcase', required=True, attrs='autofocus') }}
+            {{ textarea_field('Description (optional)', 'description', placeholder='What is this team for?', rows=3) }}
+            <button type="submit" class="ui-btn ui-btn--primary ui-btn--lg ui-btn--block" style="margin-top:6px;">Create team <i data-lucide="arrow-right"></i></button>
         </form>
     </div>
 </div>
 
 <style>
-@keyframes slideUpFade {
-    from { opacity: 0; transform: translateY(20px); }
-    to { opacity: 1; transform: translateY(0); }
-}
-@keyframes fadeDown {
-    from { opacity: 0; transform: translateY(-10px); }
-    to { opacity: 1; transform: translateY(0); }
-}
-.back-link:hover {
-    color: var(--text) !important;
-}
-.premium-input:focus {
-    outline: none;
-    border-color: var(--accent) !important;
-    box-shadow: 0 0 0 3px var(--accent-glow);
-    background: var(--surface-elev) !important;
-}
-.btn.primary:hover {
-    transform: translateY(-2px);
-    box-shadow: 0 8px 25px var(--accent-glow) !important;
-    filter: brightness(1.1);
-}
+.form-page { max-width:520px; margin:24px auto; }
+.form-page-head { text-align:center; margin-bottom:var(--space-6); }
+.form-page-head .ui-stat-icon { margin:0 auto var(--space-4); }
+.form-page-head h1 { font-size:var(--fs-2xl); font-weight:var(--fw-bold); color:var(--text); letter-spacing:var(--tracking-tight); }
+.form-page-head p { font-size:var(--fs-base); color:var(--text-muted); margin-top:8px; }
 </style>
 {% endblock %}

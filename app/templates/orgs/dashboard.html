@@ -1,150 +1,117 @@
 {% extends "base.html" %}
+{% from 'components/ui.html' import button, badge, avatar, empty_state %}
 {% block title %}{{ org.name }} — HiveFlow{% endblock %}
 
 {% block content %}
-<div class="org-back-link-container animate-fade-down">
-    <a href="{{ url_for('orgs.list_orgs') }}" class="back-link">
-        <i data-lucide="arrow-left"></i> Back to Teams
-    </a>
-</div>
+<a href="{{ url_for('orgs.list_orgs') }}" class="ui-btn ui-btn--ghost ui-btn--sm" style="margin-bottom:var(--space-4);"><i data-lucide="arrow-left"></i> Teams</a>
 
-<div class="org-header-premium animate-slide-up">
-    <div class="org-header-info-row">
-        <div class="org-header-avatar">
-            {{ org.name[0].upper() }}
-        </div>
+<!-- Org header -->
+<div class="org-head">
+    <div class="org-head-left">
+        <span class="ui-avatar ui-avatar--lg" style="border-radius:14px;">{{ org.name[0]|upper }}</span>
         <div>
-            <h2 class="org-header-title">
-                {{ org.name }}
-                {% if membership.role == 'Admin' %}
-                <span class="badge-admin">Admin</span>
-                {% endif %}
-            </h2>
-            <p class="org-header-desc">{{ org.description if org.description else "No description provided." }}</p>
+            <h1 class="org-head-title">{{ org.name }} {% if membership.role == 'Admin' %}{{ badge('Admin', 'accent') }}{% endif %}</h1>
+            <p class="org-head-desc">{{ org.description if org.description else "No description provided." }}</p>
         </div>
     </div>
-    
-    <div style="display: flex; flex-direction: column; align-items: flex-end; gap: 12px;">
-        <div class="invite-pill">
-            <div class="invite-pill-label">Invite Code</div>
-            <div class="invite-code-pill" title="Click to copy" onclick="navigator.clipboard.writeText('{{ org.invite_code }}').then(() => showToast('Invite code copied to clipboard')).catch(() => showToast('Could not copy. Code: {{ org.invite_code }}', 'error'));">
-                <span>{{ org.invite_code }}</span>
-                <div class="invite-copy-btn">
-                    <i data-lucide="copy"></i>
-                </div>
-            </div>
+    <div class="org-head-right">
+        <button type="button" class="invite-chip" title="Click to copy"
+                onclick="navigator.clipboard.writeText('{{ org.invite_code }}').then(() => showToast('Invite code copied')).catch(() => showToast('Code: {{ org.invite_code }}', 'error'));">
+            <span class="invite-chip-label">Invite code</span>
+            <span class="invite-chip-code">{{ org.invite_code }}</span>
+            <i data-lucide="copy"></i>
+        </button>
+        <div class="org-head-actions">
+            {{ button('Team Docs', variant='secondary', size='sm', icon='book-open', href=url_for('docs.index', slug=org.slug)) }}
+            {{ button('Calendar', variant='secondary', size='sm', icon='calendar-days', href=url_for('calendar.my_calendar', team=org.slug)) }}
+            {% if membership.role == 'Admin' %}
+            {{ button('Analytics', variant='primary', size='sm', icon='bar-chart-2', href=url_for('orgs.analytics', slug=org.slug)) }}
+            {% endif %}
         </div>
-        
-        {% if membership.role == 'Admin' %}
-        <a href="{{ url_for('orgs.analytics', slug=org.slug) }}" class="profile-save-btn" style="background: linear-gradient(135deg, var(--accent-main), var(--accent-dark)); padding: 8px 16px; border-radius: 20px; font-size: 0.9rem; text-decoration: none; display: inline-flex; align-items: center; gap: 6px;">
-            <i data-lucide="bar-chart-2" style="width: 16px; height: 16px;"></i> Team Analytics
-        </a>
-        {% endif %}
     </div>
 </div>
 
-<div class="org-content-grid animate-slide-up">
-    
-    <!-- Left Column: Projects -->
-    <div class="projects-section">
-        <div class="section-header-row">
-            <h3 class="section-header-title">
-                <div class="section-header-icon-box">
-                    <i data-lucide="layout"></i>
-                </div>
-                Projects
-            </h3>
-            <a href="{{ url_for('projects.create_project', org_slug=org.slug) }}" class="profile-save-btn btn-new-project">
-                <i data-lucide="plus"></i> New Project
-            </a>
+<div class="org-grid">
+    <!-- Projects -->
+    <section>
+        <div class="org-section-head">
+            <h2><i data-lucide="layout"></i> Projects</h2>
+            {{ button('New project', variant='secondary', size='sm', icon='plus', href=url_for('projects.create_project', org_slug=org.slug)) }}
         </div>
-        
-        <div class="org-projects-grid">
+        <div class="org-projects">
             {% for project in org.projects %}
-            <a href="{{ url_for('projects.dashboard', project_id=project.id) }}" class="premium-project-card">
-                <div class="project-card-header">
-                    <h4 class="project-card-title">{{ project.name }}</h4>
-                    <div class="project-card-tasks-badge">
-                        {{ project.tasks.count() }} tasks
-                    </div>
+            {% set total_tasks = project.tasks.count() %}
+            {% set done_tasks = project.tasks.filter_by(status='Completed').count() %}
+            {% set pct = ((done_tasks / total_tasks * 100) | round | int) if total_tasks else 0 %}
+            <a href="{{ url_for('projects.dashboard', project_id=project.id) }}" class="ui-card ui-card--link ui-card--sm op">
+                <div class="op-head">
+                    <h3>{{ project.name }}</h3>
+                    {{ badge(total_tasks ~ (' task' if total_tasks == 1 else ' tasks')) }}
                 </div>
-                <p class="project-card-desc">
-                    {{ project.description if project.description else "No description available for this project." }}
-                </p>
-                <div class="project-progress-bar">
-                    <div class="project-progress-fill" style="width: {{ range(25, 95) | random }}%;"></div>
-                </div>
+                <p class="op-desc">{{ project.description if project.description else "No description available." }}</p>
+                <div class="op-meta"><span>{{ done_tasks }} of {{ total_tasks }} done</span><span class="op-pct">{{ pct }}%</span></div>
+                <div class="op-bar"><div class="op-bar-fill" style="width: {{ pct }}%;"></div></div>
             </a>
             {% else %}
-            <div class="empty-projects-state">
-                <div class="empty-projects-icon-box">
-                    <i data-lucide="layout"></i>
-                </div>
-                <h4 class="empty-projects-title">No projects yet</h4>
-                <p class="empty-projects-desc">Create your first project to start organizing team tasks and workflows.</p>
-            </div>
+            {% call empty_state('layout', 'No projects yet', 'Create your first project to start organizing team tasks.') %}
+                {{ button('New project', variant='primary', size='sm', icon='plus', href=url_for('projects.create_project', org_slug=org.slug)) }}
+            {% endcall %}
             {% endfor %}
         </div>
-    </div>
-    
-    <!-- Right Column: Members -->
-    <div class="members-section">
-        <h3 class="members-section-header">
-            <div class="members-header-title-box">
-                <div class="members-header-icon-box">
-                    <i data-lucide="users"></i>
-                </div>
-                Members
-            </div>
-            <span class="members-count-badge">{{ members|length }}</span>
-        </h3>
-        
-        <div class="members-premium-list">
+    </section>
+
+    <!-- Members -->
+    <section>
+        <div class="org-section-head">
+            <h2><i data-lucide="users"></i> Members</h2>
+            <span class="ui-badge">{{ members|length }}</span>
+        </div>
+        <div class="org-members">
             {% for member in members %}
-            <div class="member-premium-row">
-                <div class="member-row-left">
-                    <div class="member-premium-avatar">
-                        {{ member.user.name[0].upper() if member.user.name else member.user.username[0].upper() }}
-                    </div>
+            <div class="om-row">
+                <div class="om-left">
+                    {{ avatar(member.user, size='md') }}
                     <div>
-                        <div class="member-name-row">
-                            {{ member.user.name if member.user.name else member.user.username }}
-                            {% if member.user.id == current_user.id %}
-                            <span class="badge-you">You</span>
-                            {% endif %}
-                        </div>
-                        <div class="member-username">@{{ member.user.username }}</div>
+                        <div class="om-name">{{ member.user.name if member.user.name else member.user.username }}{% if member.user.id == current_user.id %} {{ badge('You', 'accent') }}{% endif %}</div>
+                        <div class="om-handle">@{{ member.user.username }}</div>
                     </div>
                 </div>
-                <div class="role-badge {% if member.role == 'Admin' %}role-badge-admin{% else %}role-badge-member{% endif %}">
-                    {{ member.role }}
-                </div>
+                {{ badge(member.role, 'accent' if member.role == 'Admin' else '') }}
             </div>
             {% endfor %}
         </div>
-    </div>
+    </section>
 </div>
 
 <style>
-@media (max-width: 900px) {
-    .org-header-premium {
-        flex-direction: column !important;
-        align-items: stretch !important;
-        gap: 20px !important;
-    }
-    .org-header-premium .invite-pill {
-        width: 100% !important;
-        text-align: left !important;
-    }
-    .org-content-grid {
-        grid-template-columns: 1fr !important;
-    }
-}
-@media (max-width: 600px) {
-    .org-projects-grid {
-        grid-template-columns: 1fr !important;
-        gap: 14px !important;
-    }
-}
+.org-head { display:flex; align-items:flex-start; justify-content:space-between; gap:var(--space-5); flex-wrap:wrap; margin-bottom:var(--space-7); }
+.org-head-left { display:flex; align-items:center; gap:var(--space-4); }
+.org-head-title { font-size:var(--fs-2xl); font-weight:var(--fw-bold); color:var(--text); display:flex; align-items:center; gap:10px; letter-spacing:-0.01em; }
+.org-head-desc { color:var(--text-muted); font-size:var(--fs-base); margin-top:4px; max-width:52ch; }
+.org-head-right { display:flex; flex-direction:column; align-items:flex-end; gap:var(--space-3); }
+.invite-chip { display:inline-flex; align-items:center; gap:8px; padding:7px 12px; border:1px dashed var(--border-strong); border-radius:var(--radius); background:var(--surface); cursor:pointer; color:var(--text); }
+.invite-chip-label { font-size:var(--fs-xs); color:var(--text-muted); text-transform:uppercase; letter-spacing:0.04em; }
+.invite-chip-code { font-weight:var(--fw-semibold); font-family:monospace; }
+.invite-chip i { width:14px; height:14px; color:var(--text-muted); }
+.org-head-actions { display:flex; gap:var(--space-2); flex-wrap:wrap; justify-content:flex-end; }
+.org-grid { display:grid; grid-template-columns:1.6fr 1fr; gap:var(--space-6); }
+.org-section-head { display:flex; align-items:center; justify-content:space-between; gap:var(--space-3); margin-bottom:var(--space-4); }
+.org-section-head h2 { display:flex; align-items:center; gap:8px; font-size:var(--fs-lg); font-weight:var(--fw-semibold); color:var(--text); }
+.org-section-head h2 i { width:18px; height:18px; color:var(--text-muted); }
+.org-projects { display:grid; grid-template-columns:repeat(auto-fill, minmax(230px,1fr)); gap:var(--space-4); }
+.op { display:flex; flex-direction:column; gap:var(--space-2); }
+.op-head { display:flex; align-items:flex-start; justify-content:space-between; gap:var(--space-2); }
+.op-head h3 { font-size:var(--fs-md); font-weight:var(--fw-semibold); color:var(--text); }
+.op-desc { font-size:var(--fs-sm); color:var(--text-muted); line-height:1.5; flex:1; }
+.op-meta { display:flex; justify-content:space-between; font-size:var(--fs-xs); color:var(--text-muted); }
+.op-pct { color:var(--accent); font-weight:var(--fw-semibold); }
+.op-bar { height:6px; border-radius:999px; background:var(--surface-hover); overflow:hidden; }
+.op-bar-fill { height:100%; border-radius:999px; background:var(--accent); }
+.org-members { display:flex; flex-direction:column; gap:var(--space-2); }
+.om-row { display:flex; align-items:center; justify-content:space-between; gap:var(--space-3); padding:var(--space-3); border:1px solid var(--border); border-radius:var(--radius); }
+.om-left { display:flex; align-items:center; gap:var(--space-3); }
+.om-name { font-weight:var(--fw-medium); color:var(--text); font-size:var(--fs-sm); display:flex; align-items:center; gap:6px; }
+.om-handle { font-size:var(--fs-xs); color:var(--text-muted); }
+@media (max-width:900px) { .org-grid { grid-template-columns:1fr; } .org-head-right { align-items:stretch; width:100%; } .org-head-actions { justify-content:flex-start; } }
 </style>
 {% endblock %}

@@ -254,8 +254,22 @@
                 </div>
                 
                 <div class="premium-section-body">
+                    <a href="{{ url_for('auth.security') }}"
+                       style="display:flex;align-items:center;gap:12px;padding:14px 16px;margin-bottom:18px;
+                              border:1px solid var(--border-color,#e5e7eb);border-radius:12px;text-decoration:none;
+                              color:inherit;transition:border-color .2s;"
+                       onmouseover="this.style.borderColor='var(--accent-light,#8b5cf6)'"
+                       onmouseout="this.style.borderColor='var(--border-color,#e5e7eb)'">
+                        <i data-lucide="monitor-smartphone" style="color:var(--accent-light,#8b5cf6);"></i>
+                        <span style="flex:1;">
+                            <strong style="display:block;">Devices &amp; login activity</strong>
+                            <span style="font-size:13px;color:var(--text-secondary,#888);">See where your account is signed in, from which location, and log out other devices.</span>
+                        </span>
+                        <i data-lucide="chevron-right" style="color:var(--text-secondary,#888);"></i>
+                    </a>
+
                     <p class="security-info-text">Leave these fields blank if you do not wish to change your password.</p>
-                    
+
                     <div class="form-flex-column">
                         <!-- Current Password -->
                         <div>

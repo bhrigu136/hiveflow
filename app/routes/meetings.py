@@ -1,6 +1,6 @@
 from flask import Blueprint, render_template, redirect, url_for, flash, current_app, jsonify, request
 from flask_login import login_required, current_user
-from app.models import Project, OrgMember
+from app.models import Project, OrgMember, Meeting
 import os
 
 meetings_bp = Blueprint('meetings', __name__)
@@ -30,6 +30,30 @@ def project_meeting(project_id):
         project=project,
         room_name=room_name,
         current_user=current_user
+    )
+
+
+@meetings_bp.route('/meetings/<int:meeting_id>/room')
+@login_required
+def meeting_room(meeting_id):
+    """Join the Jitsi room for a scheduled team meeting.
+
+    Access is restricted to members of the meeting's organization. The room
+    name is stored on the meeting (generated at booking time) so everyone who
+    opens this URL lands in the same private room.
+    """
+    meeting = Meeting.query.get_or_404(meeting_id)
+
+    member = OrgMember.query.filter_by(org_id=meeting.org_id, user_id=current_user.id).first()
+    if member is None:
+        flash("You do not have permission to join this meeting room.", 'danger')
+        return redirect(url_for('calendar.my_calendar'))
+
+    return render_template(
+        'calendar/room.html',
+        meeting=meeting,
+        room_name=meeting.room_name or f"HiveFlow_Meeting_{meeting.id}",
+        current_user=current_user,
     )
 
 

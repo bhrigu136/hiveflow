@@ -136,10 +136,12 @@
     scrollbar-width: none;
     -ms-overflow-style: none;
     position: sticky;
-    top: var(--topbar-h, 56px);
+    /* Desktop has no top bar (sidebar layout) → stick to the very top.
+       The 56px mobile-topbar offset is re-applied below at <=960px. */
+    top: 0;
     z-index: 40;
     background: var(--bg);
-    background: color-mix(in srgb, var(--bg) 85%, transparent);
+    background: color-mix(in srgb, var(--bg) 92%, transparent);
     -webkit-backdrop-filter: saturate(180%) blur(12px);
     backdrop-filter: saturate(180%) blur(12px);
     border-bottom: 1px solid var(--border-muted);
@@ -147,6 +149,12 @@
     margin: 0 -24px 28px;
     padding-left: 24px;
     padding-right: 24px;
+}
+
+/* Below 960px the fixed mobile topbar (56px) appears — push the sticky
+   tabs down so they stick just under it instead of behind it. */
+@media (max-width: 960px) {
+    .tracker-tabs { top: var(--topbar-h, 56px); }
 }
 
 .tracker-tabs::-webkit-scrollbar { display: none; }

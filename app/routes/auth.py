@@ -5,10 +5,11 @@ from datetime import datetime, timedelta, date
 from urllib.parse import urlparse, urljoin
 
 from werkzeug.utils import secure_filename
-from flask import Blueprint, render_template, request, redirect, url_for, flash, current_app, jsonify
+from flask import Blueprint, render_template, request, redirect, url_for, flash, current_app, jsonify, session
 from flask_login import login_user, logout_user, login_required, current_user
-from app.models import User, Task
+from app.models import User, Task, LoginSession, ActivityLog
 from app.extensions import db, limiter
+from app.security_utils import record_login_session, revoke_current_session, SESSION_KEY
 
 BREVO_API_URL = "https://api.brevo.com/v3/smtp/email"
 
@@ -413,6 +414,12 @@ def login():
                 return render_template('login.html', show_resend=True, resend_email=email_or_username)
 
             login_user(user)
+            # Record this device/session for the Security page (best-effort)
+            try:
+                record_login_session(user)
+            except Exception as e:
+                current_app.logger.warning(f'[login] could not record session: {e}')
+                db.session.rollback()
             flash('Login successful!', 'success')
             next_page = request.args.get('next')
             # Guard against open-redirect attacks — only follow same-host URLs
@@ -430,9 +437,86 @@ def login():
 @auth_bp.route('/logout')
 @login_required
 def logout():
+    # Mark this device's session as revoked before clearing the login
+    revoke_current_session()
     logout_user()
     flash('You have been logged out.', 'info')
     return redirect(url_for('auth.login'))
+
+
+# ─── Security / Active Devices ───────────────────────────
+
+@auth_bp.route('/security')
+@login_required
+def security():
+    """Show every device signed into this account, plus a recent activity trail."""
+    current_token = session.get(SESSION_KEY)
+
+    sessions = (
+        LoginSession.query
+        .filter_by(user_id=current_user.id, revoked=False)
+        .order_by(LoginSession.last_seen.desc())
+        .all()
+    )
+
+    activities = (
+        ActivityLog.query
+        .filter_by(user_id=current_user.id)
+        .order_by(ActivityLog.created_at.desc())
+        .limit(100)
+        .all()
+    )
+
+    return render_template(
+        'security/devices.html',
+        sessions=sessions,
+        activities=activities,
+        current_token=current_token,
+        now=datetime.utcnow(),
+    )
+
+
+@auth_bp.route('/security/revoke/<int:session_id>', methods=['POST'])
+@login_required
+def revoke_session(session_id):
+    """Remotely log out one device. If it's the current device, sign out here too."""
+    ls = LoginSession.query.filter_by(id=session_id, user_id=current_user.id).first()
+    if not ls:
+        flash('That session was not found.', 'danger')
+        return redirect(url_for('auth.security'))
+
+    ls.revoked = True
+    ls.revoked_at = datetime.utcnow()
+    db.session.commit()
+
+    if ls.session_token == session.get(SESSION_KEY):
+        session.pop(SESSION_KEY, None)
+        logout_user()
+        flash('You signed out this device.', 'info')
+        return redirect(url_for('auth.login'))
+
+    flash(f'Logged out {ls.device_label}. That device will be signed out on its next action.', 'success')
+    return redirect(url_for('auth.security'))
+
+
+@auth_bp.route('/security/revoke-others', methods=['POST'])
+@login_required
+def revoke_other_sessions():
+    """Log out every device except the one making this request."""
+    current_token = session.get(SESSION_KEY)
+    others = LoginSession.query.filter(
+        LoginSession.user_id == current_user.id,
+        LoginSession.revoked == False,  # noqa: E712
+        LoginSession.session_token != current_token,
+    ).all()
+
+    for ls in others:
+        ls.revoked = True
+        ls.revoked_at = datetime.utcnow()
+    db.session.commit()
+
+    flash(f'Logged out {len(others)} other device(s).', 'success')
+    return redirect(url_for('auth.security'))
 
 
 # ─── Forgot Password ────────────────────────────────────

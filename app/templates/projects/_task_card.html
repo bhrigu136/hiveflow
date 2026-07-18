@@ -1,91 +1,65 @@
-<div class="kanban-task-card prio-{{ task.priority|lower }}">
-    <div style="display:flex;justify-content:space-between;align-items:flex-start;gap:12px;">
-        <h4 class="kanban-task-title">{{ task.title }}</h4>
-        <span class="kanban-prio-tag prio-{{ task.priority|lower }}">{{ task.priority }}</span>
+{% from 'components/ui.html' import badge, icon_button, avatar %}
+{% set _pv = {'Low': '', 'Medium': 'warning', 'High': 'danger'}.get(task.priority, '') %}
+<div class="kb-card prio-{{ task.priority|lower }}">
+    <div class="kb-card-top">
+        <h4 class="kb-title">{{ task.title }}</h4>
+        {{ badge(task.priority, _pv) }}
     </div>
+    {% if task.description %}<p class="kb-desc">{{ task.description }}</p>{% endif %}
 
-    <div class="kanban-card-row">
-        <div class="kanban-assignee">
+    <div class="kb-card-bottom">
+        <div class="kb-assignee">
             {% if task.assignee %}
-            <div class="kanban-avatar" title="{{ task.assignee.name if task.assignee.name else task.assignee.username }}">
-                {{ task.assignee.name[0].upper() if task.assignee.name else task.assignee.username[0].upper() }}
-            </div>
-            <span class="kanban-assignee-name">{{ task.assignee.name if task.assignee.name else task.assignee.username }}</span>
+            {{ avatar(task.assignee, size='sm') }}
+            <span>{{ task.assignee.name if task.assignee.name else task.assignee.username }}</span>
             {% else %}
-            <div class="kanban-avatar unassigned">
-                <i data-lucide="user" style="width:10px;height:10px;"></i>
-            </div>
+            <span class="kb-avatar-none"><i data-lucide="user"></i></span>
             <span>Unassigned</span>
             {% endif %}
         </div>
 
-        {# Actions: status toggle for admin or assignee; delete for admin only #}
         {% set can_toggle = is_admin or (task.assigned_to and task.assigned_to == current_user.id) %}
-        <div class="kanban-actions">
+        <div class="kb-actions">
             {% if can_toggle %}
             <form action="{{ url_for('tasks.toggle_status', task_id=task.id) }}" method="POST" style="margin:0;">
                 <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
                 <input type="hidden" name="next" value="{{ request.url }}">
-                {% if task.status == 'Pending' %}
-                <button type="submit" class="kanban-icon-btn start" title="Start working">
-                    <i data-lucide="play-circle" style="width:16px;height:16px;"></i>
-                </button>
-                {% elif task.status == 'Working' %}
-                <button type="submit" class="kanban-icon-btn complete" title="Mark completed">
-                    <i data-lucide="check-circle" style="width:16px;height:16px;"></i>
-                </button>
-                {% else %}
-                <button type="submit" class="kanban-icon-btn reopen" title="Reopen task">
-                    <i data-lucide="rotate-ccw" style="width:16px;height:16px;"></i>
-                </button>
-                {% endif %}
+                {% if task.status == 'Pending' %}{{ icon_button('play', type='submit', size='sm', title='Start working') }}
+                {% elif task.status == 'Working' %}{{ icon_button('check', type='submit', size='sm', title='Mark completed') }}
+                {% else %}{{ icon_button('rotate-ccw', type='submit', size='sm', title='Reopen task') }}{% endif %}
             </form>
             {% endif %}
             {% if is_admin %}
-            <button type="button"
-                    class="task-edit-btn kanban-icon-btn edit"
-                    data-task-id="{{ task.id }}"
-                    data-task-title="{{ task.title }}"
-                    data-task-description="{{ task.description or '' }}"
-                    data-task-priority="{{ task.priority }}"
-                    data-task-status="{{ task.status }}"
-                    data-task-assigned="{{ task.assigned_to or '' }}"
-                    title="Edit task">
-                <i data-lucide="edit-3" style="width:16px;height:16px;"></i>
-            </button>
+            <button type="button" class="ui-icon-btn ui-icon-btn--sm task-edit-btn"
+                    data-id="{{ task.id }}" data-title="{{ task.title }}" data-description="{{ task.description or '' }}"
+                    data-priority="{{ task.priority }}" data-status="{{ task.status }}" data-assigned="{{ task.assigned_to or '' }}"
+                    @click="openEdit($event.currentTarget.dataset)" title="Edit task"><i data-lucide="edit-3"></i></button>
             <form action="{{ url_for('tasks.delete_task', task_id=task.id) }}" method="POST" style="margin:0;" data-confirm="Delete this task? This cannot be undone.">
                 <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
                 <input type="hidden" name="next" value="{{ request.url }}">
-                <button type="submit" class="kanban-icon-btn delete" title="Delete task">
-                    <i data-lucide="trash-2" style="width:16px;height:16px;"></i>
-                </button>
+                {{ icon_button('trash-2', variant='danger', type='submit', size='sm', title='Delete task') }}
             </form>
             {% endif %}
         </div>
     </div>
 
-    <!-- Task Comments -->
-    <details class="kanban-comments">
-        <summary>
-            <i data-lucide="message-square" style="width:14px;height:14px;"></i> Comments ({{ task.comments.count() }})
-        </summary>
-        <div style="display:flex;flex-direction:column;gap:6px;">
+    <details class="kb-comments">
+        <summary><i data-lucide="message-square"></i> Comments ({{ task.comments.count() }})</summary>
+        <div class="kb-comments-body">
             {% for comment in task.comments %}
-            <div class="kanban-comment">
-                <div class="kanban-comment-head">
+            <div class="kb-comment">
+                <div class="kb-comment-head">
                     <strong>{{ comment.creator.name if comment.creator.name else comment.creator.username }}</strong>
                     <time datetime="{{ comment.created_at.strftime('%Y-%m-%dT%H:%M:%SZ') }}" data-fmt="compact">{{ comment.created_at.strftime('%b %d, %H:%M') }}</time>
                 </div>
-                <div class="kanban-comment-body">{{ comment.content }}</div>
+                <div class="kb-comment-body">{{ comment.content }}</div>
             </div>
             {% endfor %}
-            <form action="{{ url_for('discussions.add_task_comment', task_id=task.id) }}" method="POST" class="kanban-comment-form" onsubmit="if(this.dataset.submitting) return false; this.dataset.submitting = true; this.querySelector('button[type=submit]').style.opacity = '0.5'; return true;">
+            <form action="{{ url_for('discussions.add_task_comment', task_id=task.id) }}" method="POST" class="kb-comment-form">
                 <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
                 <input type="hidden" name="next" value="{{ request.url }}">
-                <input type="text" name="content" required placeholder="Write a comment...">
-                <button type="submit" class="kanban-comment-send" title="Post comment">
-                    <i data-lucide="send" style="width:14px;height:14px;"></i>
-                </button>
+                <input type="text" name="content" required placeholder="Write a comment…" class="ui-input">
+                {{ icon_button('send', type='submit', size='sm', title='Post comment') }}
             </form>
         </div>
     </details>

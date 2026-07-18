@@ -1,8 +1,11 @@
-from flask import Blueprint, render_template, request, redirect, url_for, flash
+import csv
+import io
+from flask import Blueprint, render_template, request, redirect, url_for, flash, Response
 from flask_login import login_required, current_user
 from app.models import Organization, OrgMember, Project, Task
 from app.extensions import db
 from app.utils import create_notification
+from app.services.analytics import project_analytics
 
 projects_bp = Blueprint('projects', __name__, url_prefix='/projects')
 
@@ -199,4 +202,33 @@ def analytics(project_id):
     # Sort members by completed tasks descending
     members_data.sort(key=lambda x: x['completed'], reverse=True)
 
-    return render_template('projects/analytics.html', project=project, org=org, members_data=members_data)
+    stats = project_analytics(project.id)
+    return render_template('projects/analytics.html', project=project, org=org,
+                           members_data=members_data, stats=stats)
+
+
+@projects_bp.route('/<int:project_id>/analytics/export.csv')
+@login_required
+def analytics_export(project_id):
+    project = Project.query.get_or_404(project_id)
+    org = project.organization
+    membership = OrgMember.query.filter_by(org_id=org.id, user_id=current_user.id).first()
+    if not membership or membership.role != 'Admin':
+        flash('You do not have permission to export analytics.', 'danger')
+        return redirect(url_for('projects.dashboard', project_id=project.id))
+
+    stats = project_analytics(project.id)
+    buf = io.StringIO()
+    writer = csv.writer(buf)
+    writer.writerow(['Metric', 'Value'])
+    for label, key in (('Total tasks', 'total'), ('Completed', 'completed'),
+                       ('In progress', 'working'), ('Pending', 'pending'),
+                       ('Overdue', 'overdue'), ('Completion rate %', 'completion_rate')):
+        writer.writerow([label, stats['totals'][key]])
+    writer.writerow([])
+    writer.writerow(['Member', 'Assigned', 'Completed'])
+    for m in stats['members']:
+        writer.writerow([m['name'], m['total'], m['completed']])
+
+    return Response(buf.getvalue(), mimetype='text/csv',
+                    headers={'Content-Disposition': f'attachment; filename=project-{project.id}-analytics.csv'})

@@ -1,6 +1,10 @@
 {% extends "base.html" %}
 {% block title %}Team Analytics - {{ org.name }} — HiveFlow{% endblock %}
 
+{% block extra_head %}
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
+{% endblock %}
+
 {% block content %}
 <div class="org-back-link-container animate-fade-down">
     <a href="{{ url_for('orgs.dashboard', slug=org.slug) }}" class="back-link">
@@ -14,6 +18,10 @@
     </h2>
     <p class="profile-subtitle">Track individual contributions and task completion across the entire {{ org.name }} organization.</p>
 </div>
+
+{% set export_url = url_for('orgs.analytics_export', slug=org.slug) %}
+{% set show_meetings = true %}
+{% include '_analytics_dashboard.html' %}
 
 <div class="members-premium-list animate-slide-up" style="display: flex; flex-direction: column; gap: 20px;">
     {% for data in members_data %}

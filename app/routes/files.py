@@ -1,6 +1,6 @@
 from flask import Blueprint, request, jsonify
 from flask_login import login_required, current_user
-from app.models import FileAttachment, Project, Task, Discussion, OrgMember
+from app.models import FileAttachment, Project, Task, Discussion, OrgMember, Document
 from app.extensions import db
 from datetime import datetime, timezone
 import os
@@ -17,6 +17,15 @@ def check_project_access(project_id):
     member = OrgMember.query.filter_by(org_id=project.org_id, user_id=current_user.id).first()
     return member is not None
 
+def check_document_access(document_id):
+    """Verify current_user belongs to the org of the document being attached to."""
+    if not document_id:
+        return True
+    doc = Document.query.get(document_id)
+    if not doc or doc.deleted_at is not None:
+        return False
+    return OrgMember.query.filter_by(org_id=doc.org_id, user_id=current_user.id).first() is not None
+
 @files_bp.route('/api/files/sign-upload', methods=['POST'])
 @login_required
 def sign_upload():
@@ -25,11 +34,14 @@ def sign_upload():
     filename = data.get('filename')
     mime_type = data.get('mime_type')
     project_id = data.get('project_id')
+    document_id = data.get('document_id')
 
     if not filename:
         return jsonify({'error': 'Filename is required'}), 400
 
     if project_id and not check_project_access(project_id):
+        return jsonify({'error': 'Access denied'}), 403
+    if document_id and not check_document_access(document_id):
         return jsonify({'error': 'Access denied'}), 403
 
     supabase_url = os.environ.get('SUPABASE_URL')
@@ -44,7 +56,12 @@ def sign_upload():
         
         # Format a unique file path: uploads/project_<id>/user_<id>/timestamp_<filename>
         timestamp = int(datetime.now(timezone.utc).timestamp())
-        folder = f"project_{project_id}" if project_id else f"user_{current_user.id}"
+        if project_id:
+            folder = f"project_{project_id}"
+        elif document_id:
+            folder = f"doc_{document_id}"
+        else:
+            folder = f"user_{current_user.id}"
         file_path = f"{folder}/{timestamp}_{filename}"
 
         # Generate signed upload URL via Supabase Storage REST API
@@ -84,11 +101,14 @@ def register_file():
     project_id = data.get('project_id')
     task_id = data.get('task_id')
     discussion_id = data.get('discussion_id')
+    document_id = data.get('document_id')
 
     if not filename or not file_url:
         return jsonify({'error': 'Filename and file URL are required'}), 400
 
     if project_id and not check_project_access(project_id):
+        return jsonify({'error': 'Access denied'}), 403
+    if document_id and not check_document_access(document_id):
         return jsonify({'error': 'Access denied'}), 403
 
     try:
@@ -100,7 +120,8 @@ def register_file():
             uploaded_by=current_user.id,
             project_id=project_id,
             task_id=task_id,
-            discussion_id=discussion_id
+            discussion_id=discussion_id,
+            document_id=document_id
         )
         db.session.add(attachment)
         db.session.commit()
