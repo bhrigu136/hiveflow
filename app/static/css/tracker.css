@@ -220,7 +220,7 @@
     position: absolute;
     top: 0; left: 0; right: 0;
     height: 1px;
-    background: linear-gradient(90deg, transparent, rgba(139, 92, 246, 0.25), transparent);
+    background: linear-gradient(90deg, transparent, rgba(167, 139, 250, 0.25), transparent);
     pointer-events: none;
 }
 
@@ -504,7 +504,7 @@ html[data-theme="light"] .create-plan-form {
     position: absolute;
     top: 0; left: 0; right: 0;
     height: 1px;
-    background: linear-gradient(90deg, transparent, rgba(139, 92, 246, 0.2), transparent);
+    background: linear-gradient(90deg, transparent, rgba(167, 139, 250, 0.2), transparent);
     pointer-events: none;
 }
 
@@ -619,7 +619,7 @@ html[data-theme="light"] .kpi-card {
     position: absolute;
     top: 0; left: 0; right: 0;
     height: 1px;
-    background: linear-gradient(90deg, transparent, rgba(139, 92, 246, 0.2), transparent);
+    background: linear-gradient(90deg, transparent, rgba(167, 139, 250, 0.2), transparent);
     pointer-events: none;
 }
 
@@ -1131,7 +1131,7 @@ html[data-theme="light"] .job-form {
     position: absolute;
     top: 0; left: 0; right: 0;
     height: 1px;
-    background: linear-gradient(90deg, transparent, rgba(139, 92, 246, 0.2), transparent);
+    background: linear-gradient(90deg, transparent, rgba(167, 139, 250, 0.2), transparent);
     pointer-events: none;
 }
 
@@ -1580,7 +1580,7 @@ html[data-theme="light"] .radar-chart-container {
     position: absolute;
     top: 0; left: 0; right: 0;
     height: 1px;
-    background: linear-gradient(90deg, transparent, rgba(139, 92, 246, 0.2), transparent);
+    background: linear-gradient(90deg, transparent, rgba(167, 139, 250, 0.2), transparent);
     pointer-events: none;
 }
 

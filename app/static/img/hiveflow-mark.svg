@@ -1,0 +1,28 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 128 128" role="img" aria-labelledby="title desc">
+  <title id="title">HiveFlow mark</title>
+  <desc id="desc">A hexagonal hive cell with a flowing check path for the HiveFlow product.</desc>
+  <defs>
+    <linearGradient id="hf-shell" x1="23" y1="19" x2="103" y2="111" gradientUnits="userSpaceOnUse">
+      <stop offset="0" stop-color="#0f172a"/>
+      <stop offset="1" stop-color="#161225"/>
+    </linearGradient>
+    <linearGradient id="hf-cell" x1="33" y1="30" x2="92" y2="98" gradientUnits="userSpaceOnUse">
+      <stop offset="0" stop-color="#c4b5fd"/>
+      <stop offset=".52" stop-color="#8b5cf6"/>
+      <stop offset="1" stop-color="#6d28d9"/>
+    </linearGradient>
+    <linearGradient id="hf-flow" x1="26" y1="88" x2="104" y2="42" gradientUnits="userSpaceOnUse">
+      <stop offset="0" stop-color="#34d399"/>
+      <stop offset=".54" stop-color="#2dd4bf"/>
+      <stop offset="1" stop-color="#a7f3d0"/>
+    </linearGradient>
+  </defs>
+  <path fill="url(#hf-shell)" d="M64 6.8c4.4 0 8.8 1.2 12.6 3.4l34.5 19.9a25.1 25.1 0 0 1 12.6 21.8v39.8c0 9-4.8 17.3-12.6 21.8l-34.5 20a25.2 25.2 0 0 1-25.2 0l-34.5-20A25.1 25.1 0 0 1 4.3 91.7V51.9c0-9 4.8-17.3 12.6-21.8l34.5-19.9A25.1 25.1 0 0 1 64 6.8Z"/>
+  <path fill="#fff" d="M64 18.2c2.4 0 4.7.6 6.8 1.8l29.8 17.2a13.6 13.6 0 0 1 6.8 11.8v34.4c0 4.9-2.6 9.3-6.8 11.8l-29.8 17.2a13.6 13.6 0 0 1-13.6 0L27.4 95.2a13.6 13.6 0 0 1-6.8-11.8V49c0-4.9 2.6-9.3 6.8-11.8L57.2 20c2.1-1.2 4.4-1.8 6.8-1.8Z"/>
+  <path fill="url(#hf-cell)" d="M36.2 45.5 56.8 33.6v29.9L30.3 78.8V55.7c0-4.2 2.2-8.1 5.9-10.2Z"/>
+  <path fill="url(#hf-cell)" d="M62.9 30.7c1.8-.9 3.9-.9 5.7.1L90.4 43.4c3.7 2.1 5.9 6 5.9 10.2v12.1L63 84.9 62.9 30.7Z" opacity=".9"/>
+  <path fill="url(#hf-cell)" d="M31.8 87.8 58 72.7v31.4c-1.1-.3-2.2-.7-3.2-1.3L36.2 92c-1.8-1-3.3-2.5-4.4-4.2Z" opacity=".88"/>
+  <path fill="url(#hf-cell)" d="M69.2 91.6 96.3 76v7.4c0 4.2-2.2 8.1-5.9 10.2L70.5 105c-.5.3-.9.5-1.4.7l.1-14.1Z" opacity=".74"/>
+  <path fill="none" stroke="url(#hf-flow)" stroke-linecap="round" stroke-linejoin="round" stroke-width="13.5" d="M31.1 87.4c17.4-10.9 33.5-18.9 45.2-23.1 8.6-3.1 13.9-11.1 20.6-18.7"/>
+  <path fill="none" stroke="#fff" stroke-linecap="round" stroke-linejoin="round" stroke-width="4.4" d="M36.8 84c16.4-9.9 31.4-17.1 42.1-21.1 6.2-2.3 10-7.4 14.9-13.1" opacity=".68"/>
+</svg>

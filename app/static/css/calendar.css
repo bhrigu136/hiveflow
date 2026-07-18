@@ -710,7 +710,7 @@
     cursor: pointer;
 }
 .cal-hourly-click-cell:hover {
-    background: rgba(139, 92, 246, 0.03);
+    background: rgba(167, 139, 250, 0.03);
 }
 
 /* Positioning blocks */

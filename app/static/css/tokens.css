@@ -1,5 +1,5 @@
 /* ============================================================================
-   HiveFlow design tokens — premium product aesthetic (Linear / Stripe / Vercel).
+   HiveFlow design tokens — Superhuman aesthetic (Rich Obsidian + Warm Parchment).
    Loaded after style.css so these win. Includes a compatibility shim so every
    legacy token keeps working during the UI migration.
    ============================================================================ */
@@ -7,44 +7,44 @@
 :root {
     color-scheme: dark;
 
-    /* ---- Surfaces ---- */
-    --bg:             #0a0b0f;
-    --bg-start:       #0a0b0f;
-    --bg-mid:         #0a0b0f;
-    --bg-end:         #0a0b0f;
-    --surface:        #14151b;
-    --surface-hover:  #1b1d25;
-    --surface-solid:  #14151b;
-    --surface-sunken: #0e0f14;
-    --surface-elev:   #1a1c24;
+    /* ---- Surfaces (Rich Obsidian) ---- */
+    --bg:             #0f0b1e;
+    --bg-start:       #0f0b1e;
+    --bg-mid:         #0f0b1e;
+    --bg-end:         #0f0b1e;
+    --surface:        #161225;
+    --surface-hover:  #1e1932;
+    --surface-solid:  #161225;
+    --surface-sunken: #0a0816;
+    --surface-elev:   #1a1530;
 
-    --glass:         rgba(20, 21, 27, 0.72);
-    --glass-border:  #262834;
-    --glass-strong:  #343745;
-    --border:        #23252f;
-    --border-muted:  #1a1c24;
-    --border-strong: #313442;
+    --glass:         rgba(22, 18, 37, 0.72);
+    --glass-border:  #2a2442;
+    --glass-strong:  #342d50;
+    --border:        #2a2442;
+    --border-muted:  #1e1932;
+    --border-strong: #342d50;
 
-    --text:           #f3f4f6;
-    --text-secondary: #b4b7c2;
-    --text-muted:     #777b8a;
+    --text:           #ededf0;
+    --text-secondary: #a8a3b8;
+    --text-muted:     #6b6580;
 
-    /* ---- Accent: indigo→violet, used as a gradient for premium surfaces ---- */
-    --accent:        #8b87ff;
-    --accent-light:  #a5a1ff;
-    --accent-hover:  #9f9bff;
-    --accent-ink:    #6d63ff;
-    --accent-soft:   rgba(139, 135, 255, 0.14);
-    --accent-ring:   rgba(139, 135, 255, 0.40);
-    --accent-glow:   rgba(139, 135, 255, 0.45);
+    /* ---- Accent: lavender mysteria ---- */
+    --accent:        #a78bfa;
+    --accent-light:  #c4b5fd;
+    --accent-hover:  #8b5cf6;
+    --accent-ink:    #7c3aed;
+    --accent-soft:   rgba(167, 139, 250, 0.14);
+    --accent-ring:   rgba(167, 139, 250, 0.40);
+    --accent-glow:   rgba(167, 139, 250, 0.30);
     --on-accent:     #ffffff;
-    --accent-grad:        linear-gradient(135deg, #7c6cff 0%, #6366f1 100%);
-    --accent-grad-hover:  linear-gradient(135deg, #897aff 0%, #7176f4 100%);
+    --accent-grad:        linear-gradient(135deg, #a78bfa 0%, #8b5cf6 100%);
+    --accent-grad-hover:  linear-gradient(135deg, #c4b5fd 0%, #a78bfa 100%);
 
     --success: #34d399; --success-soft: rgba(52, 211, 153, 0.14);
     --warning: #fbbf24; --warning-soft: rgba(251, 191, 36, 0.14);
-    --danger:  #fb7185; --danger-soft:  rgba(251, 113, 133, 0.14);
-    --info:    #60a5fa; --info-soft:    rgba(96, 165, 250, 0.14);
+    --danger:  #f87171; --danger-soft:  rgba(248, 113, 113, 0.14);
+    --info:    #a78bfa; --info-soft:    rgba(167, 139, 250, 0.14);
     --sky:     #38bdf8;
 
     --radius-xs: 7px;
@@ -65,7 +65,7 @@
     --space-1: 4px;  --space-2: 8px;  --space-3: 12px; --space-4: 16px;
     --space-5: 20px; --space-6: 24px; --space-7: 32px; --space-8: 48px;
 
-    --font: "Inter", -apple-system, BlinkMacSystemFont, "Segoe UI", "Helvetica Neue", Arial, sans-serif;
+    --font: "Manrope", -apple-system, BlinkMacSystemFont, "Segoe UI", "Helvetica Neue", Arial, sans-serif;
     --fs-xs: 12px; --fs-sm: 13px; --fs-base: 14px; --fs-md: 15px;
     --fs-lg: 17px; --fs-xl: 21px; --fs-2xl: 26px; --fs-3xl: 34px; --fs-4xl: 44px;
     --fw-normal: 400; --fw-medium: 500; --fw-semibold: 600; --fw-bold: 700; --fw-black: 800;
@@ -75,7 +75,7 @@
     --ease: cubic-bezier(.4, 0, .2, 1);
     --ease-out: cubic-bezier(.16, 1, .3, 1);
     --transition: 0.18s var(--ease);
-    --overlay: rgba(8, 9, 13, 0.66);
+    --overlay: rgba(10, 8, 22, 0.66);
 
     --sidebar-w: 244px;
     --sidebar-w-collapsed: 64px;
@@ -88,53 +88,55 @@
 html[data-theme="light"] {
     color-scheme: light;
 
-    --bg:             #f6f7fb;
-    --bg-start:       #f6f7fb;
-    --bg-mid:         #f6f7fb;
-    --bg-end:         #f6f7fb;
+    /* ---- Warm Parchment backgrounds ---- */
+    --bg:             #faf8f5;
+    --bg-start:       #faf8f5;
+    --bg-mid:         #faf8f5;
+    --bg-end:         #faf8f5;
     --surface:        #ffffff;
-    --surface-hover:  #f5f6fa;
+    --surface-hover:  #f5f2ed;
     --surface-solid:  #ffffff;
-    --surface-sunken: #fafbfd;
+    --surface-sunken: #f7f5f1;
     --surface-elev:   #ffffff;
 
     --glass:         rgba(255, 255, 255, 0.72);
-    --glass-border:  #e9eaf0;
-    --glass-strong:  #d7d9e3;
-    --border:        #e7e8ef;
-    --border-muted:  #f0f1f5;
-    --border-strong: #d9dbe5;
+    --glass-border:  #e5e0d8;
+    --glass-strong:  #d5d0c7;
+    --border:        #e5e0d8;
+    --border-muted:  #f0ece6;
+    --border-strong: #d5d0c7;
 
-    --text:           #15161c;
-    --text-secondary: #4a4d5c;
-    --text-muted:     #8a8d9c;
+    --text:           #1f1d1a;
+    --text-secondary: #4a4640;
+    --text-muted:     #8a857d;
 
-    --accent:        #6d5cf5;
-    --accent-light:  #8b7bff;
-    --accent-hover:  #5b48e8;
-    --accent-ink:    #5b48e8;
-    --accent-soft:   #efeefe;
-    --accent-ring:   rgba(109, 92, 245, 0.24);
-    --accent-glow:   rgba(109, 92, 245, 0.18);
+    /* Mysteria purple accent */
+    --accent:        #6d28d9;
+    --accent-light:  #8b5cf6;
+    --accent-hover:  #5b21b6;
+    --accent-ink:    #5b21b6;
+    --accent-soft:   #f3eeff;
+    --accent-ring:   rgba(109, 40, 217, 0.24);
+    --accent-glow:   rgba(109, 40, 217, 0.18);
     --on-accent:     #ffffff;
-    --accent-grad:        linear-gradient(135deg, #7c3aed 0%, #6366f1 100%);
-    --accent-grad-hover:  linear-gradient(135deg, #8b46f7 0%, #6f72f4 100%);
+    --accent-grad:        linear-gradient(135deg, #6d28d9 0%, #5b21b6 100%);
+    --accent-grad-hover:  linear-gradient(135deg, #8b5cf6 0%, #6d28d9 100%);
 
-    --success: #059669; --success-soft: #e7f7f1;
-    --warning: #d97706; --warning-soft: #fdf2e3;
-    --danger:  #e11d48; --danger-soft:  #fcebef;
-    --info:    #2563eb; --info-soft:    #e9f0fe;
+    --success: #059669; --success-soft: #d1fae5;
+    --warning: #d97706; --warning-soft: #fef3c7;
+    --danger:  #dc2626; --danger-soft:  #fee2e2;
+    --info:    #6d28d9; --info-soft:    #f3eeff;
     --sky:     #0ea5e9;
 
-    --shadow-sm:   0 1px 2px rgba(16, 24, 40, 0.06);
-    --shadow:      0 2px 6px -1px rgba(16, 24, 40, 0.08), 0 4px 14px -4px rgba(16, 24, 40, 0.08);
-    --shadow-md:   0 12px 28px -8px rgba(16, 24, 40, 0.14), 0 4px 8px -4px rgba(16, 24, 40, 0.06);
-    --shadow-lg:   0 28px 60px -16px rgba(16, 24, 40, 0.22), 0 10px 24px -12px rgba(16, 24, 40, 0.12);
+    --shadow-sm:   0 1px 2px rgba(120, 100, 80, 0.06);
+    --shadow:      0 2px 6px -1px rgba(120, 100, 80, 0.08), 0 4px 14px -4px rgba(120, 100, 80, 0.08);
+    --shadow-md:   0 12px 28px -8px rgba(120, 100, 80, 0.14), 0 4px 8px -4px rgba(120, 100, 80, 0.06);
+    --shadow-lg:   0 28px 60px -16px rgba(120, 100, 80, 0.22), 0 10px 24px -12px rgba(120, 100, 80, 0.12);
     --shadow-accent: 0 8px 24px -6px var(--accent-ring);
     --shadow-glow: 0 0 0 3px var(--accent-ring);
     --shadow-glow-soft: none;
 
-    --overlay: rgba(20, 22, 34, 0.40);
+    --overlay: rgba(31, 29, 26, 0.40);
 }
 
 /* ============================================================================
@@ -152,11 +154,11 @@ html[data-theme="light"] {
     --r-md:          var(--radius);
 }
 
-/* Flat canvas (no pulsing wash); a whisper of accent depth at the top in dark. */
+/* Flat canvas; a whisper of mysteria depth at the top in dark. */
 body::before { content: none !important; }
 html[data-theme="dark"] body::before {
     content: ''; position: fixed; inset: 0; pointer-events: none; z-index: 0;
-    background: radial-gradient(75% 45% at 50% -8%, rgba(124, 108, 255, 0.10), transparent 65%);
+    background: radial-gradient(75% 45% at 50% -8%, rgba(167, 139, 250, 0.08), transparent 65%);
 }
 
 @media (prefers-reduced-motion: reduce) {
