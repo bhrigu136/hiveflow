@@ -400,8 +400,8 @@
 <script>
 (function () {
     // 1. Data Serialization
-    var meetings = {{ meetings_json | safe }};
-    var tasks = {{ tasks_json | safe }};
+    var meetings = {{ meetings_json | tojson }};
+    var tasks = {{ tasks_json | tojson }};
     var teams = {{ teams_data | tojson }};
     
     // Server state params

@@ -9,7 +9,6 @@ schedule a meeting with selected teammates. Each booking:
 """
 import calendar as pycal
 import hashlib
-import json
 from datetime import date, datetime, time, timedelta
 from sqlalchemy import or_
 
@@ -220,8 +219,11 @@ def my_calendar():
         team_filter=team_filter,
         today_iso=today.isoformat(),
         default_date=today.isoformat(),
-        meetings_json=json.dumps(meetings_json),
-        tasks_json=json.dumps(tasks_json),
+        # Passed as plain Python objects and serialized in the template with
+        # `| tojson`, which escapes <, >, & and ' — json.dumps does not, so a
+        # value containing </script> could break out of the <script> block.
+        meetings_json=meetings_json,
+        tasks_json=tasks_json,
     )
 
 
