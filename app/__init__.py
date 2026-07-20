@@ -9,42 +9,30 @@ from app.extensions import db, login_manager, csrf, migrate, limiter
 from app.logging_config import configure_logging
 
 
-
-
-def create_app(config_object=None):
-    """Application factory.
-
-    `config_object` accepts a config class, an instance, or a name such as
-    'testing'. Omitted, it resolves from FLASK_ENV and defaults to production.
-    """
+def _resolve_config(config_object):
+    """Accept a config class, an instance, or a name; return an instance."""
     cfg = config_object if config_object is not None else get_config()
     if isinstance(cfg, str):
         cfg = get_config(cfg)
     if isinstance(cfg, type):
         cfg = cfg()
+    return cfg
 
-    # Fail fast on a misconfigured environment rather than at first request.
-    cfg.validate()
 
-    # ── Sentry Error Monitoring (optional, free tier) ────────────────
-    if cfg.SENTRY_DSN:
-        import sentry_sdk
-        sentry_sdk.init(
-            dsn=cfg.SENTRY_DSN,
-            traces_sample_rate=0.1,  # 10% of requests for performance monitoring
-            profiles_sample_rate=0.1,
-            environment=cfg.ENV_NAME,
-        )
+def _init_sentry(cfg):
+    """Optional error monitoring; skipped entirely when no DSN is configured."""
+    if not cfg.SENTRY_DSN:
+        return
+    import sentry_sdk
+    sentry_sdk.init(
+        dsn=cfg.SENTRY_DSN,
+        traces_sample_rate=0.1,  # 10% of requests for performance monitoring
+        profiles_sample_rate=0.1,
+        environment=cfg.ENV_NAME,
+    )
 
-    app = Flask(__name__)
-    app.config.from_object(cfg)
-    app.config['SQLALCHEMY_ENGINE_OPTIONS'] = cfg.engine_options
 
-    # ── Logging ────────────────────────────────────────────────────
-    # Configured early so anything below can log.
-    configure_logging(app)
-
-    # Initialize extensions
+def register_extensions(app):
     db.init_app(app)
     migrate.init_app(app, db)
     login_manager.init_app(app)
@@ -52,10 +40,19 @@ def create_app(config_object=None):
     csrf.init_app(app)
     limiter.init_app(app)
 
-    # Jinja global
+
+def register_jinja_globals(app):
     app.jinja_env.globals['current_year'] = datetime.now().year
     app.jinja_env.globals['pusher_key'] = app.config['PUSHER_KEY']
     app.jinja_env.globals['pusher_cluster'] = app.config['PUSHER_CLUSTER']
+
+
+def register_hooks(app):
+    """Per-request middleware: security headers, session tracking, activity log.
+
+    NOTE: Flask runs after_request handlers in REVERSE registration order, so
+    _log_activity runs before set_security_headers despite appearing later.
+    """
 
     # ── HTTP Security Headers ──────────────────────────────────────
     @app.after_request
@@ -97,7 +94,8 @@ def create_app(config_object=None):
         log_activity(response)
         return response
 
-    # ── Custom Error Pages ─────────────────────────────────────────
+
+def register_errorhandlers(app):
     @app.errorhandler(404)
     def page_not_found(e):
         return render_template('errors/404.html'), 404
@@ -113,7 +111,9 @@ def create_app(config_object=None):
         app.logger.error(f'Server Error: {e}')
         return render_template('errors/500.html'), 500
 
-    # Register blueprints (AFTER extensions)
+
+def register_blueprints(app):
+    """Registered after extensions, so blueprint import side effects see them."""
     from app.routes.auth import auth_bp
     from app.routes.tasks import tasks_bp
     from app.routes.google import google_bp
@@ -128,32 +128,58 @@ def create_app(config_object=None):
     from app.routes.meeting_intel import meeting_intel_bp
     from app.routes.docs import docs_bp
 
-    app.register_blueprint(auth_bp)
-    app.register_blueprint(tasks_bp)
-    app.register_blueprint(google_bp)
-    app.register_blueprint(orgs_bp)
-    app.register_blueprint(projects_bp)
-    app.register_blueprint(discussions_bp)
-    app.register_blueprint(notifications_bp)
-    app.register_blueprint(files_bp)
-    app.register_blueprint(meetings_bp)
-    app.register_blueprint(tracker_bp)
-    app.register_blueprint(calendar_bp)
-    app.register_blueprint(meeting_intel_bp)
-    app.register_blueprint(docs_bp)
+    for bp in (auth_bp, tasks_bp, google_bp, orgs_bp, projects_bp,
+               discussions_bp, notifications_bp, files_bp, meetings_bp,
+               tracker_bp, calendar_bp, meeting_intel_bp, docs_bp):
+        app.register_blueprint(bp)
 
     # Serve robots.txt from the static folder at the root path
     from flask import send_from_directory
+
     @app.route('/robots.txt')
     def robots_txt():
         return send_from_directory(app.static_folder, 'robots.txt')
 
-    # Import the models so SQLAlchemy registers every table. models was
-    # previously loaded only as a side effect of blueprint registration, which
-    # left Alembic autogenerate depending on blueprint import order.
-    # NOTE: use `from app import ...` — `import app.models` would rebind the
-    # local name `app` to the package module.
+
+def register_models():
+    """Import the models so SQLAlchemy registers every table.
+
+    models was previously loaded only as a side effect of blueprint
+    registration, which left Alembic autogenerate depending on blueprint import
+    order.
+
+    NOTE: use `from app import ...` — `import app.models` would rebind the local
+    name `app` to the package module.
+    """
     from app import models  # noqa: F401
     from app import tracker_models  # noqa: F401
+
+
+def create_app(config_object=None):
+    """Application factory.
+
+    `config_object` accepts a config class, an instance, or a name such as
+    'testing'. Omitted, it resolves from FLASK_ENV and defaults to production.
+    """
+    cfg = _resolve_config(config_object)
+
+    # Fail fast on a misconfigured environment rather than at first request.
+    cfg.validate()
+
+    _init_sentry(cfg)
+
+    app = Flask(__name__)
+    app.config.from_object(cfg)
+    app.config['SQLALCHEMY_ENGINE_OPTIONS'] = cfg.engine_options
+
+    # Configured early so everything below can log.
+    configure_logging(app)
+
+    register_extensions(app)
+    register_jinja_globals(app)
+    register_hooks(app)
+    register_errorhandlers(app)
+    register_blueprints(app)
+    register_models()
 
     return app
