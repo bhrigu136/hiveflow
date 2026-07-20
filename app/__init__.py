@@ -2,11 +2,11 @@ from dotenv import load_dotenv
 load_dotenv()
 
 import os
-import logging
 from flask import Flask, render_template
 from datetime import datetime, timedelta
 
 from app.extensions import db, login_manager, csrf, migrate, limiter
+from app.logging_config import configure_logging
 
 
 
@@ -33,6 +33,11 @@ def create_app():
             raise RuntimeError('SECRET_KEY environment variable must be set in production!')
         secret_key = 'dev-secret-key-change-me'
     app.config['SECRET_KEY'] = secret_key
+
+    # ── Logging ────────────────────────────────────────────────────
+    # Configured early so anything below can log. LOG_LEVEL defaults to INFO.
+    app.config['LOG_LEVEL'] = os.environ.get('LOG_LEVEL', 'INFO')
+    configure_logging(app)
 
     # ── Upload Safety ──────────────────────────────────────────────
     # Reject any request body larger than 5 MB (profile pictures, forms, etc.)
