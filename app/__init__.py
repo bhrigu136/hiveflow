@@ -1,75 +1,48 @@
 from dotenv import load_dotenv
 load_dotenv()
 
-import os
 from flask import Flask, render_template
-from datetime import datetime, timedelta
+from datetime import datetime
 
+from app.config import get_config
 from app.extensions import db, login_manager, csrf, migrate, limiter
 from app.logging_config import configure_logging
 
 
 
 
-def create_app():
+def create_app(config_object=None):
+    """Application factory.
+
+    `config_object` accepts a config class, an instance, or a name such as
+    'testing'. Omitted, it resolves from FLASK_ENV and defaults to production.
+    """
+    cfg = config_object if config_object is not None else get_config()
+    if isinstance(cfg, str):
+        cfg = get_config(cfg)
+    if isinstance(cfg, type):
+        cfg = cfg()
+
+    # Fail fast on a misconfigured environment rather than at first request.
+    cfg.validate()
+
     # ── Sentry Error Monitoring (optional, free tier) ────────────────
-    sentry_dsn = os.environ.get('SENTRY_DSN')
-    if sentry_dsn:
+    if cfg.SENTRY_DSN:
         import sentry_sdk
         sentry_sdk.init(
-            dsn=sentry_dsn,
+            dsn=cfg.SENTRY_DSN,
             traces_sample_rate=0.1,  # 10% of requests for performance monitoring
             profiles_sample_rate=0.1,
-            environment=os.environ.get('FLASK_ENV', 'production'),
+            environment=cfg.ENV_NAME,
         )
 
     app = Flask(__name__)
-
-    # ── Secret Key ────────────────────────────────────────────────
-    secret_key = os.environ.get('SECRET_KEY')
-    if not secret_key:
-        # Allow insecure fallback ONLY in local dev — crash in production
-        if os.environ.get('FLASK_ENV') == 'production':
-            raise RuntimeError('SECRET_KEY environment variable must be set in production!')
-        secret_key = 'dev-secret-key-change-me'
-    app.config['SECRET_KEY'] = secret_key
+    app.config.from_object(cfg)
+    app.config['SQLALCHEMY_ENGINE_OPTIONS'] = cfg.engine_options
 
     # ── Logging ────────────────────────────────────────────────────
-    # Configured early so anything below can log. LOG_LEVEL defaults to INFO.
-    app.config['LOG_LEVEL'] = os.environ.get('LOG_LEVEL', 'INFO')
+    # Configured early so anything below can log.
     configure_logging(app)
-
-    # ── Upload Safety ──────────────────────────────────────────────
-    # Reject any request body larger than 5 MB (profile pictures, forms, etc.)
-    app.config['MAX_CONTENT_LENGTH'] = 5 * 1024 * 1024
-
-    # ── Session Cookie Hardening ───────────────────────────────────
-    app.config['SESSION_COOKIE_SECURE'] = True      # HTTPS-only; browsers ignore on HTTP
-    app.config['SESSION_COOKIE_HTTPONLY'] = True     # JS cannot read the cookie
-    app.config['SESSION_COOKIE_SAMESITE'] = 'Lax'   # Mitigates most CSRF via top-level nav
-    app.config['PERMANENT_SESSION_LIFETIME'] = timedelta(days=7)
-    app.config['REMEMBER_COOKIE_SECURE'] = True
-    app.config['REMEMBER_COOKIE_HTTPONLY'] = True
-
-    # ── Database ──────────────────────────────────────────────────
-    # Uses PostgreSQL in production (via DATABASE_URL), SQLite locally
-    database_url = os.environ.get('DATABASE_URL', 'sqlite:///todo.db')
-
-    # Render provide postgres:// but SQLAlchemy 1.4+ needs postgresql://
-    if database_url.startswith('postgres://'):
-        database_url = database_url.replace('postgres://', 'postgresql://', 1)
-
-    app.config['SQLALCHEMY_DATABASE_URI'] = database_url
-    app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
-
-    # Connection pool — important for PostgreSQL under concurrent load
-    if not database_url.startswith('sqlite'):
-        app.config['SQLALCHEMY_ENGINE_OPTIONS'] = {
-            'pool_size': 5,
-            'pool_recycle': 300,   # recycle connections every 5 min
-            'pool_pre_ping': True, # verify connection is alive before using
-            'max_overflow': 10,
-        }
 
     # Initialize extensions
     db.init_app(app)
@@ -81,8 +54,8 @@ def create_app():
 
     # Jinja global
     app.jinja_env.globals['current_year'] = datetime.now().year
-    app.jinja_env.globals['pusher_key'] = os.environ.get('PUSHER_KEY', '')
-    app.jinja_env.globals['pusher_cluster'] = os.environ.get('PUSHER_CLUSTER', 'ap2')
+    app.jinja_env.globals['pusher_key'] = app.config['PUSHER_KEY']
+    app.jinja_env.globals['pusher_cluster'] = app.config['PUSHER_CLUSTER']
 
     # ── HTTP Security Headers ──────────────────────────────────────
     @app.after_request
@@ -175,16 +148,12 @@ def create_app():
     def robots_txt():
         return send_from_directory(app.static_folder, 'robots.txt')
 
-    # Import tracker models so SQLAlchemy registers the tables.
-    # NOTE: use `from app import ...` — `import app.tracker_models` would
-    # rebind the local name `app` to the package module and break the
-    # `app.app_context()` call below.
+    # Import the models so SQLAlchemy registers every table. models was
+    # previously loaded only as a side effect of blueprint registration, which
+    # left Alembic autogenerate depending on blueprint import order.
+    # NOTE: use `from app import ...` — `import app.models` would rebind the
+    # local name `app` to the package module.
+    from app import models  # noqa: F401
     from app import tracker_models  # noqa: F401
-
-    # Create tables on first run (migrations handle everything after that)
-    with app.app_context():
-        migrations_dir = os.path.join(app.root_path, '..', 'migrations')
-        if not os.path.exists(migrations_dir):
-            db.create_all()  # First-time bootstrap only
 
     return app
