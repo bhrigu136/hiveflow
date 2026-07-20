@@ -9,45 +9,8 @@ from flask import Blueprint, render_template, request, redirect, url_for, flash,
 from flask_login import login_user, logout_user, login_required, current_user
 from app.models import User, Task, LoginSession, ActivityLog
 from app.extensions import db, limiter
+from app.mailer import send_via_brevo
 from app.security_utils import record_login_session, revoke_current_session, SESSION_KEY
-
-BREVO_API_URL = "https://api.brevo.com/v3/smtp/email"
-
-
-def _send_via_brevo(to_email: str, subject: str, html: str) -> str:
-    """Send a transactional email via Brevo's HTTP API.
-
-    Render blocks outbound SMTP, so we use HTTPS instead.
-    Returns 'sent', 'unconfigured', or 'failed'.
-    """
-    api_key = os.environ.get('BREVO_API_KEY')
-    sender = os.environ.get('MAIL_SENDER')
-    if not api_key or not sender:
-        return 'unconfigured'
-
-    try:
-        resp = requests.post(
-            BREVO_API_URL,
-            headers={
-                'api-key': api_key,
-                'content-type': 'application/json',
-                'accept': 'application/json',
-            },
-            json={
-                'sender': {'email': sender, 'name': 'HiveFlow'},
-                'to': [{'email': to_email}],
-                'subject': subject,
-                'htmlContent': html,
-            },
-            timeout=15,
-        )
-        if resp.status_code in (200, 201):
-            return 'sent'
-        print(f"[BREVO ERROR] {resp.status_code}: {resp.text[:300]}")
-        return 'failed'
-    except Exception as e:
-        print(f"[BREVO ERROR] {type(e).__name__}: {e}")
-        return 'failed'
 
 auth_bp = Blueprint('auth', __name__, url_prefix='/auth')
 
@@ -213,7 +176,7 @@ def send_verification_email(to_email: str, username: str, verify_url: str) -> st
         </p>
     </div>
     """
-    return _send_via_brevo(to_email, 'HiveFlow — Verify Your Email', html)
+    return send_via_brevo(to_email, 'HiveFlow — Verify Your Email', html)
 
 
 def generate_otp() -> str:
@@ -257,7 +220,7 @@ def send_reset_email(to_email, code, username):
         </p>
     </div>
     """
-    return _send_via_brevo(to_email, 'HiveFlow — Password Reset Code', html)
+    return send_via_brevo(to_email, 'HiveFlow — Password Reset Code', html)
 
 
 # ─── Register ────────────────────────────────────────────

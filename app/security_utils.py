@@ -18,6 +18,7 @@ from flask import request, session, current_app, url_for
 from flask_login import current_user, logout_user
 
 from app.extensions import db
+from app.mailer import send_via_brevo
 
 SESSION_KEY = 'login_session_token'
 
@@ -252,8 +253,7 @@ def send_new_login_alert(user, ls) -> None:
 
     def _deliver():
         try:
-            from app.routes.auth import _send_via_brevo
-            _send_via_brevo(user.email, subject, html)
+            send_via_brevo(user.email, subject, html)
         except Exception:
             pass  # best-effort; nothing to do if mail fails
 
