@@ -26,6 +26,40 @@ def check_document_access(document_id):
         return False
     return OrgMember.query.filter_by(org_id=doc.org_id, user_id=current_user.id).first() is not None
 
+def check_task_access(task_id):
+    """Verify current_user may attach a file to this task.
+
+    A project task requires membership of the owning organization. A personal
+    task (no project) is private to its owner.
+    """
+    if not task_id:
+        return True
+    task = Task.query.get(task_id)
+    if not task:
+        return False
+    if not task.project_id:
+        return task.user_id == current_user.id
+    project = Project.query.get(task.project_id)
+    if not project:
+        return False
+    return OrgMember.query.filter_by(
+        org_id=project.org_id, user_id=current_user.id
+    ).first() is not None
+
+def check_discussion_access(discussion_id):
+    """Verify current_user belongs to the org of the discussion's project."""
+    if not discussion_id:
+        return True
+    discussion = Discussion.query.get(discussion_id)
+    if not discussion:
+        return False
+    project = Project.query.get(discussion.project_id)
+    if not project:
+        return False
+    return OrgMember.query.filter_by(
+        org_id=project.org_id, user_id=current_user.id
+    ).first() is not None
+
 @files_bp.route('/api/files/sign-upload', methods=['POST'])
 @login_required
 def sign_upload():
@@ -106,9 +140,17 @@ def register_file():
     if not filename or not file_url:
         return jsonify({'error': 'Filename and file URL are required'}), 400
 
+    # Every scope the caller supplies must be authorized independently. Checking
+    # only project_id and document_id left task_id and discussion_id open: they
+    # travelled from the request body straight into the row, letting any
+    # authenticated user attach a file to any task or discussion in any org.
     if project_id and not check_project_access(project_id):
         return jsonify({'error': 'Access denied'}), 403
     if document_id and not check_document_access(document_id):
+        return jsonify({'error': 'Access denied'}), 403
+    if task_id and not check_task_access(task_id):
+        return jsonify({'error': 'Access denied'}), 403
+    if discussion_id and not check_discussion_access(discussion_id):
         return jsonify({'error': 'Access denied'}), 403
 
     try:
