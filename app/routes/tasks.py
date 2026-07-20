@@ -336,6 +336,36 @@ def edit_task(task_id):
             return redirect(fallback_redirect)
 
 
+    # VALIDATE ASSIGNEE
+    # Done before any field is mutated: an invalid assignment must not leave the
+    # task half-updated in the session, which the after-request activity logger
+    # would then commit.
+    #
+    # The assignee must belong to the organization that owns this task's project.
+    # Without this check any user id could be submitted, handing someone in an
+    # unrelated organization a task that then renders on their calendar and
+    # notifies them — see projects.add_task, which has always validated this.
+    assignment_requested = False
+    validated_assigned_to = None
+    if task.project_id and assigned_to_raw is not None:
+        assignment_requested = True
+        cleaned = assigned_to_raw.strip()
+        if cleaned:
+            try:
+                assigned_id = int(cleaned)
+            except ValueError:
+                flash('Invalid assignment.', 'danger')
+                return redirect(fallback_redirect)
+
+            project = Project.query.get(task.project_id)
+            if not project or not OrgMember.query.filter_by(
+                org_id=project.org_id, user_id=assigned_id
+            ).first():
+                flash('You can only assign tasks to members of this organization.', 'danger')
+                return redirect(fallback_redirect)
+
+            validated_assigned_to = assigned_id
+
     # Snapshot prior state so we can detect what actually changed and notify accordingly
     prev_assigned_to = task.assigned_to
     prev_status = task.status
@@ -352,15 +382,8 @@ def edit_task(task_id):
     if task.project_id:
         if status in ('Pending', 'Working', 'Completed'):
             _set_status(task, status)
-        if assigned_to_raw is not None:
-            assigned_to_raw = assigned_to_raw.strip()
-            if assigned_to_raw == '':
-                task.assigned_to = None
-            else:
-                try:
-                    task.assigned_to = int(assigned_to_raw)
-                except ValueError:
-                    pass
+        if assignment_requested:
+            task.assigned_to = validated_assigned_to
 
     # Notify the relevant people about the edit (project tasks only).
     # Status changes get a tailored message; everything else is a generic "edited".
