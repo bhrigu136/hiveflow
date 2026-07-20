@@ -119,6 +119,18 @@
         });
     }
 
+    // Only http(s) and relative URLs may reach an href or src. Anything carrying
+    // another scheme — javascript:, data:, vbscript: — is dropped. Control
+    // characters are stripped first because browsers ignore them when parsing a
+    // scheme, so "java\tscript:" would otherwise slip through.
+    function safeUrl(u) {
+        var s = String(u).replace(/[\u0000-\u001F\u007F]/g, '').trim();
+        if (/^[a-z][a-z0-9+.\-]*:/i.test(s) && !/^https?:/i.test(s)) {
+            return '';
+        }
+        return s;
+    }
+
     // Drag and Drop & Cloud Presigned upload implementation
     if (dropzone && fileInput && uploadList) {
         dropzone.addEventListener('click', function() {
@@ -279,11 +291,11 @@
         });
         // Parse links next (since images are now placeholders and don't match the link regex)
         content = content.replace(/\[(.*?)\]\((.*?)\)/g, function(match, name, url) {
-            return '<div style="margin-top: 8px;"><a href="' + url + '" target="_blank" style="display: inline-flex; align-items: center; gap: 8px; background: rgba(255,255,255,0.03); border: 1px solid var(--glass-border); border-radius: 6px; padding: 8px 16px; text-decoration: none; color: var(--accent); font-size: 13px; font-weight: 500; transition: all 0.2s; max-width: 100%; word-break: break-all;" onmouseover="this.style.background=\'rgba(255,255,255,0.06)\'" onmouseout="this.style.background=\'rgba(255,255,255,0.03)\'"><i data-lucide="file-text" style="width: 15px; height: 15px; color: var(--text-muted);"></i> ' + escapeHTML(name) + '</a></div>';
+            return '<div style="margin-top: 8px;"><a href="' + escapeHTML(safeUrl(url)) + '" target="_blank" rel="noopener noreferrer" style="display: inline-flex; align-items: center; gap: 8px; background: rgba(255,255,255,0.03); border: 1px solid var(--glass-border); border-radius: 6px; padding: 8px 16px; text-decoration: none; color: var(--accent); font-size: 13px; font-weight: 500; transition: all 0.2s; max-width: 100%; word-break: break-all;" onmouseover="this.style.background=\'rgba(255,255,255,0.06)\'" onmouseout="this.style.background=\'rgba(255,255,255,0.03)\'"><i data-lucide="file-text" style="width: 15px; height: 15px; color: var(--text-muted);"></i> ' + escapeHTML(name) + '</a></div>';
         });
         // Restore images into full HTML
         content = content.replace(/IMAGE_PLACEHOLDER_START(.*?)IMAGE_PLACEHOLDER_MID(.*?)IMAGE_PLACEHOLDER_END/g, function(match, url, name) {
-            return '<div style="margin-top: 10px;"><img src="' + url + '" alt="' + name + '" style="max-width: 100%; max-height: 300px; border-radius: 8px; border: 1px solid var(--glass-border); display: block; box-shadow: 0 4px 12px rgba(0,0,0,0.15);"></div>';
+            return '<div style="margin-top: 10px;"><img src="' + escapeHTML(safeUrl(url)) + '" alt="' + escapeHTML(name) + '" style="max-width: 100%; max-height: 300px; border-radius: 8px; border: 1px solid var(--glass-border); display: block; box-shadow: 0 4px 12px rgba(0,0,0,0.15);"></div>';
         });
         el.innerHTML = content;
         if (window.lucide) {
