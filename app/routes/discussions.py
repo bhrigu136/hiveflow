@@ -1,9 +1,10 @@
-from flask import Blueprint, render_template, request, redirect, url_for, flash, jsonify
+from flask import Blueprint, render_template, request, redirect, url_for, flash, jsonify, g
 from flask_login import login_required, current_user
-from app.models import Project, Discussion, DiscussionComment, Task, TaskComment
+from app.models import Discussion, DiscussionComment, Task, TaskComment
 from app.extensions import db, broadcast_event
 from app.utils import create_notification, notify_org_members
-from app.authz import check_project_access
+from app.authz import (check_project_access, require_org_member,
+                       by_project, by_discussion, redirect_flash, json_403)
 
 discussions_bp = Blueprint('discussions', __name__)
 
@@ -11,23 +12,20 @@ discussions_bp = Blueprint('discussions', __name__)
 
 @discussions_bp.route('/projects/<int:project_id>/discussions')
 @login_required
+@require_org_member(by_project(), redirect_flash(
+    'orgs.list_orgs', "You don't have access to this project's discussions."))
 def list_discussions(project_id):
-    project = Project.query.get_or_404(project_id)
-    if not check_project_access(project):
-        flash("You don't have access to this project's discussions.", 'danger')
-        return redirect(url_for('orgs.list_orgs'))
-        
+    project = g.authz_obj
+
     discussions = Discussion.query.filter_by(project_id=project.id).order_by(Discussion.created_at.desc()).all()
     return render_template('discussions/list.html', project=project, discussions=discussions)
 
 @discussions_bp.route('/projects/<int:project_id>/discussions/create', methods=['POST'])
 @login_required
+@require_org_member(by_project(), redirect_flash('orgs.list_orgs', "Access denied."))
 def create_discussion(project_id):
-    project = Project.query.get_or_404(project_id)
-    if not check_project_access(project):
-        flash("Access denied.", 'danger')
-        return redirect(url_for('orgs.list_orgs'))
-        
+    project = g.authz_obj
+
     title = request.form.get('title', '').strip()
     content = request.form.get('content', '').strip()
     
@@ -68,12 +66,10 @@ def create_discussion(project_id):
 
 @discussions_bp.route('/discussions/<int:discussion_id>')
 @login_required
+@require_org_member(by_discussion(), redirect_flash('orgs.list_orgs', "Access denied."))
 def view_discussion(discussion_id):
-    discussion = Discussion.query.get_or_404(discussion_id)
-    if not check_project_access(discussion.project):
-        flash("Access denied.", 'danger')
-        return redirect(url_for('orgs.list_orgs'))
-        
+    discussion = g.authz_obj
+
     comments = DiscussionComment.query.filter_by(discussion_id=discussion.id).order_by(DiscussionComment.created_at.asc()).all()
     return render_template('discussions/view.html', discussion=discussion, comments=comments)
 
@@ -205,15 +201,14 @@ def _comment_to_dict(c):
 
 @discussions_bp.route('/api/discussions/<int:discussion_id>/comments')
 @login_required
+@require_org_member(by_discussion(), json_403())
 def api_discussion_comments(discussion_id):
     """Return discussion comments newer than ?since_id=N (default 0).
 
     Used by the discussion view page to poll for new chat messages so members
     don't have to refresh.
     """
-    discussion = Discussion.query.get_or_404(discussion_id)
-    if not check_project_access(discussion.project):
-        return jsonify({'error': 'access denied'}), 403
+    discussion = g.authz_obj
 
     try:
         since_id = int(request.args.get('since_id', 0))
@@ -238,6 +233,7 @@ def api_discussion_comments(discussion_id):
 
 @discussions_bp.route('/api/projects/<int:project_id>/state')
 @login_required
+@require_org_member(by_project(), json_403())
 def api_project_state(project_id):
     """Return a fingerprint of the project's task board + new discussions.
 
@@ -245,9 +241,7 @@ def api_project_state(project_id):
     at page load, the page soft-refreshes so everyone sees task moves, new
     assignments, and new discussions without manual reload.
     """
-    project = Project.query.get_or_404(project_id)
-    if not check_project_access(project):
-        return jsonify({'error': 'access denied'}), 403
+    project = g.authz_obj
 
     tasks = Task.query.filter_by(project_id=project.id).all()
     # Build a deterministic fingerprint covering everything visible on the board.
@@ -270,12 +264,11 @@ def api_project_state(project_id):
 
 @discussions_bp.route('/api/projects/<int:project_id>/discussions/state')
 @login_required
+@require_org_member(by_project(), json_403())
 def api_discussions_state(project_id):
     """Return the latest discussion ID for the project; the list page polls
     this to detect new discussions without a refresh."""
-    project = Project.query.get_or_404(project_id)
-    if not check_project_access(project):
-        return jsonify({'error': 'access denied'}), 403
+    project = g.authz_obj
 
     latest = (
         Discussion.query

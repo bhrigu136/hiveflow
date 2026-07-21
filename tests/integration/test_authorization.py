@@ -189,6 +189,29 @@ class TestProjectMutationGates:
 
 
 @pytest.mark.integration
+class TestDiscussionApiGates:
+    """The discussions AJAX/polling endpoints deny non-members with JSON 403
+    (C5 migrated them to require_org_member + json_403)."""
+
+    def test_outsider_denied_project_state(self, app, make_client, world):
+        c = login(make_client(), "outsider")
+        r = c.get(f"/api/projects/{world['project_a']}/state")
+        assert r.status_code == 403 and r.get_json()["error"] == "access denied"
+
+    def test_member_allowed_project_state(self, app, make_client, world):
+        c = login(make_client(), "member_a")
+        assert c.get(f"/api/projects/{world['project_a']}/state").status_code == 200
+
+    def test_outsider_denied_discussion_comments(self, app, make_client, world):
+        c = login(make_client(), "outsider")
+        assert c.get(f"/api/discussions/{world['discussion_a']}/comments").status_code == 403
+
+    def test_outsider_denied_discussions_state(self, app, make_client, world):
+        c = login(make_client(), "outsider")
+        assert c.get(f"/api/projects/{world['project_a']}/discussions/state").status_code == 403
+
+
+@pytest.mark.integration
 class TestMeetingCountApi:
     """meetings.active_meeting_count is an AJAX endpoint that denies with JSON 403
     (C4 migrated it to require_org_member + json_403)."""
