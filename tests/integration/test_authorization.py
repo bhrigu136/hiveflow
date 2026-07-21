@@ -5,10 +5,12 @@ are exactly what this matrix catches. It also asserts the deliberate
 404-not-403 disclosure control in docs, which a future authorization
 consolidation must not "normalise" into a 403.
 """
+from datetime import datetime
+
 import pytest
 
 from app.extensions import db
-from app.models import FileAttachment, Task
+from app.models import FileAttachment, Meeting, Task
 from tests.factories import login, two_org_world
 
 
@@ -136,6 +138,32 @@ class TestDocsDisclosureControl:
             "docs must return 404 to non-members, not 403 — this is a "
             "deliberate existence-disclosure control (docs.py:6-7)"
         )
+
+
+@pytest.mark.integration
+class TestMeetingRoomAccess:
+    """meetings.meeting_room gates on org membership. B6 migrated this from an
+    inline OrgMember query to is_org_member; the access decision must not move."""
+
+    def _make_meeting(self, app, world):
+        with app.app_context():
+            m = Meeting(title="Standup", org_id=world["org_a"],
+                        scheduled_for=datetime(2030, 1, 1, 10, 0),
+                        created_by=world["admin_a"], room_name="HiveFlow_Test")
+            db.session.add(m)
+            db.session.commit()
+            return m.id
+
+    def test_member_can_open_meeting_room(self, app, make_client, world):
+        mid = self._make_meeting(app, world)
+        c = login(make_client(), "member_a")
+        assert c.get(f"/meetings/{mid}/room").status_code == 200
+
+    def test_outsider_denied_meeting_room(self, app, make_client, world):
+        mid = self._make_meeting(app, world)
+        c = login(make_client(), "outsider")
+        r = c.get(f"/meetings/{mid}/room", follow_redirects=False)
+        assert r.status_code in (302, 403, 404)
 
 
 @pytest.mark.integration

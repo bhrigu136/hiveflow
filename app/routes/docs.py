@@ -16,6 +16,7 @@ from sqlalchemy import func, or_
 from app.extensions import db
 from app.models import Organization, OrgMember, Document, DocumentRevision
 from app.docs_render import render_markdown, to_plain_text, MAX_MARKDOWN_BYTES
+from app.authz import is_org_member
 
 docs_bp = Blueprint('docs', __name__)
 
@@ -233,7 +234,7 @@ def reorder():
     if first is None:
         abort(404)
     org_id = first.org_id
-    if OrgMember.query.filter_by(org_id=org_id, user_id=current_user.id).first() is None:
+    if not is_org_member(org_id):
         abort(404)
 
     for it in items:

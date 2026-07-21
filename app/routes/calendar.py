@@ -23,6 +23,7 @@ from app.models import (
 )
 from app.utils import create_notification
 from app.google_calendar import create_meeting_event, delete_meeting_event
+from app.authz import is_org_member
 
 calendar_bp = Blueprint('calendar', __name__)
 
@@ -245,8 +246,7 @@ def book_meeting():
         flash('Please choose a team for this meeting.', 'danger')
         return redirect(redirect_target)
 
-    membership = OrgMember.query.filter_by(org_id=org.id, user_id=current_user.id).first()
-    if not membership:
+    if not is_org_member(org.id):
         flash('You are not a member of that team.', 'danger')
         return redirect(redirect_target)
 

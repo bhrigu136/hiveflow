@@ -1,7 +1,7 @@
 from flask import Blueprint, render_template, redirect, url_for, flash, current_app, jsonify, request
 from flask_login import login_required, current_user
-from app.models import Project, OrgMember, Meeting
-from app.authz import check_project_access
+from app.models import Project, Meeting
+from app.authz import check_project_access, is_org_member
 import os
 
 meetings_bp = Blueprint('meetings', __name__)
@@ -40,8 +40,7 @@ def meeting_room(meeting_id):
     """
     meeting = Meeting.query.get_or_404(meeting_id)
 
-    member = OrgMember.query.filter_by(org_id=meeting.org_id, user_id=current_user.id).first()
-    if member is None:
+    if not is_org_member(meeting.org_id):
         flash("You do not have permission to join this meeting room.", 'danger')
         return redirect(url_for('calendar.my_calendar'))
 
