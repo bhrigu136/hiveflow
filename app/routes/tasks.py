@@ -189,45 +189,7 @@ def add_task():
     db.session.commit()
 
     # CREATE GOOGLE CALENDAR EVENT (IF CONNECTED)
-    if (
-        deadline_datetime
-        and current_user.google_access_token
-        and current_user.google_refresh_token
-    ):
-        try:
-            service = build_calendar_service(current_user)
-
-            event = {
-                "summary": f"To-Do: {task.title}",
-                "description": f"Priority: {task.priority}",
-                "start": {
-                    "dateTime": deadline_datetime.isoformat(),
-                    "timeZone": "Asia/Kolkata",
-                },
-                "end": {
-                    "dateTime": (deadline_datetime + timedelta(minutes=30)).isoformat(),
-                    "timeZone": "Asia/Kolkata",
-                },
-                "reminders": {
-                    "useDefault": False,
-                    "overrides": [
-                        {"method": "email", "minutes": 60},
-                        {"method": "popup", "minutes": 10},
-                    ],
-                },
-            }
-
-            created_event = service.events().insert(
-                calendarId="primary",
-                body=event
-            ).execute()
-
-            task.google_event_id = created_event.get("id")
-            db.session.commit()
-
-        except Exception as e:
-            # Do NOT crash app for calendar failures
-            print("Google Calendar error:", e)
+    _create_task_calendar_event(task, deadline_datetime)
 
     flash('Task added successfully!', 'success')
     return redirect(url_for('tasks.view_tasks'))
@@ -362,6 +324,82 @@ def _update_task_calendar_event(task, deadline, time_slot):
     except Exception as e:
         # Never block user edit for Google failures
         print("Google Calendar update failed:", e)
+
+
+def _create_task_calendar_event(task, deadline_datetime):
+    """Create a Google Calendar event for a newly-added task, if connected.
+
+    Extracted verbatim from add_task. Best-effort: runs only when a deadline
+    datetime exists and the user is connected to Google; a failure is logged and
+    never blocks task creation. Persists the created event id on the task.
+    """
+    if not (
+        deadline_datetime
+        and current_user.google_access_token
+        and current_user.google_refresh_token
+    ):
+        return
+
+    try:
+        service = build_calendar_service(current_user)
+
+        event = {
+            "summary": f"To-Do: {task.title}",
+            "description": f"Priority: {task.priority}",
+            "start": {
+                "dateTime": deadline_datetime.isoformat(),
+                "timeZone": "Asia/Kolkata",
+            },
+            "end": {
+                "dateTime": (deadline_datetime + timedelta(minutes=30)).isoformat(),
+                "timeZone": "Asia/Kolkata",
+            },
+            "reminders": {
+                "useDefault": False,
+                "overrides": [
+                    {"method": "email", "minutes": 60},
+                    {"method": "popup", "minutes": 10},
+                ],
+            },
+        }
+
+        created_event = service.events().insert(
+            calendarId="primary",
+            body=event
+        ).execute()
+
+        task.google_event_id = created_event.get("id")
+        db.session.commit()
+
+    except Exception as e:
+        # Do NOT crash app for calendar failures
+        print("Google Calendar error:", e)
+
+
+def _delete_task_calendar_event(task):
+    """Delete the task's Google Calendar event, if one exists.
+
+    Extracted verbatim from delete_task. Best-effort: a Google failure never
+    blocks deletion.
+    """
+    if not (
+        task.google_event_id
+        and current_user.google_access_token
+        and current_user.google_refresh_token
+    ):
+        return
+
+    try:
+        service = build_calendar_service(current_user)
+
+        service.events().delete(
+            calendarId="primary",
+            eventId=task.google_event_id
+        ).execute()
+
+    except Exception as e:
+        # Never block deletion if Google fails
+        print("Google Calendar delete failed:", e)
 
 
 # EDIT TASK
@@ -529,23 +567,7 @@ def delete_task(task_id):
 
     
     # DELETE GOOGLE CALENDAR EVENT (IF EXISTS)
-
-    if (
-        task.google_event_id
-        and current_user.google_access_token
-        and current_user.google_refresh_token
-    ):
-        try:
-            service = build_calendar_service(current_user)
-
-            service.events().delete(
-                calendarId="primary",
-                eventId=task.google_event_id
-            ).execute()
-
-        except Exception as e:
-            # Never block deletion if Google fails
-            print("Google Calendar delete failed:", e)
+    _delete_task_calendar_event(task)
 
     
     # DELETE LOCAL TASK
