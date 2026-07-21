@@ -16,7 +16,7 @@ tasks / finalizing is limited to the organizer or an org Admin.
 from datetime import datetime, timezone, timedelta
 
 from flask import (Blueprint, request, jsonify, render_template, redirect,
-                   url_for, flash, abort)
+                   url_for, flash, abort, current_app)
 from flask_login import login_required, current_user
 
 from app.extensions import db, limiter, get_pusher
@@ -137,8 +137,14 @@ def post_segment(meeting_id):
                         'text': b['text'],
                         'started_at': b['started_at'],
                     })
-            except Exception:
-                pass
+            except Exception as e:
+                # Best-effort live caption; segments are already stored. Broad
+                # catch is intentional so a Pusher outage never breaks segment
+                # ingestion; logged rather than swallowed.
+                current_app.logger.warning(
+                    f'[pusher] caption-final broadcast failed for meeting '
+                    f'{meeting.id}: {type(e).__name__}: {e}'
+                )
 
     return jsonify({'ok': True, 'stored': stored})
 
@@ -332,8 +338,12 @@ def convert_action_item(meeting_id, item_id):
     if pusher:
         try:
             pusher.trigger(f'project-{project.id}', 'new-task', {'task_id': task.id})
-        except Exception:
-            pass
+        except Exception as e:
+            # Best-effort broadcast; the task is already created.
+            current_app.logger.warning(
+                f'[pusher] new-task broadcast failed for project '
+                f'{project.id}: {type(e).__name__}: {e}'
+            )
 
     return jsonify({'ok': True, 'task_id': task.id,
                     'dashboard_url': url_for('projects.dashboard', project_id=project.id)})

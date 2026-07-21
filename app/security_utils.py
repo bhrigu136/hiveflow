@@ -365,8 +365,17 @@ def log_activity(response) -> None:
         )
         db.session.add(entry)
         db.session.commit()
-    except Exception:
-        # Activity logging is strictly best-effort — never surface an error.
+    except Exception as e:
+        # Activity logging is strictly best-effort — never surface an error to
+        # the user. The broad catch is intentional (this runs on every
+        # response), but the failure is now logged instead of vanishing: a
+        # persistent write error here would otherwise be completely invisible.
+        try:
+            current_app.logger.warning(
+                f'[activity-log] write failed: {type(e).__name__}: {e}'
+            )
+        except Exception:
+            pass
         try:
             db.session.rollback()
         except Exception:

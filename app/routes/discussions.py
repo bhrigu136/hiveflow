@@ -1,4 +1,4 @@
-from flask import Blueprint, render_template, request, redirect, url_for, flash, jsonify
+from flask import Blueprint, render_template, request, redirect, url_for, flash, jsonify, current_app
 from flask_login import login_required, current_user
 from app.models import Project, Discussion, DiscussionComment, Task, TaskComment, OrgMember
 from app.extensions import db
@@ -132,8 +132,14 @@ def add_discussion_comment(discussion_id):
                     'comment': _comment_to_dict(comment)
                 }
             )
-        except Exception:
-            pass
+        except Exception as e:
+            # Broadcast is best-effort — the comment is already saved. Broad
+            # catch is intentional so a Pusher outage never breaks posting; the
+            # failure is logged rather than swallowed silently.
+            current_app.logger.warning(
+                f'[pusher] new-comment broadcast failed for discussion '
+                f'{discussion.id}: {type(e).__name__}: {e}'
+            )
 
     if is_ajax:
         return jsonify({'ok': True, 'comment': _comment_to_dict(comment)})
@@ -196,8 +202,12 @@ def add_task_comment(task_id):
                             'comment': _comment_to_dict(comment)
                         }
                     )
-                except Exception:
-                    pass
+                except Exception as e:
+                    # Best-effort broadcast; the comment is already saved.
+                    current_app.logger.warning(
+                        f'[pusher] new-task-comment broadcast failed for task '
+                        f'{task.id}: {type(e).__name__}: {e}'
+                    )
         
     # Redirect back to wherever we came from
     next_url = request.form.get('next')
