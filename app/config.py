@@ -94,6 +94,7 @@ class TestConfig(BaseConfig):
     Everything a test needs to run in isolation without touching the
     environment.
     """
+    __test__ = False  # not a pytest test class despite the Test* name
     TESTING = True
     DEBUG = False
     ENV_NAME = 'testing'

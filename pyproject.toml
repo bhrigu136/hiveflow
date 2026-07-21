@@ -1,0 +1,21 @@
+[tool.pytest.ini_options]
+minversion = "7.0"
+testpaths = ["tests"]
+python_files = ["test_*.py"]
+python_classes = ["Test*"]
+python_functions = ["test_*"]
+addopts = "-ra --strict-markers"
+markers = [
+    "unit: pure functions, no app context or database",
+    "integration: exercises routes through the test client",
+    "security: regression test for a specific SEC-* finding",
+    "xfail_known: marks behaviour for a finding that is still open",
+]
+
+[tool.coverage.run]
+source = ["app"]
+omit = ["app/summarizer/llm.py"]  # network-bound; covered by contract tests only
+
+[tool.coverage.report]
+show_missing = true
+skip_covered = true
