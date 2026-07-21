@@ -180,7 +180,6 @@ def analytics(project_id):
     values=lambda a: {'project_id': a.obj.id}))
 def analytics_export(project_id):
     project = g.authz_obj
-    org = project.organization
 
     stats = project_analytics(project.id)
     buf = io.StringIO()

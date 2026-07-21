@@ -1,7 +1,7 @@
 import os
 import secrets
 import requests
-from datetime import datetime, timedelta, date
+from datetime import datetime, timedelta
 from urllib.parse import urlparse, urljoin
 
 from werkzeug.utils import secure_filename

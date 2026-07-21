@@ -1,7 +1,6 @@
-from flask import Blueprint, render_template, current_app, jsonify, request, g
+from flask import Blueprint, render_template, current_app, jsonify, g
 from flask_login import login_required, current_user
 from app.authz import require_org_member, by_project, by_meeting, redirect_flash, json_403
-import os
 
 meetings_bp = Blueprint('meetings', __name__)
 

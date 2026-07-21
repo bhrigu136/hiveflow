@@ -4,7 +4,7 @@ import io
 import secrets
 from flask import Blueprint, render_template, request, redirect, url_for, flash, Response, g
 from flask_login import login_required, current_user
-from app.models import Organization, OrgMember, Project, Task
+from app.models import Organization, OrgMember, Task
 from app.extensions import db, limiter
 from app.utils import create_notification
 from app.services.analytics import org_analytics, member_task_breakdown

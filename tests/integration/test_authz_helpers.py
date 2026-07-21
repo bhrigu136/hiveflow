@@ -20,7 +20,7 @@ def world(app):
 @pytest.mark.integration
 class TestMembershipHelpers:
     def test_member_is_member(self, app, world):
-        from app.models import Organization, User
+        from app.models import User
         with app.app_context():
             with app.test_request_context():
                 from flask_login import login_user

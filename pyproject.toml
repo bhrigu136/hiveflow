@@ -19,3 +19,13 @@ omit = ["app/summarizer/llm.py"]  # network-bound; covered by contract tests onl
 [tool.coverage.report]
 show_missing = true
 skip_covered = true
+
+[tool.ruff]
+line-length = 100
+
+[tool.ruff.lint]
+# Conservative, high-signal rules only: pyflakes (F — unused imports/variables,
+# undefined names, redefinitions) + syntax/runtime errors (E9). Style and
+# import-sorting are deliberately excluded for now to avoid large reformat churn;
+# broaden the set later if the team wants it.
+select = ["F", "E9"]

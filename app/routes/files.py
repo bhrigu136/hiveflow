@@ -62,7 +62,10 @@ def sign_upload():
     """Generates a signed upload URL for client-side direct upload to Supabase Storage."""
     data = request.get_json() or {}
     filename = data.get('filename')
-    mime_type = data.get('mime_type')
+    # Accepted from the client but not yet forwarded to the signed URL's
+    # content-type. Kept (not deleted) as it's likely an unfinished feature —
+    # flagged for the owner rather than silently dropped. See C14.
+    mime_type = data.get('mime_type')  # noqa: F841
     project_id = data.get('project_id')
     document_id = data.get('document_id')
 
