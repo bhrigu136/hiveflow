@@ -48,3 +48,27 @@ def get_pusher():
                 pusher_client = None
     return pusher_client
 
+
+def broadcast_event(channel, event, data, *, failure_desc):
+    """Best-effort Pusher broadcast for a single event.
+
+    Skips silently when Pusher isn't configured; if the trigger raises, logs a
+    warning instead of propagating — the primary write has already been
+    committed, so a Pusher outage must never break the request. Extracted from
+    the identical guard/try/except/log blocks in the discussion and meeting-intel
+    routes. ``failure_desc`` is the human label used in the warning, e.g.
+    ``'new-comment broadcast failed for discussion 42'``.
+    """
+    from flask import current_app
+    pusher = get_pusher()
+    if not pusher:
+        return
+    try:
+        pusher.trigger(channel, event, data)
+    except Exception as e:
+        # Broad catch is intentional: a Pusher outage must never break the
+        # request. Logged rather than swallowed silently.
+        current_app.logger.warning(
+            f'[pusher] {failure_desc}: {type(e).__name__}: {e}'
+        )
+

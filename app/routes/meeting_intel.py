@@ -19,7 +19,7 @@ from flask import (Blueprint, request, jsonify, render_template, redirect,
                    url_for, flash, abort, current_app)
 from flask_login import login_required, current_user
 
-from app.extensions import db, limiter, get_pusher
+from app.extensions import db, limiter, get_pusher, broadcast_event
 from app.models import (Meeting, TranscriptSegment, OrgMember, Project, Task,
                         User, Organization)
 from app.utils import create_notification
@@ -334,16 +334,12 @@ def convert_action_item(meeting_id, item_id):
     db.session.commit()
 
     # Nudge the board live, consistent with discussions/comments.
-    pusher = get_pusher()
-    if pusher:
-        try:
-            pusher.trigger(f'project-{project.id}', 'new-task', {'task_id': task.id})
-        except Exception as e:
-            # Best-effort broadcast; the task is already created.
-            current_app.logger.warning(
-                f'[pusher] new-task broadcast failed for project '
-                f'{project.id}: {type(e).__name__}: {e}'
-            )
+    broadcast_event(
+        f'project-{project.id}',
+        'new-task',
+        {'task_id': task.id},
+        failure_desc=f'new-task broadcast failed for project {project.id}',
+    )
 
     return jsonify({'ok': True, 'task_id': task.id,
                     'dashboard_url': url_for('projects.dashboard', project_id=project.id)})
