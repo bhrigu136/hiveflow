@@ -49,6 +49,129 @@ def _can_manage(meeting, membership_role):
     return meeting.created_by == current_user.id or membership_role == 'Admin'
 
 
+# ── my_calendar data-assembly helpers (pure serialization for the template) ──
+
+def _serialize_meetings(meetings, org_index, role_by_org):
+    """Serialize meetings to the JSON dicts the calendar grid renders.
+
+    Extracted verbatim from my_calendar. `org_index` maps org_id -> palette
+    index; `role_by_org` maps org_id -> the viewer's role (for can_manage).
+    """
+    result = []
+    for mtg in meetings:
+        org = mtg.organization
+        color = _color_for(org_index.get(mtg.org_id, 0))
+        attendees = [
+            {
+                'name': a.user.name or a.user.username,
+                'initial': (a.user.name or a.user.username or 'U')[0].upper(),
+                'status': a.status,
+            }
+            for a in mtg.attendees
+        ]
+        result.append({
+            'kind': 'meeting',
+            'id': mtg.id,
+            'title': mtg.title,
+            'description': mtg.description or '',
+            'scheduled_for': mtg.scheduled_for.isoformat(),
+            'end_time_iso': mtg.end_time.isoformat(),
+            'time': mtg.scheduled_for.strftime('%I:%M %p').lstrip('0'),
+            'end_time': mtg.end_time.strftime('%I:%M %p').lstrip('0'),
+            'duration': mtg.duration_minutes,
+            'date_label': mtg.scheduled_for.strftime('%A, %b %d'),
+            'color': color,
+            'team': org.name,
+            'team_slug': org.slug,
+            'organizer': (mtg.organizer.name or mtg.organizer.username) if mtg.organizer else 'Someone',
+            'attendees': attendees,
+            'attendee_count': len(attendees),
+            'join_url': url_for('meetings.meeting_room', meeting_id=mtg.id),
+            'can_manage': _can_manage(mtg, role_by_org.get(mtg.org_id)),
+            'cancel_url': url_for('calendar.cancel_meeting', meeting_id=mtg.id),
+        })
+    return result
+
+
+def _serialize_tasks(tasks):
+    """Serialize tasks to the JSON dicts the calendar grid renders.
+
+    Extracted verbatim from my_calendar.
+    """
+    result = []
+    for tsk in tasks:
+        result.append({
+            'kind': 'task',
+            'id': tsk.id,
+            'title': tsk.title,
+            'description': tsk.description or '',
+            'deadline': tsk.deadline.isoformat() if tsk.deadline else None,
+            'time_slot': tsk.time_slot.strftime('%H:%M') if tsk.time_slot else None,
+            'time': tsk.time_slot.strftime('%I:%M %p').lstrip('0') if tsk.time_slot else None,
+            'priority': tsk.priority,
+            'status': tsk.status,
+            'project_id': tsk.project_id,
+            'project_name': tsk.project.name if tsk.project else None,
+            'assigned_to': tsk.assigned_to,
+            'assignee_name': (tsk.assignee.name or tsk.assignee.username) if tsk.assignee else None,
+            'toggle_url': url_for('tasks.toggle_status', task_id=tsk.id),
+            'edit_url': url_for('tasks.edit_task', task_id=tsk.id),
+            'delete_url': url_for('tasks.delete_task', task_id=tsk.id),
+        })
+    return result
+
+
+def _upcoming_meetings(org_ids, org_index):
+    """The next up-to-6 meetings from now, for the side panel.
+
+    Extracted verbatim from my_calendar. Independent of the viewed month.
+    """
+    if not org_ids:
+        return []
+    now = datetime.now()
+    upcoming_rows = Meeting.query.filter(
+        Meeting.org_id.in_(org_ids),
+        Meeting.scheduled_for >= now,
+    ).order_by(Meeting.scheduled_for.asc()).limit(6).all()
+    upcoming = []
+    for mtg in upcoming_rows:
+        org = mtg.organization
+        upcoming.append({
+            'id': mtg.id,
+            'title': mtg.title,
+            'color': _color_for(org_index.get(mtg.org_id, 0)),
+            'team': org.name,
+            'when': mtg.scheduled_for.strftime('%a, %b %d · %I:%M %p').replace('· 0', '· '),
+            'day_num': mtg.scheduled_for.day,
+            'month_abbr': mtg.scheduled_for.strftime('%b'),
+            'time': mtg.scheduled_for.strftime('%I:%M %p').lstrip('0'),
+            'attendee_count': len(mtg.attendees),
+            'join_url': url_for('meetings.meeting_room', meeting_id=mtg.id),
+        })
+    return upcoming
+
+
+def _teams_payload(orgs_with_membership):
+    """Teams + members for the booking modal.
+
+    Extracted verbatim from my_calendar.
+    """
+    teams_data = []
+    for org, m in orgs_with_membership:
+        members = OrgMember.query.filter_by(org_id=org.id).all()
+        teams_data.append({
+            'slug': org.slug,
+            'name': org.name,
+            'members': [
+                {'id': mem.user_id,
+                 'name': (mem.user.name or mem.user.username),
+                 'is_self': mem.user_id == current_user.id}
+                for mem in members
+            ],
+        })
+    return teams_data
+
+
 @calendar_bp.route('/calendar')
 @login_required
 def my_calendar():
@@ -108,100 +231,11 @@ def my_calendar():
         Task.deadline <= grid_end,
     ).all()
 
-    # ---- serialize meetings to JSON ----
-    meetings_json = []
-    for mtg in meetings:
-        org = mtg.organization
-        color = _color_for(org_index.get(mtg.org_id, 0))
-        attendees = [
-            {
-                'name': a.user.name or a.user.username,
-                'initial': (a.user.name or a.user.username or 'U')[0].upper(),
-                'status': a.status,
-            }
-            for a in mtg.attendees
-        ]
-        meetings_json.append({
-            'kind': 'meeting',
-            'id': mtg.id,
-            'title': mtg.title,
-            'description': mtg.description or '',
-            'scheduled_for': mtg.scheduled_for.isoformat(),
-            'end_time_iso': mtg.end_time.isoformat(),
-            'time': mtg.scheduled_for.strftime('%I:%M %p').lstrip('0'),
-            'end_time': mtg.end_time.strftime('%I:%M %p').lstrip('0'),
-            'duration': mtg.duration_minutes,
-            'date_label': mtg.scheduled_for.strftime('%A, %b %d'),
-            'color': color,
-            'team': org.name,
-            'team_slug': org.slug,
-            'organizer': (mtg.organizer.name or mtg.organizer.username) if mtg.organizer else 'Someone',
-            'attendees': attendees,
-            'attendee_count': len(attendees),
-            'join_url': url_for('meetings.meeting_room', meeting_id=mtg.id),
-            'can_manage': _can_manage(mtg, role_by_org.get(mtg.org_id)),
-            'cancel_url': url_for('calendar.cancel_meeting', meeting_id=mtg.id),
-        })
-
-    # ---- serialize tasks to JSON ----
-    tasks_json = []
-    for tsk in tasks:
-        tasks_json.append({
-            'kind': 'task',
-            'id': tsk.id,
-            'title': tsk.title,
-            'description': tsk.description or '',
-            'deadline': tsk.deadline.isoformat() if tsk.deadline else None,
-            'time_slot': tsk.time_slot.strftime('%H:%M') if tsk.time_slot else None,
-            'time': tsk.time_slot.strftime('%I:%M %p').lstrip('0') if tsk.time_slot else None,
-            'priority': tsk.priority,
-            'status': tsk.status,
-            'project_id': tsk.project_id,
-            'project_name': tsk.project.name if tsk.project else None,
-            'assigned_to': tsk.assigned_to,
-            'assignee_name': (tsk.assignee.name or tsk.assignee.username) if tsk.assignee else None,
-            'toggle_url': url_for('tasks.toggle_status', task_id=tsk.id),
-            'edit_url': url_for('tasks.edit_task', task_id=tsk.id),
-            'delete_url': url_for('tasks.delete_task', task_id=tsk.id),
-        })
-
-    # ---- upcoming meetings (next 30 days) for the side panel ----
-    now = datetime.now()
-    upcoming = []
-    if org_ids:
-        upcoming_rows = Meeting.query.filter(
-            Meeting.org_id.in_(org_ids),
-            Meeting.scheduled_for >= now,
-        ).order_by(Meeting.scheduled_for.asc()).limit(6).all()
-        for mtg in upcoming_rows:
-            org = mtg.organization
-            upcoming.append({
-                'id': mtg.id,
-                'title': mtg.title,
-                'color': _color_for(org_index.get(mtg.org_id, 0)),
-                'team': org.name,
-                'when': mtg.scheduled_for.strftime('%a, %b %d · %I:%M %p').replace('· 0', '· '),
-                'day_num': mtg.scheduled_for.day,
-                'month_abbr': mtg.scheduled_for.strftime('%b'),
-                'time': mtg.scheduled_for.strftime('%I:%M %p').lstrip('0'),
-                'attendee_count': len(mtg.attendees),
-                'join_url': url_for('meetings.meeting_room', meeting_id=mtg.id),
-            })
-
-    # ---- teams + members payload for the booking modal ----
-    teams_data = []
-    for org, m in orgs_with_membership:
-        members = OrgMember.query.filter_by(org_id=org.id).all()
-        teams_data.append({
-            'slug': org.slug,
-            'name': org.name,
-            'members': [
-                {'id': mem.user_id,
-                 'name': (mem.user.name or mem.user.username),
-                 'is_self': mem.user_id == current_user.id}
-                for mem in members
-            ],
-        })
+    # ---- serialize meetings + tasks, side panel, and booking-modal teams ----
+    meetings_json = _serialize_meetings(meetings, org_index, role_by_org)
+    tasks_json = _serialize_tasks(tasks)
+    upcoming = _upcoming_meetings(org_ids, org_index)
+    teams_data = _teams_payload(orgs_with_membership)
 
     prev_month = (first_of_month - timedelta(days=1))
     next_month = (last_of_month + timedelta(days=1))
