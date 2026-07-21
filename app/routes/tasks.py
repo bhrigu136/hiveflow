@@ -278,6 +278,92 @@ def _authorize_task(task_id, action):
     _deny("not admin")
 
 
+def _notify_task_edit(task, prev_assigned_to, prev_status):
+    """Notify the relevant people about a project-task edit.
+
+    Extracted verbatim from edit_task. Only project tasks notify. A status
+    change gets a tailored message; anything else is a generic 'edited'. The
+    actor is never notified. Does not commit — the caller owns the transaction.
+    """
+    if not task.project_id:
+        return
+
+    actor_name = current_user.name or current_user.username
+    link = url_for('projects.dashboard', project_id=task.project_id)
+    notified = {current_user.id}
+
+    # 1. If the assignee changed, ping the new assignee specifically
+    if task.assigned_to and task.assigned_to != prev_assigned_to and task.assigned_to not in notified:
+        create_notification(
+            task.assigned_to,
+            f"{actor_name} assigned you the task '{task.title}'",
+            link,
+        )
+        notified.add(task.assigned_to)
+
+    # 2. Notify existing audience (creator + current assignee) about the edit
+    if task.status != prev_status:
+        message_template = f"{actor_name} moved '{task.title}' to {task.status}"
+    else:
+        message_template = f"{actor_name} edited the task '{task.title}'"
+
+    if task.assigned_to and task.assigned_to not in notified:
+        create_notification(task.assigned_to, message_template, link)
+        notified.add(task.assigned_to)
+    if task.created_by and task.created_by not in notified:
+        create_notification(task.created_by, message_template, link)
+
+
+def _update_task_calendar_event(task, deadline, time_slot):
+    """Patch the task's Google Calendar event after an edit, if one exists.
+
+    Extracted verbatim from edit_task. Best-effort: runs only when the task has
+    a synced event, the user is connected to Google, and a date/time was given;
+    a Google failure is logged and never blocks the edit.
+    """
+    if not (
+        task.google_event_id
+        and current_user.google_access_token
+        and current_user.google_refresh_token
+        and (deadline or time_slot)
+    ):
+        return
+
+    try:
+        # Rebuild datetime
+        deadline_datetime = None
+        if deadline and time_slot:
+            deadline_datetime = datetime.combine(deadline, time_slot)
+        elif deadline:
+            deadline_datetime = datetime.combine(deadline, time(9, 0))
+
+        if deadline_datetime:
+            service = build_calendar_service(current_user)
+
+            updated_event = {
+                "summary": f"To-Do: {task.title}",
+                "description": f"Priority: {task.priority}",
+                "start": {
+                    "dateTime": deadline_datetime.isoformat(),
+                    "timeZone": "Asia/Kolkata",
+                },
+                "end": {
+                    "dateTime": (deadline_datetime + timedelta(minutes=30)).isoformat(),
+                    "timeZone": "Asia/Kolkata",
+                },
+            }
+
+            service.events().patch(
+                calendarId="primary",
+                eventId=task.google_event_id,
+                body=updated_event
+            ).execute()
+
+    except Exception as e:
+        # Never block user edit for Google failures
+        print("Google Calendar update failed:", e)
+
+
 # EDIT TASK
 @tasks_bp.route('/edit/<int:task_id>', methods=['POST'])
 @login_required
@@ -373,75 +459,12 @@ def edit_task(task_id):
             task.assigned_to = validated_assigned_to
 
     # Notify the relevant people about the edit (project tasks only).
-    # Status changes get a tailored message; everything else is a generic "edited".
-    if task.project_id:
-        actor_name = current_user.name or current_user.username
-        link = url_for('projects.dashboard', project_id=task.project_id)
-        notified = {current_user.id}
-
-        # 1. If the assignee changed, ping the new assignee specifically
-        if task.assigned_to and task.assigned_to != prev_assigned_to and task.assigned_to not in notified:
-            create_notification(
-                task.assigned_to,
-                f"{actor_name} assigned you the task '{task.title}'",
-                link,
-            )
-            notified.add(task.assigned_to)
-
-        # 2. Notify existing audience (creator + current assignee) about the edit
-        if task.status != prev_status:
-            message_template = f"{actor_name} moved '{task.title}' to {task.status}"
-        else:
-            message_template = f"{actor_name} edited the task '{task.title}'"
-
-        if task.assigned_to and task.assigned_to not in notified:
-            create_notification(task.assigned_to, message_template, link)
-            notified.add(task.assigned_to)
-        if task.created_by and task.created_by not in notified:
-            create_notification(task.created_by, message_template, link)
+    _notify_task_edit(task, prev_assigned_to, prev_status)
 
     db.session.commit()
 
     # UPDATE GOOGLE CALENDAR EVENT (IF EXISTS)
-    if (
-        task.google_event_id
-        and current_user.google_access_token
-        and current_user.google_refresh_token
-        and (deadline or time_slot)
-    ):
-        try:
-            # Rebuild datetime
-            deadline_datetime = None
-            if deadline and time_slot:
-                deadline_datetime = datetime.combine(deadline, time_slot)
-            elif deadline:
-                deadline_datetime = datetime.combine(deadline, time(9, 0))
-
-            if deadline_datetime:
-                service = build_calendar_service(current_user)
-
-                updated_event = {
-                    "summary": f"To-Do: {task.title}",
-                    "description": f"Priority: {task.priority}",
-                    "start": {
-                        "dateTime": deadline_datetime.isoformat(),
-                        "timeZone": "Asia/Kolkata",
-                    },
-                    "end": {
-                        "dateTime": (deadline_datetime + timedelta(minutes=30)).isoformat(),
-                        "timeZone": "Asia/Kolkata",
-                    },
-                }
-
-                service.events().patch(
-                    calendarId="primary",
-                    eventId=task.google_event_id,
-                    body=updated_event
-                ).execute()
-
-        except Exception as e:
-            # Never block user edit for Google failures
-            print("Google Calendar update failed:", e)
+    _update_task_calendar_event(task, deadline, time_slot)
 
     flash("Task updated successfully.", "success")
     return redirect(fallback_redirect)
