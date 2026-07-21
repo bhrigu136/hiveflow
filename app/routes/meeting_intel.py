@@ -16,10 +16,10 @@ tasks / finalizing is limited to the organizer or an org Admin.
 from datetime import datetime, timezone, timedelta
 
 from flask import (Blueprint, request, jsonify, render_template, redirect,
-                   url_for, flash, abort, current_app)
+                   url_for, flash, abort)
 from flask_login import login_required, current_user
 
-from app.extensions import db, limiter, get_pusher, broadcast_event
+from app.extensions import db, limiter, broadcast_event, broadcast_batch
 from app.models import (Meeting, TranscriptSegment, OrgMember, Project, Task,
                         User, Organization)
 from app.utils import create_notification
@@ -127,25 +127,15 @@ def post_segment(meeting_id):
         return jsonify({'ok': False, 'error': 'save failed'}), 500
 
     # Push finals to everyone in the room for a live transcript panel.
+    # Best-effort: segments are already stored, so a Pusher outage must not break
+    # ingestion (broadcast_batch swallows + logs).
     if broadcast:
-        pusher = get_pusher()
-        if pusher:
-            try:
-                for b in broadcast:
-                    pusher.trigger(f'meeting-{meeting.id}', 'caption-final', {
-                        'user_id': current_user.id,
-                        'name': speaker_name,
-                        'text': b['text'],
-                        'started_at': b['started_at'],
-                    })
-            except Exception as e:
-                # Best-effort live caption; segments are already stored. Broad
-                # catch is intentional so a Pusher outage never breaks segment
-                # ingestion; logged rather than swallowed.
-                current_app.logger.warning(
-                    f'[pusher] caption-final broadcast failed for meeting '
-                    f'{meeting.id}: {type(e).__name__}: {e}'
-                )
+        broadcast_batch(
+            f'meeting-{meeting.id}', 'caption-final',
+            [{'user_id': current_user.id, 'name': speaker_name,
+              'text': b['text'], 'started_at': b['started_at']} for b in broadcast],
+            failure_desc=f'caption-final broadcast failed for meeting {meeting.id}',
+        )
 
     return jsonify({'ok': True, 'stored': stored})
 

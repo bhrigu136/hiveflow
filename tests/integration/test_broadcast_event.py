@@ -17,7 +17,7 @@ from unittest.mock import MagicMock
 
 import pytest
 
-from app.extensions import broadcast_event
+from app.extensions import broadcast_batch, broadcast_event
 
 
 @pytest.fixture
@@ -64,3 +64,30 @@ class TestBroadcastEvent:
 
         messages = [r.getMessage() for r in app_warnings]
         assert any("[pusher]" in m and desc in m and "RuntimeError" in m for m in messages), messages
+
+
+class TestBroadcastBatch:
+    def test_skips_when_pusher_unconfigured(self, app, monkeypatch):
+        monkeypatch.setattr("app.extensions.get_pusher", lambda: None)
+        with app.app_context():
+            assert broadcast_batch("c", "e", [{"x": 1}], failure_desc="d") is None
+
+    def test_triggers_each_payload_in_order(self, app, monkeypatch):
+        fake = MagicMock()
+        monkeypatch.setattr("app.extensions.get_pusher", lambda: fake)
+        payloads = [{"n": 1}, {"n": 2}, {"n": 3}]
+        with app.app_context():
+            broadcast_batch("room-7", "caption-final", payloads, failure_desc="d")
+        assert fake.trigger.call_count == 3
+        fake.trigger.assert_any_call("room-7", "caption-final", {"n": 2})
+
+    def test_swallows_and_logs_on_raise(self, app, monkeypatch, app_warnings):
+        class _Boom:
+            def trigger(self, *a, **k):
+                raise RuntimeError("pusher down")
+
+        monkeypatch.setattr("app.extensions.get_pusher", lambda: _Boom())
+        desc = "caption-final broadcast failed for meeting 9"
+        with app.app_context():
+            broadcast_batch("c", "e", [{"x": 1}], failure_desc=desc)
+        assert any("[pusher]" in m and desc in m for m in (r.getMessage() for r in app_warnings))

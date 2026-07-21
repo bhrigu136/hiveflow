@@ -72,3 +72,24 @@ def broadcast_event(channel, event, data, *, failure_desc):
             f'[pusher] {failure_desc}: {type(e).__name__}: {e}'
         )
 
+
+def broadcast_batch(channel, event, payloads, *, failure_desc):
+    """Best-effort Pusher broadcast of many payloads to one channel/event.
+
+    The batch sibling of :func:`broadcast_event` (e.g. caption finals). Same
+    contract — skip when Pusher isn't configured, and on the first failing
+    trigger stop and log a single warning instead of propagating — matching the
+    previous inline behaviour: one ``try`` around the whole loop, one warning.
+    """
+    from flask import current_app
+    pusher = get_pusher()
+    if not pusher:
+        return
+    try:
+        for payload in payloads:
+            pusher.trigger(channel, event, payload)
+    except Exception as e:
+        current_app.logger.warning(
+            f'[pusher] {failure_desc}: {type(e).__name__}: {e}'
+        )
+
