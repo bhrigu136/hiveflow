@@ -1,19 +1,17 @@
-from flask import Blueprint, render_template, redirect, url_for, flash, current_app, jsonify, request
+from flask import Blueprint, render_template, current_app, jsonify, request, g
 from flask_login import login_required, current_user
-from app.models import Project, Meeting
-from app.authz import check_project_access, is_org_member
+from app.authz import require_org_member, by_project, by_meeting, redirect_flash, json_403
 import os
 
 meetings_bp = Blueprint('meetings', __name__)
 
 @meetings_bp.route('/projects/<int:project_id>/meeting')
 @login_required
+@require_org_member(by_project(), redirect_flash(
+    'orgs.list_orgs', "You do not have permission to join this meeting room."))
 def project_meeting(project_id):
     """Renders the collaborative audio/video and screen share meeting room using Jitsi."""
-    project = Project.query.get_or_404(project_id)
-    if not check_project_access(project):
-        flash("You do not have permission to join this meeting room.", 'danger')
-        return redirect(url_for('orgs.list_orgs'))
+    project = g.authz_obj
 
     import hashlib
     # Generate a unique hash using project ID and secret key to keep room private
@@ -31,6 +29,8 @@ def project_meeting(project_id):
 
 @meetings_bp.route('/meetings/<int:meeting_id>/room')
 @login_required
+@require_org_member(by_meeting(), redirect_flash(
+    'calendar.my_calendar', "You do not have permission to join this meeting room."))
 def meeting_room(meeting_id):
     """Join the Jitsi room for a scheduled team meeting.
 
@@ -38,11 +38,7 @@ def meeting_room(meeting_id):
     name is stored on the meeting (generated at booking time) so everyone who
     opens this URL lands in the same private room.
     """
-    meeting = Meeting.query.get_or_404(meeting_id)
-
-    if not is_org_member(meeting.org_id):
-        flash("You do not have permission to join this meeting room.", 'danger')
-        return redirect(url_for('calendar.my_calendar'))
+    meeting = g.authz_obj
 
     return render_template(
         'calendar/room.html',
@@ -54,16 +50,13 @@ def meeting_room(meeting_id):
 
 @meetings_bp.route('/api/projects/<int:project_id>/meeting/active-count')
 @login_required
+@require_org_member(by_project(), json_403())
 def active_meeting_count(project_id):
     """Returns the mock active user count for this project meeting room.
 
     In a fully distributed environment, this can query Jitsi's active participants state,
     or read from Redis active states.
     """
-    project = Project.query.get_or_404(project_id)
-    if not check_project_access(project):
-        return jsonify({'error': 'access denied'}), 403
-
     # For a zero-cost student startup, we can return a randomized or real-time cached count
     # to show that a session is live.
     return jsonify({

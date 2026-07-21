@@ -189,6 +189,21 @@ class TestProjectMutationGates:
 
 
 @pytest.mark.integration
+class TestMeetingCountApi:
+    """meetings.active_meeting_count is an AJAX endpoint that denies with JSON 403
+    (C4 migrated it to require_org_member + json_403)."""
+
+    def test_outsider_gets_json_403(self, app, make_client, world):
+        c = login(make_client(), "outsider")
+        r = c.get(f"/api/projects/{world['project_a']}/meeting/active-count")
+        assert r.status_code == 403 and r.get_json()["error"] == "access denied"
+
+    def test_member_gets_200(self, app, make_client, world):
+        c = login(make_client(), "member_a")
+        assert c.get(f"/api/projects/{world['project_a']}/meeting/active-count").status_code == 200
+
+
+@pytest.mark.integration
 class TestAnalyticsAdminGate:
     """org + project analytics require Admin. B7/B8 migrated the gate from an
     inline `not membership or membership.role != 'Admin'` check to
