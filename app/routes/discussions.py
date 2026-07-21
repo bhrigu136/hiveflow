@@ -1,8 +1,8 @@
 from flask import Blueprint, render_template, request, redirect, url_for, flash, jsonify, current_app
 from flask_login import login_required, current_user
-from app.models import Project, Discussion, DiscussionComment, Task, TaskComment, OrgMember
+from app.models import Project, Discussion, DiscussionComment, Task, TaskComment
 from app.extensions import db
-from app.utils import create_notification
+from app.utils import create_notification, notify_org_members
 from app.authz import check_project_access
 
 discussions_bp = Blueprint('discussions', __name__)
@@ -54,11 +54,13 @@ def create_discussion(project_id):
 
     
     # Notify all other org members
-    org_members = OrgMember.query.filter_by(org_id=project.org_id).all()
-    for member in org_members:
-        if member.user_id != current_user.id:
-            create_notification(member.user_id, f"{current_user.name or current_user.username} started a new discussion: {title}", url_for('discussions.list_discussions', project_id=project.id))
-            
+    notify_org_members(
+        project.org_id,
+        f"{current_user.name or current_user.username} started a new discussion: {title}",
+        url_for('discussions.list_discussions', project_id=project.id),
+        exclude_user_id=current_user.id,
+    )
+
     db.session.commit()
     
     flash("Discussion created successfully.", 'success')
@@ -108,10 +110,12 @@ def add_discussion_comment(discussion_id):
     db.session.add(comment)
 
     # Notify all other org members
-    org_members = OrgMember.query.filter_by(org_id=discussion.project.org_id).all()
-    for member in org_members:
-        if member.user_id != current_user.id:
-            create_notification(member.user_id, f"{current_user.name or current_user.username} commented on discussion '{discussion.title}'", url_for('discussions.view_discussion', discussion_id=discussion.id))
+    notify_org_members(
+        discussion.project.org_id,
+        f"{current_user.name or current_user.username} commented on discussion '{discussion.title}'",
+        url_for('discussions.view_discussion', discussion_id=discussion.id),
+        exclude_user_id=current_user.id,
+    )
 
     db.session.commit()
 
