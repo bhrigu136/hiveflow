@@ -1,14 +1,10 @@
 from flask import Blueprint, render_template, redirect, url_for, flash, current_app, jsonify, request
 from flask_login import login_required, current_user
 from app.models import Project, OrgMember, Meeting
+from app.authz import check_project_access
 import os
 
 meetings_bp = Blueprint('meetings', __name__)
-
-def check_project_access(project):
-    """Helper to check if current_user is in the project's organization."""
-    member = OrgMember.query.filter_by(org_id=project.org_id, user_id=current_user.id).first()
-    return member is not None
 
 @meetings_bp.route('/projects/<int:project_id>/meeting')
 @login_required

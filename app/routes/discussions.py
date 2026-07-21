@@ -3,13 +3,9 @@ from flask_login import login_required, current_user
 from app.models import Project, Discussion, DiscussionComment, Task, TaskComment, OrgMember
 from app.extensions import db
 from app.utils import create_notification
+from app.authz import check_project_access
 
 discussions_bp = Blueprint('discussions', __name__)
-
-def check_project_access(project):
-    """Helper to check if current_user is in the project's organization."""
-    member = OrgMember.query.filter_by(org_id=project.org_id, user_id=current_user.id).first()
-    return member is not None
 
 # ── Project Discussions ──────────────────────────────────────────────
 
