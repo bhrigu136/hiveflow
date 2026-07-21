@@ -1,7 +1,8 @@
 from flask import Blueprint, request, jsonify
 from flask_login import login_required, current_user
-from app.models import FileAttachment, Project, Task, Discussion, OrgMember, Document
+from app.models import FileAttachment, Project, Task, Discussion, Document
 from app.extensions import db
+from app.authz import is_org_member
 from datetime import datetime, timezone
 import os
 
@@ -14,8 +15,7 @@ def check_project_access(project_id):
     project = Project.query.get(project_id)
     if not project:
         return False
-    member = OrgMember.query.filter_by(org_id=project.org_id, user_id=current_user.id).first()
-    return member is not None
+    return is_org_member(project.org_id)
 
 def check_document_access(document_id):
     """Verify current_user belongs to the org of the document being attached to."""
@@ -24,7 +24,7 @@ def check_document_access(document_id):
     doc = Document.query.get(document_id)
     if not doc or doc.deleted_at is not None:
         return False
-    return OrgMember.query.filter_by(org_id=doc.org_id, user_id=current_user.id).first() is not None
+    return is_org_member(doc.org_id)
 
 def check_task_access(task_id):
     """Verify current_user may attach a file to this task.
@@ -42,9 +42,7 @@ def check_task_access(task_id):
     project = Project.query.get(task.project_id)
     if not project:
         return False
-    return OrgMember.query.filter_by(
-        org_id=project.org_id, user_id=current_user.id
-    ).first() is not None
+    return is_org_member(project.org_id)
 
 def check_discussion_access(discussion_id):
     """Verify current_user belongs to the org of the discussion's project."""
@@ -56,9 +54,7 @@ def check_discussion_access(discussion_id):
     project = Project.query.get(discussion.project_id)
     if not project:
         return False
-    return OrgMember.query.filter_by(
-        org_id=project.org_id, user_id=current_user.id
-    ).first() is not None
+    return is_org_member(project.org_id)
 
 @files_bp.route('/api/files/sign-upload', methods=['POST'])
 @login_required
