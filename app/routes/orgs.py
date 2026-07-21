@@ -7,7 +7,7 @@ from flask_login import login_required, current_user
 from app.models import Organization, OrgMember, Project, Task
 from app.extensions import db, limiter
 from app.utils import create_notification
-from app.services.analytics import org_analytics
+from app.services.analytics import org_analytics, member_task_breakdown
 
 orgs_bp = Blueprint('orgs', __name__, url_prefix='/orgs')
 
@@ -154,33 +154,8 @@ def analytics(slug):
         
     project_ids = [p.id for p in org.projects]
     tasks = Task.query.filter(Task.project_id.in_(project_ids)).all() if project_ids else []
-    
-    members_data = []
-    for member in org.members:
-        member_tasks = [t for t in tasks if t.assigned_to == member.user_id]
-        total_assigned = len(member_tasks)
-        completed = sum(1 for t in member_tasks if t.status == 'Completed')
-        pending = sum(1 for t in member_tasks if t.status == 'Pending')
-        working = sum(1 for t in member_tasks if t.status == 'Working')
-        
-        # Calculate completion rate safely
-        completion_rate = int((completed / total_assigned) * 100) if total_assigned > 0 else 0
-        
-        # Get up to 5 recently completed tasks
-        recent_tasks = sorted([t for t in member_tasks if t.status == 'Completed'], key=lambda t: t.created_at, reverse=True)[:5]
-        
-        members_data.append({
-            'member': member,
-            'total': total_assigned,
-            'completed': completed,
-            'pending': pending,
-            'working': working,
-            'completion_rate': completion_rate,
-            'recent_tasks': recent_tasks
-        })
-        
-    # Sort members by completed tasks descending
-    members_data.sort(key=lambda x: x['completed'], reverse=True)
+
+    members_data = member_task_breakdown(org.members, tasks)
 
     stats = org_analytics(org.id)
     return render_template('orgs/analytics.html', org=org, members_data=members_data, stats=stats)
