@@ -17,6 +17,51 @@ tasks_bp = Blueprint('tasks', __name__)
 
 
 # VIEW TASKS
+def _query_personal_tasks(user_id, status_filter, priority_filter, search, selected_date, today):
+    """Build and run the filtered personal-task query for the task list view.
+
+    Personal tasks only (project tasks live on their board). Extracted verbatim
+    from view_tasks. ``selected_date`` of None is the 'all' view; when it equals
+    ``today`` the query also surfaces undated tasks so they don't get lost.
+    """
+    query = Task.query.filter_by(user_id=user_id).filter(Task.project_id.is_(None))
+
+    if status_filter != 'all':
+        query = query.filter_by(status=status_filter)
+
+    if priority_filter != 'all':
+        query = query.filter_by(priority=priority_filter)
+
+    if search:
+        query = query.filter(Task.title.ilike(f'%{search}%'))
+
+    if selected_date is not None:
+        if selected_date == today:
+            query = query.filter(or_(Task.deadline == selected_date, Task.deadline.is_(None)))
+        else:
+            query = query.filter(Task.deadline == selected_date)
+
+    return query.order_by(
+        Task.deadline.desc(),
+        Task.time_slot.desc(),
+        Task.created_at.desc()
+    ).all()
+
+
+def _task_stats(tasks):
+    """Summary counts for the currently-visible task set. Extracted from
+    view_tasks; completion_pct truncates like int(), matching the original."""
+    total = len(tasks)
+    completed = sum(1 for t in tasks if t.status == 'Completed')
+    return {
+        'total_count': total,
+        'pending_count': sum(1 for t in tasks if t.status == 'Pending'),
+        'working_count': sum(1 for t in tasks if t.status == 'Working'),
+        'completed_count': completed,
+        'completion_pct': int((completed / total) * 100) if total else 0,
+    }
+
+
 @tasks_bp.route('/')
 @login_required
 def view_tasks():
@@ -40,36 +85,11 @@ def view_tasks():
             selected_date = today
 
     # Personal view: only personal tasks. Project tasks live on their project board.
-    query = Task.query.filter_by(user_id=current_user.id).filter(Task.project_id.is_(None))
-
-    if status_filter != 'all':
-        query = query.filter_by(status=status_filter)
-
-    if priority_filter != 'all':
-        query = query.filter_by(priority=priority_filter)
-
-    if search:
-        query = query.filter(Task.title.ilike(f'%{search}%'))
-
-    if selected_date is not None:
-        if selected_date == today:
-            # Today's view also surfaces undated tasks so they don't get lost
-            query = query.filter(or_(Task.deadline == selected_date, Task.deadline.is_(None)))
-        else:
-            query = query.filter(Task.deadline == selected_date)
-
-    tasks = query.order_by(
-        Task.deadline.desc(),
-        Task.time_slot.desc(),
-        Task.created_at.desc()
-    ).all()
+    tasks = _query_personal_tasks(
+        current_user.id, status_filter, priority_filter, search, selected_date, today)
 
     # Stats for the dashboard summary — based on the currently visible task set
-    total_count = len(tasks)
-    pending_count = sum(1 for t in tasks if t.status == 'Pending')
-    working_count = sum(1 for t in tasks if t.status == 'Working')
-    completed_count = sum(1 for t in tasks if t.status == 'Completed')
-    completion_pct = int((completed_count / total_count) * 100) if total_count else 0
+    stats = _task_stats(tasks)
 
     # Build prev/next dates and a friendly label for the day-navigation bar
     prev_date = (selected_date - timedelta(days=1)).isoformat() if selected_date else None
@@ -109,11 +129,11 @@ def view_tasks():
         next_date=next_date,
         day_label=day_label,
         nav_args=nav_args,
-        total_count=total_count,
-        pending_count=pending_count,
-        working_count=working_count,
-        completed_count=completed_count,
-        completion_pct=completion_pct,
+        total_count=stats['total_count'],
+        pending_count=stats['pending_count'],
+        working_count=stats['working_count'],
+        completed_count=stats['completed_count'],
+        completion_pct=stats['completion_pct'],
     )
 
 
