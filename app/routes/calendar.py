@@ -228,6 +228,42 @@ def my_calendar():
     )
 
 
+def _invite_meeting_attendees(meeting, attendee_ids, join_url, when_label):
+    """Create attendee rows for a newly-booked meeting and fan out invites.
+
+    Extracted verbatim from book_meeting. The organizer is always included
+    (auto-accepted); only real members of the meeting's org among `attendee_ids`
+    are added. Each attendee gets a best-effort Google Calendar event (fails soft
+    per user); everyone except the organizer gets an in-app invite notification.
+    Does not commit — the caller owns the transaction.
+    """
+    valid_member_ids = {m.user_id for m in OrgMember.query.filter_by(org_id=meeting.org_id).all()}
+    chosen = {int(a) for a in attendee_ids if a.isdigit()} & valid_member_ids
+    chosen.add(current_user.id)
+
+    actor_name = current_user.name or current_user.username
+
+    for uid in chosen:
+        attendee_user = User.query.get(uid)
+        if not attendee_user:
+            continue
+        attendee = MeetingAttendee(
+            meeting_id=meeting.id,
+            user_id=uid,
+            status='Accepted' if uid == current_user.id else 'Invited',
+        )
+        # Google Calendar sync (fails soft per-user)
+        attendee.google_event_id = create_meeting_event(attendee_user, meeting, join_url=join_url)
+        db.session.add(attendee)
+
+        if uid != current_user.id:
+            create_notification(
+                uid,
+                f"{actor_name} invited you to '{meeting.title}' on {when_label}",
+                url_for('calendar.my_calendar'),
+            )
+
+
 @calendar_bp.route('/calendar/book', methods=['POST'])
 @login_required
 def book_meeting():
@@ -282,34 +318,10 @@ def book_meeting():
     meeting.room_name = f"HiveFlow_Meeting_{meeting.id}_{room_hash}"
 
     join_url = url_for('meetings.meeting_room', meeting_id=meeting.id, _external=True)
-
-    # ---- resolve attendees (organizer always included, members only) ----
-    valid_member_ids = {m.user_id for m in OrgMember.query.filter_by(org_id=org.id).all()}
-    chosen = {int(a) for a in attendee_ids if a.isdigit()} & valid_member_ids
-    chosen.add(current_user.id)
-
-    actor_name = current_user.name or current_user.username
     when_label = scheduled_for.strftime('%b %d at %I:%M %p').replace(' 0', ' ')
 
-    for uid in chosen:
-        attendee_user = User.query.get(uid)
-        if not attendee_user:
-            continue
-        attendee = MeetingAttendee(
-            meeting_id=meeting.id,
-            user_id=uid,
-            status='Accepted' if uid == current_user.id else 'Invited',
-        )
-        # Google Calendar sync (fails soft per-user)
-        attendee.google_event_id = create_meeting_event(attendee_user, meeting, join_url=join_url)
-        db.session.add(attendee)
-
-        if uid != current_user.id:
-            create_notification(
-                uid,
-                f"{actor_name} invited you to '{title}' on {when_label}",
-                url_for('calendar.my_calendar'),
-            )
+    # ---- resolve attendees (organizer always included, members only) + invite ----
+    _invite_meeting_attendees(meeting, attendee_ids, join_url, when_label)
 
     db.session.commit()
     flash(f'Meeting "{title}" scheduled for {when_label}.', 'success')
