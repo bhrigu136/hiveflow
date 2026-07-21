@@ -1,25 +1,23 @@
 import csv
 import io
-from flask import Blueprint, render_template, request, redirect, url_for, flash, Response
+from flask import Blueprint, render_template, request, redirect, url_for, flash, Response, g
 from flask_login import login_required, current_user
-from app.models import Organization, OrgMember, Project, Task
+from app.models import OrgMember, Project, Task
 from app.extensions import db
 from app.utils import create_notification
 from app.services.analytics import project_analytics, member_task_breakdown
-from app.authz import is_org_member, is_org_admin
+from app.authz import (require_org_member, require_org_admin,
+                       by_slug, by_project, redirect_flash)
 
 projects_bp = Blueprint('projects', __name__, url_prefix='/projects')
 
 @projects_bp.route('/<org_slug>/create', methods=['GET', 'POST'])
 @login_required
+@require_org_member(by_slug('org_slug'), redirect_flash(
+    'orgs.list_orgs', 'You do not have permission to create projects here.'))
 def create_project(org_slug):
-    org = Organization.query.filter_by(slug=org_slug).first_or_404()
-    
-    # Verify membership
-    if not is_org_member(org.id):
-        flash('You do not have permission to create projects here.', 'danger')
-        return redirect(url_for('orgs.list_orgs'))
-        
+    org = g.authz_obj
+
     if request.method == 'POST':
         name = request.form.get('name', '').strip()
         description = request.form.get('description', '').strip()
@@ -92,15 +90,12 @@ def dashboard(project_id):
 
 @projects_bp.route('/<int:project_id>/task/add', methods=['POST'])
 @login_required
+@require_org_member(by_project(),
+                    redirect_flash('orgs.list_orgs', 'Permission denied.'))
 def add_task(project_id):
-    project = Project.query.get_or_404(project_id)
+    project = g.authz_obj
     org = project.organization
-    
-    # Verify membership
-    if not is_org_member(org.id):
-        flash('Permission denied.', 'danger')
-        return redirect(url_for('orgs.list_orgs'))
-        
+
     title = request.form.get('title', '').strip()
     description = request.form.get('description', '').strip()
     priority = request.form.get('priority', 'Medium')
@@ -162,15 +157,13 @@ def add_task(project_id):
 
 @projects_bp.route('/<int:project_id>/analytics')
 @login_required
+@require_org_admin(by_project(), redirect_flash(
+    'projects.dashboard', 'You do not have permission to view project analytics.',
+    values=lambda a: {'project_id': a.obj.id}))
 def analytics(project_id):
-    project = Project.query.get_or_404(project_id)
+    project = g.authz_obj
     org = project.organization
-    
-    # Check if user is a member AND an Admin
-    if not is_org_admin(org.id):
-        flash('You do not have permission to view project analytics.', 'danger')
-        return redirect(url_for('projects.dashboard', project_id=project.id))
-        
+
     tasks = Task.query.filter_by(project_id=project.id).all()
 
     members_data = member_task_breakdown(org.members, tasks)
@@ -182,12 +175,12 @@ def analytics(project_id):
 
 @projects_bp.route('/<int:project_id>/analytics/export.csv')
 @login_required
+@require_org_admin(by_project(), redirect_flash(
+    'projects.dashboard', 'You do not have permission to export analytics.',
+    values=lambda a: {'project_id': a.obj.id}))
 def analytics_export(project_id):
-    project = Project.query.get_or_404(project_id)
+    project = g.authz_obj
     org = project.organization
-    if not is_org_admin(org.id):
-        flash('You do not have permission to export analytics.', 'danger')
-        return redirect(url_for('projects.dashboard', project_id=project.id))
 
     stats = project_analytics(project.id)
     buf = io.StringIO()
