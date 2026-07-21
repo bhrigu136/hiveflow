@@ -209,6 +209,17 @@ class TestAnalyticsAdminGate:
         c = login(make_client(), "admin_a")
         assert c.get(f"/projects/{world['project_a']}/analytics").status_code == 200
 
+    def test_member_denied_org_export(self, app, make_client, world):
+        c = login(make_client(), "member_a")
+        r = c.get("/orgs/org-a/analytics/export.csv", follow_redirects=False)
+        assert r.status_code in (302, 403, 404)
+
+    def test_admin_allowed_org_export_csv(self, app, make_client, world):
+        c = login(make_client(), "admin_a")
+        r = c.get("/orgs/org-a/analytics/export.csv")
+        assert r.status_code == 200
+        assert "text/csv" in r.headers.get("Content-Type", "")
+
 
 @pytest.mark.integration
 class TestSessionIsolation:

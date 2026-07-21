@@ -2,13 +2,13 @@ import re
 import csv
 import io
 import secrets
-from flask import Blueprint, render_template, request, redirect, url_for, flash, Response
+from flask import Blueprint, render_template, request, redirect, url_for, flash, Response, g
 from flask_login import login_required, current_user
 from app.models import Organization, OrgMember, Project, Task
 from app.extensions import db, limiter
 from app.utils import create_notification
 from app.services.analytics import org_analytics, member_task_breakdown
-from app.authz import is_org_member, is_org_admin
+from app.authz import is_org_member, require_org_admin, by_slug, redirect_flash
 
 orgs_bp = Blueprint('orgs', __name__, url_prefix='/orgs')
 
@@ -143,14 +143,12 @@ def dashboard(slug):
 
 @orgs_bp.route('/<slug>/analytics')
 @login_required
+@require_org_admin(by_slug(), redirect_flash(
+    'orgs.dashboard', 'You do not have permission to view organization analytics.',
+    values=lambda a: {'slug': a.obj.slug}))
 def analytics(slug):
-    org = Organization.query.filter_by(slug=slug).first_or_404()
-    
-    # Check if user is a member AND an Admin
-    if not is_org_admin(org.id):
-        flash('You do not have permission to view organization analytics.', 'danger')
-        return redirect(url_for('orgs.dashboard', slug=org.slug))
-        
+    org = g.authz_obj
+
     project_ids = [p.id for p in org.projects]
     tasks = Task.query.filter(Task.project_id.in_(project_ids)).all() if project_ids else []
 
@@ -162,11 +160,11 @@ def analytics(slug):
 
 @orgs_bp.route('/<slug>/analytics/export.csv')
 @login_required
+@require_org_admin(by_slug(), redirect_flash(
+    'orgs.dashboard', 'You do not have permission to export analytics.',
+    values=lambda a: {'slug': a.obj.slug}))
 def analytics_export(slug):
-    org = Organization.query.filter_by(slug=slug).first_or_404()
-    if not is_org_admin(org.id):
-        flash('You do not have permission to export analytics.', 'danger')
-        return redirect(url_for('orgs.dashboard', slug=org.slug))
+    org = g.authz_obj
 
     stats = org_analytics(org.id)
     buf = io.StringIO()
