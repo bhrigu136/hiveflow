@@ -1,0 +1,38 @@
+name: CI
+
+on:
+  push:
+    branches: ["**"]
+  pull_request:
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          # Matches the local development version. No runtime.txt exists yet
+          # (DEP-03), so this is the single source of truth for the CI runtime.
+          python-version: "3.14"
+
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install -r requirements.txt -r requirements-dev.txt
+
+      - name: Run tests
+        env:
+          # TestConfig supplies its own key, but the app factory reads the
+          # environment during import; a value must be present.
+          SECRET_KEY: ci-test-secret-key
+        run: pytest -q
+
+# NOTE: the suite runs on in-memory SQLite via TestConfig. Migration-
+# correctness tests (a fresh DB built by `flask db upgrade` matching
+# production) and the docs full-text-search path need PostgreSQL and are
+# deferred until the DB-01 schema baseline lands; a `services: postgres`
+# block will be added here at that point. Ruff linting is deferred until
+# after the Phase B functional refactoring per the Phase A plan amendment.
