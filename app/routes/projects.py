@@ -6,6 +6,7 @@ from app.models import Organization, OrgMember, Project, Task
 from app.extensions import db
 from app.utils import create_notification
 from app.services.analytics import project_analytics, member_task_breakdown
+from app.authz import is_org_member, is_org_admin
 
 projects_bp = Blueprint('projects', __name__, url_prefix='/projects')
 
@@ -15,8 +16,7 @@ def create_project(org_slug):
     org = Organization.query.filter_by(slug=org_slug).first_or_404()
     
     # Verify membership
-    membership = OrgMember.query.filter_by(org_id=org.id, user_id=current_user.id).first()
-    if not membership:
+    if not is_org_member(org.id):
         flash('You do not have permission to create projects here.', 'danger')
         return redirect(url_for('orgs.list_orgs'))
         
@@ -97,8 +97,7 @@ def add_task(project_id):
     org = project.organization
     
     # Verify membership
-    membership = OrgMember.query.filter_by(org_id=org.id, user_id=current_user.id).first()
-    if not membership:
+    if not is_org_member(org.id):
         flash('Permission denied.', 'danger')
         return redirect(url_for('orgs.list_orgs'))
         
@@ -127,10 +126,10 @@ def add_task(project_id):
         except (ValueError, TypeError):
             flash('Invalid assignment.', 'danger')
             return redirect(url_for('projects.dashboard', project_id=project.id))
-        is_org_member = OrgMember.query.filter_by(
+        assignee_membership = OrgMember.query.filter_by(
             org_id=org.id, user_id=assigned_id
         ).first()
-        if not is_org_member:
+        if not assignee_membership:
             flash('You can only assign tasks to members of this organization.', 'danger')
             return redirect(url_for('projects.dashboard', project_id=project.id))
         validated_assigned_to = assigned_id
@@ -168,8 +167,7 @@ def analytics(project_id):
     org = project.organization
     
     # Check if user is a member AND an Admin
-    membership = OrgMember.query.filter_by(org_id=org.id, user_id=current_user.id).first()
-    if not membership or membership.role != 'Admin':
+    if not is_org_admin(org.id):
         flash('You do not have permission to view project analytics.', 'danger')
         return redirect(url_for('projects.dashboard', project_id=project.id))
         
@@ -187,8 +185,7 @@ def analytics(project_id):
 def analytics_export(project_id):
     project = Project.query.get_or_404(project_id)
     org = project.organization
-    membership = OrgMember.query.filter_by(org_id=org.id, user_id=current_user.id).first()
-    if not membership or membership.role != 'Admin':
+    if not is_org_admin(org.id):
         flash('You do not have permission to export analytics.', 'danger')
         return redirect(url_for('projects.dashboard', project_id=project.id))
 

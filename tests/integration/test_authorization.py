@@ -167,6 +167,28 @@ class TestMeetingRoomAccess:
 
 
 @pytest.mark.integration
+class TestProjectMutationGates:
+    """create_project + add_task gate on org membership. B8 migrated both from an
+    inline OrgMember query to is_org_member; an outsider must still be denied."""
+
+    def test_outsider_cannot_open_create_project(self, app, make_client, world):
+        c = login(make_client(), "outsider")
+        r = c.get("/projects/org-a/create", follow_redirects=False)
+        assert r.status_code in (302, 403, 404)
+
+    def test_outsider_cannot_add_task(self, app, make_client, world):
+        c = login(make_client(), "outsider")
+        with app.app_context():
+            before = Task.query.filter_by(project_id=world["project_a"]).count()
+        r = c.post(f"/projects/{world['project_a']}/task/add",
+                   data={"title": "sneaky", "priority": "Medium"},
+                   follow_redirects=False)
+        assert r.status_code in (302, 403, 404)
+        with app.app_context():
+            assert Task.query.filter_by(project_id=world["project_a"]).count() == before
+
+
+@pytest.mark.integration
 class TestAnalyticsAdminGate:
     """org + project analytics require Admin. B7/B8 migrated the gate from an
     inline `not membership or membership.role != 'Admin'` check to
