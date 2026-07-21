@@ -7,15 +7,10 @@ from sqlalchemy import or_
 from app.extensions import db
 from app.models import Task, Project, OrgMember
 from app.utils import create_notification
+from app.google_calendar import build_calendar_service
 
-from google.oauth2.credentials import Credentials
-from googleapiclient.discovery import build
-import os
 import csv
 import io
-
-GOOGLE_CLIENT_ID = os.environ.get("GOOGLE_CLIENT_ID")
-GOOGLE_CLIENT_SECRET = os.environ.get("GOOGLE_CLIENT_SECRET")
 
 
 tasks_bp = Blueprint('tasks', __name__)
@@ -200,15 +195,7 @@ def add_task():
         and current_user.google_refresh_token
     ):
         try:
-            creds = Credentials(
-                token=current_user.google_access_token,
-                refresh_token=current_user.google_refresh_token,
-                token_uri="https://oauth2.googleapis.com/token",
-                client_id=GOOGLE_CLIENT_ID,
-                client_secret=GOOGLE_CLIENT_SECRET,
-            )
-
-            service = build("calendar", "v3", credentials=creds)
+            service = build_calendar_service(current_user)
 
             event = {
                 "summary": f"To-Do: {task.title}",
@@ -431,15 +418,7 @@ def edit_task(task_id):
                 deadline_datetime = datetime.combine(deadline, time(9, 0))
 
             if deadline_datetime:
-                creds = Credentials(
-                    token=current_user.google_access_token,
-                    refresh_token=current_user.google_refresh_token,
-                    token_uri="https://oauth2.googleapis.com/token",
-                    client_id=GOOGLE_CLIENT_ID,
-                    client_secret=GOOGLE_CLIENT_SECRET,
-                )
-
-                service = build("calendar", "v3", credentials=creds)
+                service = build_calendar_service(current_user)
 
                 updated_event = {
                     "summary": f"To-Do: {task.title}",
@@ -534,15 +513,7 @@ def delete_task(task_id):
         and current_user.google_refresh_token
     ):
         try:
-            creds = Credentials(
-                token=current_user.google_access_token,
-                refresh_token=current_user.google_refresh_token,
-                token_uri="https://oauth2.googleapis.com/token",
-                client_id=GOOGLE_CLIENT_ID,
-                client_secret=GOOGLE_CLIENT_SECRET,
-            )
-
-            service = build("calendar", "v3", credentials=creds)
+            service = build_calendar_service(current_user)
 
             service.events().delete(
                 calendarId="primary",

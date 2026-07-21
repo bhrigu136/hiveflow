@@ -18,7 +18,7 @@ CLIENT_SECRET = os.environ.get("GOOGLE_CLIENT_SECRET")
 TIME_ZONE = "Asia/Kolkata"
 
 
-def _service_for(user):
+def build_calendar_service(user):
     """Build a Calendar service for a user, or None if they aren't connected."""
     if not (getattr(user, "google_access_token", None) and getattr(user, "google_refresh_token", None)):
         return None
@@ -38,7 +38,7 @@ def create_meeting_event(user, meeting, join_url=None):
     Returns the created event id, or None if the user isn't connected / it failed.
     """
     try:
-        service = _service_for(user)
+        service = build_calendar_service(user)
         if service is None:
             return None
 
@@ -75,7 +75,7 @@ def delete_meeting_event(user, event_id):
     if not event_id:
         return
     try:
-        service = _service_for(user)
+        service = build_calendar_service(user)
         if service is None:
             return
         service.events().delete(calendarId="primary", eventId=event_id).execute()
