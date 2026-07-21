@@ -23,7 +23,7 @@ from app.models import (
 )
 from app.utils import create_notification
 from app.google_calendar import create_meeting_event, delete_meeting_event
-from app.authz import is_org_member
+from app.authz import is_org_member, get_membership
 
 calendar_bp = Blueprint('calendar', __name__)
 
@@ -367,7 +367,7 @@ def book_meeting():
 @login_required
 def cancel_meeting(meeting_id):
     meeting = Meeting.query.get_or_404(meeting_id)
-    membership = OrgMember.query.filter_by(org_id=meeting.org_id, user_id=current_user.id).first()
+    membership = get_membership(meeting.org_id)
     if not membership:
         flash('You do not have access to that meeting.', 'danger')
         return redirect(url_for('calendar.my_calendar'))

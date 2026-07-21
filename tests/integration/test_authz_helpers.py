@@ -6,7 +6,8 @@ org id is never a member.
 """
 import pytest
 
-from app.authz import check_project_access, is_org_admin, is_org_member
+from app.authz import (check_project_access, get_membership, is_org_admin,
+                       is_org_member)
 from tests.factories import login, two_org_world
 
 
@@ -47,6 +48,17 @@ class TestMembershipHelpers:
                 # a plain member is not an admin
                 login_user(User.query.get(world["member_a"]))
                 assert is_org_admin(world["org_a"]) is False
+
+    def test_get_membership_returns_row_or_none(self, app, world):
+        from app.models import User
+        with app.app_context():
+            with app.test_request_context():
+                from flask_login import login_user
+                login_user(User.query.get(world["admin_a"]))
+                m = get_membership(world["org_a"])
+                assert m is not None and m.role == 'Admin'
+                assert get_membership(world["org_b"]) is None   # not a member
+                assert get_membership(None) is None             # falsy org id
 
     def test_null_org_never_member(self, app, world):
         from app.models import User

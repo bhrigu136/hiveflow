@@ -8,7 +8,7 @@ from app.models import Organization, OrgMember, Project, Task
 from app.extensions import db, limiter
 from app.utils import create_notification
 from app.services.analytics import org_analytics, member_task_breakdown
-from app.authz import is_org_member, require_org_admin, by_slug, redirect_flash
+from app.authz import is_org_member, get_membership, require_org_admin, by_slug, redirect_flash
 
 orgs_bp = Blueprint('orgs', __name__, url_prefix='/orgs')
 
@@ -132,7 +132,7 @@ def dashboard(slug):
     org = Organization.query.filter_by(slug=slug).first_or_404()
     
     # Check if user is a member
-    membership = OrgMember.query.filter_by(org_id=org.id, user_id=current_user.id).first()
+    membership = get_membership(org.id)
     if not membership:
         flash('You do not have permission to view this organization.', 'danger')
         return redirect(url_for('orgs.list_orgs'))

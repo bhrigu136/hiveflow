@@ -7,7 +7,7 @@ from app.extensions import db
 from app.utils import create_notification
 from app.services.analytics import project_analytics, member_task_breakdown
 from app.authz import (require_org_member, require_org_admin,
-                       by_slug, by_project, redirect_flash)
+                       by_slug, by_project, redirect_flash, get_membership)
 
 projects_bp = Blueprint('projects', __name__, url_prefix='/projects')
 
@@ -59,7 +59,7 @@ def dashboard(project_id):
     org = project.organization
     
     # Verify membership
-    membership = OrgMember.query.filter_by(org_id=org.id, user_id=current_user.id).first()
+    membership = get_membership(org.id)
     if not membership:
         flash('You do not have permission to view this project.', 'danger')
         return redirect(url_for('orgs.list_orgs'))

@@ -16,7 +16,7 @@ from sqlalchemy import func, or_
 from app.extensions import db
 from app.models import Organization, OrgMember, Document, DocumentRevision
 from app.docs_render import render_markdown, to_plain_text, MAX_MARKDOWN_BYTES
-from app.authz import is_org_member
+from app.authz import is_org_member, get_membership
 
 docs_bp = Blueprint('docs', __name__)
 
@@ -31,7 +31,7 @@ def _is_postgres():
 
 def _require_org(slug, min_role=None):
     org = Organization.query.filter_by(slug=slug).first_or_404()
-    membership = OrgMember.query.filter_by(org_id=org.id, user_id=current_user.id).first()
+    membership = get_membership(org.id)
     if membership is None:
         abort(404)  # 404, not 403 — don't reveal the workspace exists
     if min_role == 'Admin' and membership.role != 'Admin':
@@ -50,7 +50,7 @@ def _require_doc_access(doc_id):
     """For id-only routes (autosave/reorder): load doc + verify org membership."""
     doc = Document.query.filter(Document.id == doc_id,
                                 Document.deleted_at.is_(None)).first_or_404()
-    membership = OrgMember.query.filter_by(org_id=doc.org_id, user_id=current_user.id).first()
+    membership = get_membership(doc.org_id)
     if membership is None:
         abort(404)
     return doc, doc.organization, membership

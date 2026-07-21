@@ -24,6 +24,7 @@ from app.models import (Meeting, TranscriptSegment, OrgMember, Project, Task,
                         User, Organization)
 from app.utils import create_notification
 from app.summarizer import get_summarizer
+from app.authz import get_membership
 
 meeting_intel_bp = Blueprint('meeting_intel', __name__)
 
@@ -32,7 +33,7 @@ meeting_intel_bp = Blueprint('meeting_intel', __name__)
 
 def _require_meeting_access(meeting_id):
     meeting = Meeting.query.get_or_404(meeting_id)
-    member = OrgMember.query.filter_by(org_id=meeting.org_id, user_id=current_user.id).first()
+    member = get_membership(meeting.org_id)
     if member is None:
         abort(403)
     return meeting, member

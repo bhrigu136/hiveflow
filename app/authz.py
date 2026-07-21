@@ -36,6 +36,21 @@ def is_org_admin(org_id) -> bool:
     return member is not None and member.role == 'Admin'
 
 
+def get_membership(org_id):
+    """Return the current user's OrgMember row for an org, or None.
+
+    For the few call sites that need the membership object itself — to read
+    ``.role`` or pass it to a template — not just a boolean. Pure gates should
+    still use ``is_org_member`` / ``is_org_admin``. Behaviour matches the inline
+    ``OrgMember.query.filter_by(org_id=..., user_id=current_user.id).first()``
+    those sites used (the ``org_id`` guard only matters for a falsy id, which
+    never occurs at these sites — they pass a loaded object's id).
+    """
+    if not org_id:
+        return None
+    return OrgMember.query.filter_by(org_id=org_id, user_id=current_user.id).first()
+
+
 def check_project_access(project) -> bool:
     """True if the current user is in the project's organization.
 
