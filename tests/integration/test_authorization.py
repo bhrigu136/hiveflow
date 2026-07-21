@@ -167,6 +167,28 @@ class TestMeetingRoomAccess:
 
 
 @pytest.mark.integration
+class TestAnalyticsAdminGate:
+    """org + project analytics require Admin. B7/B8 migrated the gate from an
+    inline `not membership or membership.role != 'Admin'` check to
+    `not is_org_admin(...)`; a plain member must still be denied, and an Admin
+    still allowed."""
+
+    def test_member_denied_org_analytics(self, app, make_client, world):
+        c = login(make_client(), "member_a")  # Member, not Admin, of org_a
+        r = c.get("/orgs/org-a/analytics", follow_redirects=False)
+        assert r.status_code in (302, 403, 404)
+
+    def test_member_denied_project_analytics(self, app, make_client, world):
+        c = login(make_client(), "member_a")
+        r = c.get(f"/projects/{world['project_a']}/analytics", follow_redirects=False)
+        assert r.status_code in (302, 403, 404)
+
+    def test_admin_allowed_project_analytics(self, app, make_client, world):
+        c = login(make_client(), "admin_a")
+        assert c.get(f"/projects/{world['project_a']}/analytics").status_code == 200
+
+
+@pytest.mark.integration
 class TestSessionIsolation:
     """Guards the harness itself: two clients must not share identity."""
 

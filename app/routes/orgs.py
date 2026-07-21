@@ -8,6 +8,7 @@ from app.models import Organization, OrgMember, Project, Task
 from app.extensions import db, limiter
 from app.utils import create_notification
 from app.services.analytics import org_analytics, member_task_breakdown
+from app.authz import is_org_member, is_org_admin
 
 orgs_bp = Blueprint('orgs', __name__, url_prefix='/orgs')
 
@@ -89,8 +90,7 @@ def join_org():
         return redirect(url_for('orgs.list_orgs'))
         
     # Check if already a member
-    existing_member = OrgMember.query.filter_by(org_id=org.id, user_id=current_user.id).first()
-    if existing_member:
+    if is_org_member(org.id):
         flash(f'You are already a member of {org.name}.', 'info')
         return redirect(url_for('orgs.dashboard', slug=org.slug))
         
@@ -147,8 +147,7 @@ def analytics(slug):
     org = Organization.query.filter_by(slug=slug).first_or_404()
     
     # Check if user is a member AND an Admin
-    membership = OrgMember.query.filter_by(org_id=org.id, user_id=current_user.id).first()
-    if not membership or membership.role != 'Admin':
+    if not is_org_admin(org.id):
         flash('You do not have permission to view organization analytics.', 'danger')
         return redirect(url_for('orgs.dashboard', slug=org.slug))
         
@@ -165,8 +164,7 @@ def analytics(slug):
 @login_required
 def analytics_export(slug):
     org = Organization.query.filter_by(slug=slug).first_or_404()
-    membership = OrgMember.query.filter_by(org_id=org.id, user_id=current_user.id).first()
-    if not membership or membership.role != 'Admin':
+    if not is_org_admin(org.id):
         flash('You do not have permission to export analytics.', 'danger')
         return redirect(url_for('orgs.dashboard', slug=org.slug))
 
