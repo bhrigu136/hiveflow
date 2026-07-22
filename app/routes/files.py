@@ -62,15 +62,27 @@ def sign_upload():
     """Generates a signed upload URL for client-side direct upload to Supabase Storage."""
     data = request.get_json() or {}
     filename = data.get('filename')
-    # Accepted from the client but not yet forwarded to the signed URL's
-    # content-type. Kept (not deleted) as it's likely an unfinished feature —
-    # flagged for the owner rather than silently dropped. See C14.
-    mime_type = data.get('mime_type')  # noqa: F841
+    # mime_type is intentionally NOT forwarded to the signing step.
+    # Supabase's presigned upload flow expects the client to set Content-Type
+    # directly when uploading via PUT (see view.html upload JS). The signing
+    # endpoint only produces a time-limited URL; content-type is enforced at
+    # upload time, not at signing time.  The value IS stored later when the
+    # client calls /api/files/register after a successful upload.
+    mime_type = data.get('mime_type', '')
     project_id = data.get('project_id')
     document_id = data.get('document_id')
 
     if not filename:
         return jsonify({'error': 'Filename is required'}), 400
+
+    # Defense-in-depth: log suspicious MIME types for security monitoring
+    _SUSPICIOUS_MIMES = ('text/html', 'application/javascript', 'application/x-httpd-php')
+    if mime_type and mime_type.lower() in _SUSPICIOUS_MIMES:
+        import logging
+        logging.getLogger(__name__).warning(
+            "Suspicious MIME type '%s' in sign-upload for '%s' by user %s",
+            mime_type, filename, current_user.id,
+        )
 
     if project_id and not check_project_access(project_id):
         return jsonify({'error': 'Access denied'}), 403

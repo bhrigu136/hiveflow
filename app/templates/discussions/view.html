@@ -321,12 +321,25 @@
             +   '<div>'
             +     '<div style="font-weight:500;font-size:13px;">' + escapeHTML(c.creator_name) + '</div>'
             +     '<div style="font-size:11px;color:var(--text-muted);">'
-            +       '<time datetime="' + escapeHTML(c.created_at_iso) + '">' + escapeHTML(c.created_at_short) + '</time>'
+            +       '<time datetime="' + escapeHTML(c.created_at_iso) + '" data-fmt="short">' + escapeHTML(c.created_at_short) + '</time>'
             +     '</div>'
             +   '</div>'
             + '</div>'
             + '<div class="comment-body" style="line-height:1.5;color:var(--text);font-size:14px;white-space:pre-wrap;">' + escapeHTML(c.content) + '</div>';
         return div;
+    }
+
+    // Convert a <time data-fmt> element from UTC to the viewer's local timezone.
+    function localizeTime(el) {
+        var iso = el.getAttribute('datetime');
+        if (!iso) return;
+        var d = new Date(iso);
+        if (isNaN(d.getTime())) return;
+        var opts = { month: 'short', day: '2-digit', hour: 'numeric', minute: '2-digit', hour12: true };
+        var parts = new Intl.DateTimeFormat(undefined, opts).formatToParts(d);
+        var get = function(t) { return (parts.find(function(p) { return p.type === t; }) || {}).value || ''; };
+        el.textContent = get('month') + ' ' + get('day') + ', ' + get('hour') + ':' + get('minute') + ' ' + get('dayPeriod');
+        el.setAttribute('title', d.toLocaleString());
     }
 
     function appendNew(comments) {
@@ -336,6 +349,9 @@
             if (list.querySelector('[data-comment-id="' + c.id + '"]')) return;
             var commentDiv = renderComment(c);
             list.appendChild(commentDiv);
+            // Convert UTC timestamp to local timezone
+            var timeEl = commentDiv.querySelector('time[data-fmt]');
+            if (timeEl) localizeTime(timeEl);
             var body = commentDiv.querySelector('.comment-body');
             if (body) {
                 formatMarkdownAttachments(body);

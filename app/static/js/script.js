@@ -3,14 +3,15 @@
 // ===================================================
 
 document.addEventListener('DOMContentLoaded', () => {
-    // Auto-dismiss flash messages after 5 seconds
+    // Auto-dismiss flash messages — dev messages with OTP/links get extra time
     document.querySelectorAll('.flash').forEach(flash => {
+        var delay = flash.textContent.indexOf('[DEV]') !== -1 ? 15000 : 5000;
         setTimeout(() => {
             flash.style.transition = 'opacity 0.5s ease, transform 0.5s ease';
             flash.style.opacity = '0';
             flash.style.transform = 'translateY(-10px)';
             setTimeout(() => flash.remove(), 500);
-        }, 5000);
+        }, delay);
     });
 
     // Smooth scroll reveal for task-box

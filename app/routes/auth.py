@@ -288,6 +288,11 @@ def register():
                     'info'
                 )
             else:
+                current_app.logger.error(
+                    "[REGISTER] Email delivery failed for %s (status: %s). "
+                    "User registered but unverified.",
+                    email, email_status,
+                )
                 flash(
                     'Account created! We could not send a verification email right now. '
                     'You can request one again from the login page.',
@@ -537,7 +542,7 @@ def forgot_password():
             if is_production:
                 current_app.logger.critical(
                     '[PASSWORD RESET] SMTP is not configured in production! '
-                    'Set MAIL_USERNAME and MAIL_PASSWORD env vars.'
+                    'Set BREVO_API_KEY and MAIL_SENDER env vars.'
                 )
                 flash(
                     'Password reset is temporarily unavailable. Please contact support.',
